@@ -63,8 +63,7 @@ def validate_rotation(flat, label):
     for row in range(3):
         for column in range(3):
             dot = sum(m[k][row] * m[k][column] for k in range(3))
-            assert abs(dot - (1.0 if row == column else 0.0)) <= 1e-6, \\
-                f'{label} must be orthonormal'
+            assert (abs(dot - (1.0 if row == column else 0.0)) <= 1e-6), f'{label} must be orthonormal'
     determinant = (
         m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
         - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
@@ -151,8 +150,7 @@ def main():
         for field in ('imu_pipeline_delay_us', 'imu_transport_delay_us',
                       'gnss_transport_delay_us', 'baro_transport_delay_us',
                       'mag_transport_delay_us'):
-            assert isinstance(sensor[field], int) and sensor[field] >= 0, \\
-                f'{field} must be a nonnegative integer microsecond delay'
+            assert (isinstance(sensor[field], int) and sensor[field] >= 0), f'{field} must be a nonnegative integer microsecond delay'
         assert sensor['gnss_backend'] == 'SIM_PVT'
         assert sensor['pps_backend'] == 'SIM_PPS_EPOCH'
 
