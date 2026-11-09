@@ -24,16 +24,18 @@ enum {
 };
 
 typedef struct {
-    uint64_t sample_us;
-    uint64_t capture_us;
-    uint64_t arrival_us;
-    uint64_t release_us;
+    uint64_t sample_us;  /* Physical epoch represented by the measurement. */
+    uint64_t capture_us; /* Sensor capture/DRDY epoch after any pipeline delay. */
+    uint64_t arrival_us; /* Physical transport completion epoch. */
+    uint64_t release_us; /* Fixed-step time at which Host SIL gives the event to firmware. */
     uint32_t sequence;
     double values[6];
     uint8_t valid;
 } FmtSensorSimEvent;
 
 typedef struct {
+    /* Per-channel conservation: opportunities = generated + suppressed + overflow;
+     * generated = released + pending; accepted is incremented by the sink. */
     uint64_t opportunities;
     uint64_t generated;
     uint64_t suppressed;
