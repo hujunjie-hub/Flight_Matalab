@@ -26,6 +26,12 @@ $adapterObject = Join-Path $buildDir 'fmt_flight_runtime.o'
 & (Join-Path $GccDir 'gcc.exe') -std=c99 -O2 -Wall -Wextra -Werror -Wno-unused-function -fno-short-enums `
     -DFLIGHT_HOST_TEST -DFLIGHT_HOST_SIL @includes -c $adapter -o $adapterObject
 if ($LASTEXITCODE) { throw 'Flight Simulink adapter compilation failed' }
+
+$sensorSimulation = Join-Path $project 'adapters/flight_runtime/fmt_sensor_simulation.c'
+$sensorSimulationObject = Join-Path $buildDir 'fmt_sensor_simulation.o'
+& (Join-Path $GccDir 'gcc.exe') -std=c99 -O2 -Wall -Wextra -Werror -fno-short-enums `
+    -DFLIGHT_HOST_TEST -DFLIGHT_HOST_SIL @includes -c $sensorSimulation -o $sensorSimulationObject
+if ($LASTEXITCODE) { throw 'Deterministic sensor simulation compilation failed' }
 $objects = Get-ChildItem -LiteralPath $buildDir -Filter '*.o' -File |
     Where-Object Name -ne 'tests_simulation_sil_flight.c.o' | Select-Object -ExpandProperty FullName
 $wrappers = @('estimator_push_imu', 'estimator_update', 'estimator_get_snapshot',
