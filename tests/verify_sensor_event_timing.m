@@ -99,8 +99,16 @@ expect_probe_error(truth(1:20,:),invalid,timesUs(1:20),epochUs, ...
     'Flight:SensorTimingConsumerRate','IMU rate faster than the production consumer was accepted.');
 invalid=timing;
 invalid(5)=40000;
-expect_probe_error(truth,timing_with_delay(invalid),timesUs,epochUs, ...
+expect_probe_error(truth,invalid,timesUs,epochUs, ...
     'Flight:SensorTimingQueueBound','A delay exceeding the bounded queue horizon was accepted.');
+invalid=timing;
+invalid(6)=5000; % IMU pipeline + transport now exceeds its 5-ms validity horizon.
+expect_probe_error(truth,invalid,timesUs,epochUs, ...
+    'Flight:SensorTimingExpiry','An IMU event that expires before delivery was accepted.');
+invalid=timing;
+invalid(9)=20000; % GNSS PVT validity horizon.
+expect_probe_error(truth,invalid,timesUs,epochUs, ...
+    'Flight:SensorTimingExpiry','A GNSS event that expires before delivery was accepted.');
 irregularTimes=timesUs(1:20);
 irregularTimes(6)=irregularTimes(6)+250;
 expect_probe_error(truth(1:20,:),timing,irregularTimes,epochUs, ...
@@ -144,6 +152,3 @@ end
 assert(failed,identifier,'%s',message);
 end
 
-function timing=timing_with_delay(timing)
-% Keep all other fields unchanged for the isolated queue-horizon rejection case.
-end
