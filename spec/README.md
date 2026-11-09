@@ -1,5 +1,9 @@
 # Flight_Matalab 独立工程规格入口
 
+## Agent 唯一操作入口
+
+**将任务交给自动化 Agent 时，先要求它完整读取 [Agent 操作总指南](AGENT-操作指南.md)，然后按本页阅读顺序读取相关技术规格。** 所有正式技术、测试验收、问题管理和操作流程文档统一维护在 `spec/`。动态问题登记在 GitHub Issues，MATLAB 运行证据保存在 `work/validation/archives/`。GitHub 模板和可执行工具仍放在 GitHub/MATLAB 要求的固定路径，具体操作见 Agent 指南。
+
 基线：`FLIGHT-MATLAB-SPEC-1.3-DRAFT`；日期：2026-11-05；状态：`SPEC_REVIEWED_MODEL_NOT_STARTED`。
 
 当前为规格阶段，工程已从Flight目录移出，与Flight和FMT-Model同级。独立工程根目录为 `D:/STM32Project/FMT-Firmware-1.2.0/Flight_Matalab`；原 `FMT-Model` 保留，用户已明确不回写原工程。三个目标 `.slx` 尚未生成，编译/仿真/代码生成结果均为 `NOT_RUN`。
@@ -58,4 +62,7 @@ Host方案统一标HOST_NATIVE_V2：约束驱动retimer/GoalConnector、固定gr
 
 ## 问题登记与闭环
 
-所有缺陷、测试失败和验收阻塞统一登记在 GitHub Issues；编号、状态、严重级别、证据 RUN_ID、修复 commit 和回归结果按 [问题闭环规范](../quality/ISSUE_WORKFLOW.md) 管理。每次 MATLAB 运行的原始证据归档在被 Git 忽略的 `work/validation/archives/`，不与版本化的 `spec/validation/` 验收标准混放。
+所有缺陷、测试失败和验收阻塞统一登记在 GitHub Issues；编号、状态、严重级别、证据 RUN_ID、修复 commit 和回归结果按 [问题闭环规范](quality/ISSUE_WORKFLOW.md) 管理。每次 MATLAB 运行的原始证据归档在被 Git 忽略的 `work/validation/archives/`，不与版本化的 `spec/validation/` 验收标准混放。
+
+
+关闭问题前必须逐项执行[问题关闭验收清单](quality/ISSUE_CLOSURE_CHECKLIST.md)；机器可读状态定义见[issue-workflow.json](quality/issue-workflow.json)。

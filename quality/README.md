@@ -1,6 +1,3 @@
-# 质量与问题闭环
+# Moved to Spec
 
-- [问题登记、状态流转与证据归档规范](ISSUE_WORKFLOW.md)
-- [问题关闭验收清单](ISSUE_CLOSURE_CHECKLIST.md)
-
-唯一问题台账为 GitHub Issues；运行证据归档在本机被 Git 忽略的 `work/validation/archives/`，Issue 通过 RUN_ID、commit 和 SHA-256 引用证据。
+正式质量管理规范已统一迁移到 [`spec/quality/`](../spec/quality/)。请从 [Agent 操作总指南](../spec/AGENT-操作指南.md) 开始阅读。此目录不再维护规范正文。

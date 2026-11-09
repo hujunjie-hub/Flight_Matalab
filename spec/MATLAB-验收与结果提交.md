@@ -208,11 +208,11 @@ pwsh -File .\\tools\\archive_validation_run.ps1
 
 `work/` 已由 `.gitignore` 排除，因此原始 MAT、日志和每轮报告不直接提交到 Git。把 ZIP 附加到对应 GitHub Issue；若附件不可用或过大，就把 ZIP 发给验收方，并在 Issue 中登记文件名、SHA-256 和提交日期。不要只发截图或最后一行报错。
 
-问题登记、状态流转、证据目录和关闭标准见 [问题闭环规范](../quality/ISSUE_WORKFLOW.md)。每个 Issue 必须引用发现它的 RUN_ID；修复后还必须引用修复 commit 和新的回归 RUN_ID。
+问题登记、状态流转、证据目录和关闭标准见 [问题闭环规范](quality/ISSUE_WORKFLOW.md)。每个 Issue 必须引用发现它的 RUN_ID；修复后还必须引用修复 commit 和新的回归 RUN_ID。
 
 ## 9. 我方验收输出
 
-收到运行包后，除测试验收外，还会按 [问题闭环规范](../quality/ISSUE_WORKFLOW.md) 对每个独立问题建立/更新 GitHub Issue，分配 `FMAT-xxxx` 编号，记录严重级别、当前状态、复现步骤和证据。问题未经过修复后回归验收，不会关闭。
+收到运行包后，除测试验收外，还会按 [问题闭环规范](quality/ISSUE_WORKFLOW.md) 对每个独立问题建立/更新 GitHub Issue，分配 `FMAT-xxxx` 编号，记录严重级别、当前状态、复现步骤和证据。问题未经过修复后回归验收，不会关闭。
 
 ## 10. 相关文档
 
@@ -220,6 +220,7 @@ pwsh -File .\\tools\\archive_validation_run.ps1
 - [系统级目标验收矩阵](FlightSIM-test-plan.md)
 - [实现状态](../IMPLEMENTATION_STATUS.md)
 - [数据与依赖锁](validation/matlab_acceptance_manifest.json)
-- [问题闭环规范](../quality/ISSUE_WORKFLOW.md)
-- [问题关闭清单](../quality/ISSUE_CLOSURE_CHECKLIST.md)
+- [问题闭环规范](quality/ISSUE_WORKFLOW.md)
+- [问题关闭清单](quality/ISSUE_CLOSURE_CHECKLIST.md)
+- [Agent 操作总指南](AGENT-操作指南.md)
 - [项目运行说明](../README.md)

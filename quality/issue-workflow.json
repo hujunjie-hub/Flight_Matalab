@@ -1,77 +1,8 @@
 {
-  "schema": "flight-matalab-issue-workflow/1.0",
-  "issue_system_of_record": "GitHub Issues",
-  "issue_id_format": "FMAT-{github_issue_number:04d}",
-  "no_duplicate_csv_or_markdown_ledger": true,
-  "status_field_location": "GitHub Issue body: Current status",
-  "status_history_location": "Append-only GitHub Issue comments",
-  "statuses": [
-    "NEW",
-    "TRIAGED",
-    "NEEDS_INFO",
-    "REPRODUCED",
-    "IN_PROGRESS",
-    "FIXED_WAITING_RETEST",
-    "RETESTING",
-    "BLOCKED",
-    "REOPENED",
-    "VERIFIED",
-    "CLOSED"
-  ],
-  "standard_flow": [
-    "NEW",
-    "TRIAGED",
-    "REPRODUCED",
-    "IN_PROGRESS",
-    "FIXED_WAITING_RETEST",
-    "RETESTING",
-    "VERIFIED",
-    "CLOSED"
-  ],
-  "severity": [
-    "S0-CRITICAL",
-    "S1-HIGH",
-    "S2-MEDIUM",
-    "S3-LOW"
-  ],
-  "test_result_states": [
-    "PASS",
-    "FAIL",
-    "PARTIAL",
-    "NOT_RUN",
-    "UNVERIFIED"
-  ],
-  "test_result_and_issue_status_are_independent": true,
-  "run_id_format": "YYYYMMDDTHHMMSSfffZ_<project-commit-short>",
-  "evidence_root": "work/validation/archives",
-  "archive_command": "pwsh -File ./tools/archive_validation_run.ps1",
-  "archive_contains": [
-    "all work/validation reports",
-    "matlab_acceptance_diary.txt",
-    "scenarios/flight_sil_recording.mat",
-    "run_manifest.json",
-    "SHA-256 for each archived artifact",
-    "Flight_Matalab and Flight commit metadata"
-  ],
-  "canonical_locations": {
-    "policy": "quality/ISSUE_WORKFLOW.md",
-    "closure_checklist": "quality/ISSUE_CLOSURE_CHECKLIST.md",
-    "github_issue_template": ".github/ISSUE_TEMPLATE/matlab-acceptance-issue.md",
-    "acceptance_spec": "spec/MATLAB-验收与结果提交.md",
-    "versioned_test_manifest": "spec/validation/matlab_acceptance_manifest.json",
-    "transient_reports": "work/validation/",
-    "immutable_run_archives": "work/validation/archives/<RUN_ID>/",
-    "run_zip": "work/validation/archives/<RUN_ID>.zip"
-  },
-  "closure_requires": [
-    "confirmed root cause or accepted explicit disposition",
-    "fix commit/PR",
-    "new regression RUN_ID matching source/data fingerprints",
-    "original failure reproduced and passed after fix",
-    "relevant adjacent tests passed",
-    "no PARTIAL/NOT_RUN/UNVERIFIED promoted to PASS",
-    "issue body and append-only status history updated"
-  ],
-  "issue_numbering_note": "GitHub Issues and Pull Requests share the repository issue-number sequence; derive FMAT ID from the actual GitHub Issue number. Do not assume the first issue is #1.",
-  "zip_checksum_sidecar": "work/validation/archives/<RUN_ID>.zip.sha256"
+  "schema": "flight-matalab-issue-workflow-pointer/1.0",
+  "deprecated": true,
+  "canonical_document": "spec/quality/ISSUE_WORKFLOW.md",
+  "canonical_checklist": "spec/quality/ISSUE_CLOSURE_CHECKLIST.md",
+  "canonical_manifest": "spec/quality/issue-workflow.json",
+  "agent_entrypoint": "spec/AGENT-操作指南.md"
 }
