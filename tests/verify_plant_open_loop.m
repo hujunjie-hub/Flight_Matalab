@@ -185,7 +185,7 @@ testTorque=[.1;-.2;.3];
 out=run('FMT_RigidBodyRHS',{initial, [0 0 0 testTorque'], zeros(1,6),environment}, ...
     0.001,struct('PlantParameters',customParameters),0.0005);
 derivative=out.yout{1}.Values.Data(end,:);
-expectedAngularAcceleration=(Jfull\\testTorque)';
+expectedAngularAcceleration=(Jfull\testTorque)';
 assert(norm(derivative(11:13)-expectedAngularAcceleration,inf)<1e-9, ...
     'Flight:P20','Full non-diagonal inertia matrix was not applied correctly.');
 results{end+1}=passed('P-20','Full non-diagonal inertia matrix');
@@ -284,7 +284,7 @@ dx(10)=0.5*(w*wz+qx*wy-qy*wx);
 J=reshape(p(2:10),3,3);
 jw=J*x(11:13);
 gyroscopic=cross(x(11:13),jw);
-dx(11:13)=J\\(wrench(4:6)+environment(7:9)'-p(16)*x(11:13)-gyroscopic);
+dx(11:13)=J\(wrench(4:6)+environment(7:9)'-p(16)*x(11:13)-gyroscopic);
 dx(14:17)=(omegaCommand-omega)/p(12);
 end
 
