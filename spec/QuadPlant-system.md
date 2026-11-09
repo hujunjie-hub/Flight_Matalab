@@ -49,7 +49,7 @@ Command → Motor → RotorWrench → RigidBody → SensorSimulation 的物理�
 | 参数 | 当前参数视图 | 来源/性质 |
 |---|---|---|
 | 质量 m | 1.5 kg | Flight/config/vehicle_model.yaml，仍为 SIM_ONLY |
-| 转动惯量 J | diag[0.025, 0.025, 0.04] kg·m² | Flight 合成配置；当前内核只支持对角惯量 |
+| 转动惯量 J | 当前 fixture 为 diag[0.025, 0.025, 0.04] kg·m² | Flight 合成配置；内核支持完整对称正定 3×3 矩阵，非对角项不得丢弃 |
 | 电机位置 | (+0.18,-0.18)、(+0.18,+0.18)、(-0.18,+0.18)、(-0.18,-0.18) m | Flight 合成配置，FRD |
 | 径向力臂 | 0.254558 m | 从电机坐标推导，不独立手填 |
 | 偏航力矩系数 | [-0.02,+0.02,-0.02,+0.02] m | Flight 合成配置，带符号 |
@@ -87,11 +87,13 @@ omega_dot = J^-1 * (tau_body + tau_external_FRD - omega × J*omega - D*omega)
 
 q_dot = 0.5 * q ⊗ [0, omega_b/N0]
 
-当前刚体内核使用对角惯量。参数生成时会拒绝非对角惯量，避免静默丢弃惯性耦合项。若未来 Flight 引入非对角惯量，必须扩展完整矩阵动力学和测试，不能仅修改 YAML。
+刚体内核使用完整对称正定 3×3 惯量矩阵，按 `J⁻¹(τ−ω×Jω)` 计算角加速度。参数生成器和 C S-Function 均验证矩阵对称性与正定性；`J(:)` 按 MATLAB 列优先顺序传递。P-20 使用非对角 SPD 矩阵验证惯性耦合，防止回退为仅使用 `diag(J)`。
 
 空气阻力为 -D_v * (v_NED - wind_NED)，仅在 drag_enable=1 时生效。
 
 地面接触按四个接触点逐点计算。只有接触点进入地面后才产生弹簧/阻尼力；离地时严格为零。法向力向 NED Up 方向作用，并通过接触杆臂产生 CG 力矩。水平摩擦采用正则化 Coulomb 近似。模型不做状态瞬移或穿透投影修正；基准落体穿透超过 2 cm 或出现 NaN/Inf 即失败。
+
+PlantParameters 固定为 26 个 double：`[mass; J(:); k_f; tau; drag(3); rateDamping; groundK; groundC; groundDown; contactLever_FRD(3); gravity; skidHalfSpan(2); friction]`。MATLAB 生成参数、C S-Function 和独立参考积分器必须共用该索引合同；长度或物理约束不匹配时 fail closed。
 
 ## 5. 验收和限制
 
