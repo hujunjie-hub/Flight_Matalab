@@ -80,10 +80,13 @@ static void mdlOutputs(SimStruct *S, int_T tid)
         return;
     }
 
-    /* Reconstruct MATLAB column-major J(:) into a row-major symmetric matrix. */
+    /* Reconstruct MATLAB column-major J(:) as an exactly symmetric row-major matrix.
+     * Validation above permits only round-off-sized asymmetry, which is averaged here. */
     for (i = 0; i < 3; ++i) {
         for (j = 0; j < 3; ++j) {
-            inertia[3 * i + j] = p[1 + i + 3 * j];
+            const double value_ij = p[1 + i + 3 * j];
+            const double value_ji = p[1 + j + 3 * i];
+            inertia[3 * i + j] = (i == j) ? value_ij : 0.5 * (value_ij + value_ji);
         }
     }
 
@@ -95,6 +98,10 @@ static void mdlOutputs(SimStruct *S, int_T tid)
         determinant = a * (e * k - f * h) -
                       b * (d * k - f * g) +
                       c * (d * h - e * g);
+        if (!(determinant > 0.0) || !isfinite(determinant)) {
+            ssSetErrorStatus(S, "Invalid Plant inertia determinant.");
+            return;
+        }
 
         inverse_inertia[0] =  (e * k - f * h) / determinant;
         inverse_inertia[1] =  (c * h - b * k) / determinant;
