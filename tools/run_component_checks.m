@@ -9,6 +9,8 @@ try
     % Rebuild Plant/native gateways so checks cannot silently use stale MEX binaries.
     build_native_kernels;
     generate_parameters;
+    sensorModel=fullfile(root,'models','plant','FMT_PlantSensors.slx');
+    if ~isfile(sensorModel), build_plant_models(8); end
     build_actuation_components;
     build_pid_allocation_probe;
     report.source_fingerprint=fingerprint(root);
@@ -17,6 +19,7 @@ try
     report.checks.osqp=verify_osqp_gate;
     report.checks.execution=verify_execution_gate;
     report.checks.plant=verify_plant_open_loop;
+    report.checks.truth_isolation=verify_truth_isolation;
     report.checks.pid=verify_rate_pid_transaction;
     report.checks.pid_allocator_feedback=verify_pid_allocator_feedback;
     report.checks.actuation=verify_actuation_components;
