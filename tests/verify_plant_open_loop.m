@@ -78,11 +78,11 @@ results{end+1}=passed('P-06','Quaternion sign invariance and normalization');
 stepInitial=initial;
 stepInitial(7:10)=[cos(pi/6);0;0;sin(pi/6)];
 stepInitial(11:13)=[0.3;0.2;0.1];
-coarse=run('FMT_QuadPlant',{zeros(1,4),environment},0.5, ...
+coarse=run('FMT_QuadPlant',{zeros(1,4),environment},5.0, ...
     struct('PlantState0',stepInitial),0.0005);
 coarseState=coarse.yout{1}.Values.Data;
 referenceState=reference_integrate(stepInitial,zeros(1,4),environment, ...
-    cfg.derived,0.00025,0.5);
+    cfg.derived,0.00025,5.0);
 assert(size(coarseState,1)==size(referenceState,1), ...
     'Flight:P12','Simulink/reference Plant outputs do not share the same sample times.');
 positionError=max(abs(coarseState(:,1:3)-referenceState(:,1:3)),[],'all');
