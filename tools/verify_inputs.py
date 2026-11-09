@@ -161,8 +161,17 @@ def main():
         for field in ('imu_pipeline_delay_us', 'imu_transport_delay_us',
                       'gnss_transport_delay_us', 'baro_transport_delay_us',
                       'mag_transport_delay_us', 'imu_pipeline_uncertainty_us'):
+            upper = 0xffffffff if field == 'imu_pipeline_uncertainty_us' else 9_000_000_000_000_000
             assert (isinstance(sensor[field], int) and not isinstance(sensor[field], bool)
-                    and sensor[field] >= 0), f'{field} must be a nonnegative integer microsecond value'
+                    and 0 <= sensor[field] <= upper), f'{field} must be a bounded nonnegative integer microsecond value'
+        assert sensor['imu_pipeline_delay_us'] + sensor['imu_transport_delay_us'] < 5000, \\
+            'IMU arrival must precede the firmware 5-ms sample expiry'
+        assert sensor['gnss_transport_delay_us'] < 20000, \\
+            'GNSS arrival must precede the firmware 20-ms sample expiry'
+        assert sensor['baro_transport_delay_us'] < 20000, \\
+            'Barometer arrival must precede the firmware 20-ms sample expiry'
+        assert sensor['mag_transport_delay_us'] < 100000, \\
+            'Magnetometer arrival must precede the firmware 100-ms sample expiry'
         for field in ('imu_sample_period_us', 'mag_sample_period_us',
                       'baro_sample_period_us', 'gnss_sample_period_us'):
             minimum = 1000 if field == 'imu_sample_period_us' else 500
@@ -173,7 +182,7 @@ def main():
         assert (isinstance(sensor['random_seed'], int) and not isinstance(sensor['random_seed'], bool)
                 and 0 < sensor['random_seed'] <= 0xffffffff), 'random_seed must be a nonzero uint32'
         assert sensor['gnss_backend'] == 'SIM_PVT'
-        assert sensor['pps_backend'] == 'SIM_PPS_EPOCH'
+        assert sensor['pps_backend'] == 'DISABLED_LOCAL_MONOTONIC'
 
         e = config['estimator_tuning']
         assert (e['error_state_rank'], e['noise_rank']) == (22, 19)
@@ -184,7 +193,7 @@ def main():
                       flight_vehicle_source='Flight/config/vehicle_model.yaml',
                       plant_parameter_contract='FULL_3X3_INERTIA_26',
                       sensor_parameter_contract='SENSOR_19_IMU_ANTENNA_LEVERS_PLUS_SENSOR_MODEL_54',
-                      sensor_timing_contract='TIMING_10_SAMPLE_PERIODS_DELAYS_UNCERTAINTY',
+                      sensor_timing_contract='TIMING_10_MULTIRATE_QUEUE_SAMPLE_CAPTURE_ARRIVAL_NO_PPS',
                       config_hashes=hashes,
                       config_content_sha256=hashlib.sha256(json.dumps(config, sort_keys=True, separators=(',', ':')).encode()).hexdigest())
     except Exception as error:
