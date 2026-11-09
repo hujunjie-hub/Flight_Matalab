@@ -77,7 +77,7 @@ def main():
                 finite(value)
                 assert value['status'] == 'SIM_ONLY', f'Missing synthetic source tag: {file.name}'
                 config[file.stem] = value
-                hashes[str(file.relative_to(ROOT)).replace('\\\\', '/')] = sha(file)
+                hashes[str(file.relative_to(ROOT)).replace(chr(92), '/')] = sha(file)
         assert set(config) == {'vehicle_model', 'sensor_alignment', 'estimator_tuning',
                                'controller_tuning', 'profile_manifest'}, 'Expected four COREs and readonly Profile'
 
