@@ -1,6 +1,6 @@
 function report=verify_plant_open_loop
 %VERIFY_PLANT_OPEN_LOOP Run implemented Plant physics and numerical gates.
-root=fileparts(fileparts(mfilename('fullpath')));
+root=flight_startup;
 cfg=generate_parameters;
 g=cfg.derived.GravityMps2;
 initial=cfg.derived.PlantState0;
