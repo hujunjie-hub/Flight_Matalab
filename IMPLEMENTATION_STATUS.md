@@ -45,3 +45,8 @@
 - 修正 IMU 运动学历史状态：只在配置的 IMU sample epoch 更新上一采样速度/角速度，差分时间使用两个真实 IMU sample epoch 之间的时间，不再误用 500 μs Plant 基步。
 - P-07 增加 2 ms IMU 周期、非恒定线加速度/角加速度与 jerk 的回归夹具，并检查非采样时刻 IMU validity bit 必须关闭。
 - 本次为代码与测试夹具更新；当前环境未执行 MATLAB/Simulink/MEX。必须在 MATLAB 环境重新运行 `run_component_checks`，此前验证证据继续保持 STALE，不能标记为 PASS。
+
+
+## MATLAB 验收依据（2026-11-09）
+
+当前分支的测试数据集、运行入口、逐项阈值、报告清单和已知未实现范围统一由 [MATLAB 仿真测试数据集与验收标准](spec/MATLAB-验收与结果提交.md) 及其机器可读清单 `spec/validation/matlab_acceptance_manifest.json` 管理。`run_component_checks` 已作为完整验收入口：重建依赖后运行 `verify_flight_entries(true)` 刷新 MIL 回放数据，再执行已实现组件 gate 并生成最终输入指纹。当前预期仍为 `PARTIAL_PASS`，不能把 P-10 Host MIL PPS/RECTIME 端到端缺口解释为通过。

@@ -1,6 +1,6 @@
 # QuadPlant 验证计划
 
-状态：测试脚本持续补充；MATLAB 执行状态以每次生成的 validation report 为准。2026-11-09。
+状态：Plant 逐项阈值与测试编号见本文；当前分支可执行数据集、完整运行入口、报告清单及总体验收规则统一见 [MATLAB 仿真测试数据集与验收标准](MATLAB-验收与结果提交.md)。MATLAB 执行状态以本次生成的 validation report 为准。2026-11-09。
 
 ## 1. 分级验收
 

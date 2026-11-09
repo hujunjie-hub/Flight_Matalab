@@ -49,3 +49,8 @@ python -B spec/tools/check_specs.py
 Host方案统一标HOST_NATIVE_V2：约束驱动retimer/GoalConnector、固定grid与未来交接、PREPARE/COMMIT、双时间轴和完整World证据。G0-HOST检查实际依赖/输入，G1验证模型拓扑；固件数值/时序等价另经FirmwareConformanceGate。模型实施仍未开始，任何规格PASS都不自动代替模型仿真。
 
 独立目录关系和外部只读路径见[工程组织](FlightSIM-architecture.md#4-工程规划目录)。本次迁移保留所有历史证据的原始内容和原观察路径；它们不作为当前工作目录。当前迁移和逐文件核对见[迁移记录](validation/project_relocation_report.json)。
+
+
+## 当前分支 MATLAB 实际验收
+
+规格文档中的目标矩阵不自动代表代码已实现或已执行。当前分支的可执行测试入口、数据集版本、实际断言阈值、报告清单和结果提交格式，以 [MATLAB 仿真测试数据集与验收标准](MATLAB-验收与结果提交.md) 及 [机器可读验收清单](validation/matlab_acceptance_manifest.json) 为准。

@@ -8,9 +8,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def fingerprint():
     files = {}
-    for directory in ('tools', 'models', 'interfaces', 'tests', 'config', 'dictionaries', 'work/mex'):
+    for directory in ('tools', 'models', 'interfaces', 'tests', 'config', 'dictionaries', 'simulation', 'scenarios', 'work/mex'):
         for path in sorted((ROOT / directory).rglob('*')):
-            if path.is_file() and path.suffix in {'.m', '.c', '.h', '.py', '.json', '.yaml', '.slx', '.sldd', '.mexw64'}:
+            if path.is_file() and path.suffix in {'.m', '.c', '.h', '.py', '.json', '.yaml', '.slx', '.sldd', '.mexw64', '.mat'}:
                 files[str(path.relative_to(ROOT)).replace('\\', '/')] = hashlib.sha256(path.read_bytes()).hexdigest()
     lock = ROOT / 'external_dependencies.lock.json'
     files[lock.name] = hashlib.sha256(lock.read_bytes()).hexdigest()

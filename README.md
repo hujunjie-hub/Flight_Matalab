@@ -52,3 +52,8 @@ verify_flight_entries
 ### 仿真参数一致性
 
 `generate_parameters` 将 Flight 的电机坐标、偏航力矩系数和动力学参数写入 `Flight_Parameters.sldd`。本地数值分配器使用从 Flight 四个电机坐标和偏航力矩系数推导的 4×4 effectiveness 矩阵及其逆矩阵，并在运行时检查矩阵互逆；不再假定特定电机排序。MIL 传感器的 NED 磁场由 `config/SIM_ONLY/QUAD_X4/sensor_alignment.yaml` 提供。修改磁场或物理配置后，重新执行 `build_flight_mex` 和 `build_flight_models`，再运行参数与组件检查。
+
+
+## MATLAB 测试与验收
+
+当前分支的唯一自动化验收入口为 `run_component_checks`。该入口会重建 Host SIL/MEX/模型、刷新 MIL 回放数据，并运行当前已实现的组件与三入口回放测试。测试数据集、每项验收阈值、必需报告、已知缺口和结果提交方式统一见 [MATLAB 仿真测试数据集与验收标准](spec/MATLAB-验收与结果提交.md)。验收后请提交整个 `work/validation/` 目录；不要使用旧报告或静态审查结果代替本次 MATLAB 运行结果。

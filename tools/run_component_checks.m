@@ -3,8 +3,11 @@ function report=run_component_checks(gccDir)
 if nargin<1, gccDir='D:\STM32CubeCLT\mingw64\bin'; end
 root=flight_startup;
 file=fullfile(root,'work','validation','component_checks.json');
-report=struct('scope','IMPLEMENTED_COMPONENTS_ONLY','status','IN_PROGRESS', ...
+report=struct('scope','IMPLEMENTED_COMPONENTS_AND_ENTRY_REPLAY','status','IN_PROGRESS', ...
+    'acceptance_profile','CURRENT_BRANCH_MATLAB_HOST_MIL', ...
     'checks',struct);
+report.environment=struct('matlab_version',version, ...
+    'matlab_release',version('-release'),'computer',computer);
 write(file,report);
 try
     % Rebuild the upstream Host SIL DLL and every affected Simulink/MEX ABI.
@@ -18,6 +21,8 @@ try
     build_flight_models;
     build_actuation_components;
     build_pid_allocation_probe;
+    % Refresh the tracked replay tape from this exact MIL build before hashing inputs.
+    report.checks.flight_entries=verify_flight_entries(true);
     report.source_fingerprint=fingerprint(root);
     report.checks.native_kernels='PASS';
     report.checks.time_service=verify_time_service_sync;
@@ -42,7 +47,7 @@ catch exception
     rethrow(exception);
 end
 write(file,report);
-fprintf('Component checks completed; Plant acceptance coverage remains partial.\n');
+fprintf('MATLAB acceptance gates completed; Plant P-10 Host MIL integration remains partial.\n');
 end
 
 function value=fingerprint(root)
