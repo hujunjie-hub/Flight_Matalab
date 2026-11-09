@@ -17,7 +17,7 @@ static NavFrame external_frame;
 static unsigned elapsed_ticks;
 static int mode_active, attached;
 static uint32_t last_request;
-static uint16_t last_ack, last_reason;
+static uint16_t last_ack, last_reason, last_command_code;
 static FmtSensorSimState sensor_simulation;
 static int sensor_simulation_ready;
 static uint64_t sensor_simulation_epoch_us;
@@ -381,6 +381,7 @@ __declspec(dllexport) int fmt_flight_start(int mode)
      * offset when stamping the physical sample/capture epochs. */
     sensor_simulation_epoch_us = test_clock.monotonic_us + FMT_SENSOR_SIM_FIXED_STEP_US;
     last_ack = last_reason = 0;
+    last_command_code = 0u;
     memset(&external_frame, 0, sizeof(external_frame));
     memset(&fmt_origin, 0, sizeof(fmt_origin));
     memset(&fmt_state, 0, sizeof(fmt_state));
@@ -455,6 +456,7 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
         if (request) {
             last_request = request;
             last_ack = last_reason = 0;
+            last_command_code = (uint16_t)command[0];
         }
     }
 
@@ -470,7 +472,15 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
         nav->position_ned_m[0], nav->position_ned_m[1], nav->position_ned_m[2],
         nav->velocity_ned_mps[0], nav->velocity_ned_mps[1], nav->velocity_ned_mps[2],
         runtime_stats.navigation_status, runtime_stats.control_status,
-        runtime_stats.planning_status, runtime_stats.mpc_updates, commits, failures
+        runtime_stats.planning_status, runtime_stats.mpc_updates, commits, failures,
+        runtime_data.prearm.failed_checks_mask,
+        runtime_data.prearm.primary_reason_code,
+        runtime_data.prearm.failed_count,
+        runtime_data.prearm.warning_count,
+        runtime_data.prearm.check_epoch,
+        runtime_data.fms.authority,
+        runtime_data.fms.mission_state,
+        last_command_code
     };
     memcpy(status, values, sizeof(values));
     NavFrame published = {0};
