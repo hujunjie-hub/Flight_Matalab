@@ -161,7 +161,8 @@ def main():
                       osqp_files_verified=len(runtime['files']),
                       kf_files_verified=len(lock['kf_gins_matlab']['files']),
                       flight_vehicle_source='Flight/config/vehicle_model.yaml',
-                      plant_parameter_contract='FULL_3X3_INERTIA_26',\n                      sensor_parameter_contract='SENSOR_19_IMU_ANTENNA_LEVERS',
+                      plant_parameter_contract='FULL_3X3_INERTIA_26',
+                      sensor_parameter_contract='SENSOR_19_IMU_ANTENNA_LEVERS',
                       config_hashes=hashes,
                       config_content_sha256=hashlib.sha256(json.dumps(config, sort_keys=True, separators=(',', ':')).encode()).hexdigest())
     except Exception as error:
