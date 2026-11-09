@@ -36,7 +36,9 @@ GNSS 接收机和 PPS 固定启用；天空遮挡/卫星信号不可用是场景
 | 地面 k/c | 5000N/m / 100N·s/m | SIM_ONLY 合成接触参数；不含水平摩擦 |
 | 重力 / Earth rate | 与 Flight Host SIL 重力和 SIM_ONLY Origin 一致 | 共享来源，禁止另写第二份常数 |
 
-真实参数接入前必须有来源、单位、标定条件/误差和版本；本轮不从现有 Plant 默认值推断电机、桨叶或电池型号。刚体内核当前只支持对角惯量，生成参数时若发现非对角惯量会直接报错，不会静默忽略。
+真实参数接入前必须有来源、单位、标定条件/误差和版本；本轮不从现有 Plant 默认值推断电机、桨叶或电池型号。当前 SIM_ONLY fixture 的惯量为对角矩阵，但刚体内核支持完整对称正定 3×3 惯量张量；参数生成时保留 J(:) 全部九个元素，非对角惯性耦合不得被静默丢弃。
+
+PlantParameters 固定为 25 个 double：[mass; J(:); k_f; tau; drag(3); rateDamping; groundK; groundC; groundDown; contactLever_FRD(3); gravity; skidHalfSpan(2)]。其中 J(:) 按 MATLAB 列优先顺序展开，要求对称正定；刚体角加速度使用完整 J⁻¹(τ−ω×Jω)。
 
 ## 4. 物理需求映射
 
