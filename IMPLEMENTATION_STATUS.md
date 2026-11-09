@@ -28,3 +28,11 @@
 - 当前代码覆盖 P-01～P-09、P-11～P-13、P-15～P-21；P-07/P-08 覆盖杆臂运动学和静止 IMU，P-09 已加入相同 seed 重复性、不同 seed 独立性、IMU 噪声 STD 95% 卡方区间、轴间相关性及 bias/scale 注入测试。P-10 的多速率队列、sample/capture/arrival 和缺测计数已有独立 `verify_sensor_event_timing`；GNSS PPS raw capture 与 UTC epoch/time-domain mapping 尚未实现，`pps_backend` 明确为 `DISABLED_LOCAL_MONOTONIC`，因此 P-10 整体仍为 PARTIAL。P-14 已由 verify_truth_isolation 实现并纳入 run_component_checks。
 
 本阶段需在用户 MATLAB 环境执行 run_component_checks；该入口会先运行输入预检、重建 build_native_kernels、生成参数字典，再执行 verify_parameter_view、verify_plant_open_loop（内部调用 verify_sensor_event_timing）及已实现组件检查。也可单独执行 build_native_kernels、generate_parameters、verify_parameter_view 和 verify_plant_open_loop；后者会调用 verify_sensor_event_timing。需要只调试队列时可单独执行 verify_sensor_event_timing。必须保存实际运行报告、MATLAB 版本、求解器与模型 Hash。Plant 报告必须保持 PARTIAL，不能解释为完整物理模型验收、HIL 实时性 PASS 或实机飞行放行。
+
+## P-10b 时间服务核心回归（代码状态）
+
+- 新增 fmt_time_service_probe MEX wrapper，直接编译同级 Flight/sensor_device/time_base/systime.c，并调用上游 Flight/tests/time/test_time_service.c，不复制或重写 TimeService 算法。
+- build_native_kernels 会构建该 MEX；run_component_checks 会执行 verify_time_service_sync 并保存 work/validation/time_service_sync_report.json。
+- 上游测试覆盖单调时间映射、PPS 周期门限/频率锁定/失锁 holdover、UTC observation 必须与 PPS 配对、UTC 映射不确定度、外部时钟映射和 time_epoch 不连续拒绝。
+- 该回归使用合成 PpsCaptureEvent 与确定性 tick source，只证明 TimeService 核心算法；不证明 TIM2 capture ISR、UM982 UART RECTIME 解码、PPS/UTC 在 MILSIM 中端到端运行。当前 Flight/tests/simulation/sil_flight.c 的时间服务接口仍为 STATUS_NOT_READY stub，故 P-10 整体保持 PARTIAL。
+- MATLAB/MEX 编译与执行尚未在本次环境运行；本阶段代码状态不能写成实测 PASS。
