@@ -86,8 +86,7 @@ def main():
         for required in ('sensor_device/time_base/systime.c',
                          'sensor_device/time_base/systime.h',
                          'tests/time/test_time_service.c'):
-            assert required in baseline['sources_sha256'], \\
-                f'Flight baseline must fingerprint {required}; rebuild the Host SIL baseline first'
+            assert required in baseline['sources_sha256'], f'Flight baseline must fingerprint {required}; rebuild the Host SIL baseline first'
 
         flight_vehicle = read(flight / 'config/vehicle_model.yaml')
         finite(flight_vehicle)
@@ -202,7 +201,8 @@ def main():
                       flight_vehicle_source='Flight/config/vehicle_model.yaml',
                       plant_parameter_contract='FULL_3X3_INERTIA_26',
                       sensor_parameter_contract='SENSOR_19_IMU_ANTENNA_LEVERS_PLUS_SENSOR_MODEL_54',
-                      sensor_timing_contract='TIMING_10_MULTIRATE_QUEUE_SAMPLE_CAPTURE_ARRIVAL',\n                      time_service_contract='UPSTREAM_PPS_UTC_CORE_REGRESSION',
+                      sensor_timing_contract='TIMING_10_MULTIRATE_QUEUE_SAMPLE_CAPTURE_ARRIVAL',
+                      time_service_contract='UPSTREAM_PPS_UTC_CORE_REGRESSION',
                       config_hashes=hashes,
                       config_content_sha256=hashlib.sha256(json.dumps(config, sort_keys=True, separators=(',', ':')).encode()).hexdigest())
     except Exception as error:
