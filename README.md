@@ -44,3 +44,21 @@ verify_flight_entries
 ### 仿真参数一致性
 
 `generate_parameters` 将 Flight 的电机坐标、偏航力矩系数和动力学参数写入 `Flight_Parameters.sldd`。本地 X4 数值分配器使用 Flight 的径向力臂及带符号的第一路偏航系数；它会拒绝不符合当前四电机编号/符号约定的几何配置，而不是静默套用旧参数。MIL 传感器的 NED 磁场由 `config/SIM_ONLY/QUAD_X4/sensor_alignment.yaml` 提供。修改磁场或物理配置后，重新执行 `build_flight_mex` 和 `build_flight_models`，再运行参数与组件检查。
+
+
+## Plant 物理模型验证
+
+Plant 侧使用与 Flight 一致的电机编号、旋翼位置、偏航力矩符号和完整 3×3 惯量矩阵。PlantState 为 17 维，Environment 为 15 维，PlantParameters 为 26 维；环境字段、单位和坐标系见 models/plant/README.md。
+
+在 MATLAB 打开项目并确认依赖已构建后，执行：
+
+\`\`\`matlab
+build_native_kernels
+generate_parameters
+verify_parameter_view
+verify_plant_open_loop
+\`\`\`
+
+build_native_kernels 会先运行 tools/verify_inputs.py，再编译 Plant 和控制侧原生 S-Function。verify_plant_open_loop 当前覆盖电机、刚体、自由落体、悬停、接触、风阻、坐标变换、完整惯量、数值参考和输入拒绝。它会返回 PARTIAL，因为 P-07～P-10 传感器运动学/噪声/时序和 P-14 真值隔离图检查仍未完成。代码覆盖不等于 MATLAB 已运行；每次变更后必须保存实际测试报告和 MATLAB 版本。
+
+Flight/config/vehicle_model.yaml 当前仍是 SIM_ONLY 合成参数，不是实机辨识值。M7/DShot 帧量化夹具的 0～10 N 力曲线与 Plant 的 0～15 N 物理电机推力上限是两个不同合同，不得合并。
