@@ -188,6 +188,7 @@ static int inject_simulated_imu(const FmtSensorSimEvent *event)
                                 &reading, event->capture_us, event->release_us,
                                 &sample) != SENSOR_OK ||
         sample.header.timestamp_sample_us != event->sample_us ||
+        sample.header.timestamp_publish_us != event->release_us ||
         sensor_imu_inject(&sample, event->release_us) != STATUS_OK) {
         ++failures;
         return -1;
