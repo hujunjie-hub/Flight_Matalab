@@ -98,3 +98,11 @@
 - 证据归档：`work/validation/archives/20261109T160227108Z_f00f610.zip`，SHA-256 `c76d955f507bb7415ae58efd808e5a0074e8aa3971491e9c77fa1be68787bd91`，7 个文件（含 `component_checks.json`、`input_preflight.json`、Diary、`firmware_sil.log`、`run_manifest.json` 和回放 MAT 副本）。
 - 问题台账变化：FMAT-0002/0003/0004/0006/0010/0011 → VERIFIED；FMAT-0005/0007 → FIXED_WAITING_RETEST（本轮未执行到）；FMAT-0008 → REPRODUCED（干净树正式复现）；FMAT-0009 仍为 NEW（未执行到 Plant P-07）。
 - 结论：当前唯一阻断是 FMAT-0008（MIL 未解锁、导航有效位恒 0），不是构建问题。
+## 2026-11-10 00:43 MATLAB 验收运行记录（构建全通过，解锁仍被拒）
+
+- 分支/HEAD：`optimize/sil-physical-parameter-alignment` @ `9e5048c`（8b1baa3 对齐 MIL 传感器采样历元与运行时释放时钟、9e5048c 增加 MIL 诊断），运行前工作区干净。
+- 结果：**FAIL**，与上一轮相同阶段中止。构建链（Host SIL、`verify_inputs`、MEX、参数字典、Plant/Flight 模型）全部通过，`verify_flight_entries` 在 26 s MIL 后失败。
+- 新证据：`MIL diagnostics: armed=0 commit_valid=0 max_nav_mask=0xD7 max_total_thrust=0.000 N max_motor_thrust=0.000 N last_request=2204 ack=0 reason=11`。导航有效位已从全 0 提升到 `0xD7`，但解锁请求仍为 `COMMAND_ACK_REJECTED`（ack=0）、reason=11，`arm` 恒 0。
+- 断言变为 `Flight:MILArm`（此前为 `Flight:MILTakeoff`）：解锁这一环先失败，尚未到起飞判定。
+- 证据归档：`work/validation/archives/20261109T164306449Z_9e5048c.zip`，SHA-256 `afa63f983668634ac59e2932baa213903a2954d5bf61149c2719dd5f7e3cdf9f`。
+- 台账：FMAT-0008 追加本轮诊断证据，状态仍为 REPRODUCED；其余 Issue 状态不变。
