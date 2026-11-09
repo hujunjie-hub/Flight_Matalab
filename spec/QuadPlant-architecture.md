@@ -39,7 +39,7 @@ GroundContact fixture 用有符号间隙 gap=ground_D-p_contact_D 判定：gap�
 
 ## 4. 传感器与 M2 入口
 
-设 l_I 为 CG→IMU，v_I=v_CG+C*(ω×l_I)，a_I=a_CG+C*(α×l_I+ω×(ω×l_I))，其中 ω=ω_b/N0、α为同刻局部角加速度。原始 gyro=ω+C'*ω_ie^0，比力 f_I=C'*(a_I-g0+2*ω_ie^0×v_I)。当前 SIM sensor adapter 已加入固定 N0 Earth-rate/Coriolis 项、CG→IMU 杆臂角加速度与向心加速度、IMU→GNSS 天线位置/速度杆臂，并用初始速度/角速度初始化差分器、屏蔽首个无差分 IMU 样本。P07/P08 对应的杆臂与静止 IMU 物理检查已有脚本。P09 已在 M2 标准样本出口实现安装矩阵、残余 bias/scale 与多源高斯噪声；随机流按 seed/source/sample-index/axis 派生，不依赖 RK4 调用次数，回归脚本验证 seed 重复性、轴间独立性和 IMU STD。P10a 的独立多速率采样/传输队列已接入 MIL Host SIL，sample/capture/arrival 与 generated/suppressed/released/accepted 计数可验证；P10b 的 PPS raw capture、UTC observation 和 GNSS↔FCU epoch mapping 尚未接入。
+设 l_I 为 CG→IMU，v_I=v_CG+C*(ω×l_I)，a_I=a_CG+C*(α×l_I+ω×(ω×l_I))，其中 ω=ω_b/N0、α为同刻局部角加速度。原始 gyro=ω+C'*ω_ie^0，比力 f_I=C'*(a_I-g0+2*ω_ie^0×v_I)。当前 SIM sensor adapter 已加入固定 N0 Earth-rate/Coriolis 项、CG→IMU 杆臂角加速度与向心加速度、IMU→GNSS 天线位置/速度杆臂，并用初始速度/角速度初始化差分器、屏蔽首个无差分 IMU 样本。P07/P08 对应的杆臂与静止 IMU 物理检查已有脚本。P09 已在 M2 标准样本出口实现安装矩阵、残余 bias/scale 与多源高斯噪声；随机流按 seed/source/sample-index/axis 派生，不依赖 RK4 调用次数，回归脚本验证 seed 重复性、轴间独立性和 IMU STD。P10a 的独立多速率采样/传输队列已接入 MIL Host SIL，sample/capture/arrival/release 分别建模，物理到达与固定步长实际交付不混淆，并验证 generated/suppressed/released/accepted 计数；P10b 的 PPS raw capture、UTC observation 和 GNSS↔FCU epoch mapping 尚未接入。
 
 GNSS 点按天线 LLH/速度合成，Mag N0 场[25,0,40]uT；Baro 以合成压力高度基准100m和 Up 位移生成，再用 M2 同一压力转换函数的逆生成 pressure。该100m压力基准是明确合成假设，不把椭球高等同实测压力高度；h_baro0 由 M3 锁存。
 
