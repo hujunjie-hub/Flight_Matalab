@@ -21,11 +21,10 @@ try
     report.source_fingerprint=fingerprint(root);
     report.checks.native_kernels='PASS';
     report.checks.parameters=verify_parameter_view;
-    report.checks.sensor_event_timing=verify_sensor_event_timing;
     report.checks.osqp=verify_osqp_gate;
     report.checks.execution=verify_execution_gate;
     report.checks.plant=verify_plant_open_loop;
-    report.checks.sensor_timing=report.checks.plant.sensor_timing;
+    report.checks.sensor_event_timing=report.checks.plant.sensor_timing;
     report.checks.truth_isolation=verify_truth_isolation;
     report.checks.pid=verify_rate_pid_transaction;
     report.checks.pid_allocator_feedback=verify_pid_allocator_feedback;
