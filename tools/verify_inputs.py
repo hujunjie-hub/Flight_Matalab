@@ -100,8 +100,12 @@ def main():
         assert len(plant['contact_lever_frd_m']) == 3
         assert len(plant['skid_half_span_m']) == 2 and all(x >= 0 for x in plant['skid_half_span_m'])
         assert len(plant['plant_state0']) == 17
+        state0 = plant['plant_state0']
+        assert math.hypot(math.hypot(state0[6], state0[7]), math.hypot(state0[8], state0[9])) > 1e-12
+        assert all(x >= 0 for x in state0[13:17])
 
         flight_vehicle = read(flight / 'config/vehicle_model.yaml')
+        finite(flight_vehicle)
         assert flight_vehicle['profile'] == 'QUAD_X4' and flight_vehicle['status'] == 'SIM_ONLY'
         assert flight_vehicle['mass_kg'] > 0
         inertia = matrix3(flight_vehicle['inertia_frd_kgm2'])
