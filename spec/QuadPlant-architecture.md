@@ -63,3 +63,13 @@ IMU 原始捕获时刻在 M2 减已知2000us一次；STANDARD 消息直接携带
 P-12 对比 500us Simulink RK4 与独立 250us RK4 参考，使用相同初始状态、输入保持和无接触环境；当前参考只覆盖平滑无接触轨迹，不代表传感器队列/事件时序已验收。子步内不再触发 Chart/队列/噪声。连续块或 Aerospace 6DOF 不能直接混入活动方案；若以后整体换积分策略，需重验执行时序/符号/收敛再替换本方案。
 
 Truth 只有 SensorFrontend 和只读 Evaluator 可动态读取；初始化来自同一 Scenario 先验配置而非运行中 truth 反馈。没有 HIL 实时性或飞行安全放行结论。
+
+
+## 固定向量合同（2026-11-09）
+
+- PlantState：17 doubles，依次为 p_NED(3)、v_NED(3)、q_0b(wxyz)(4)、omega_b/N0_FRD(3)、motor_omega(4)。
+- Environment：15 doubles，1:3 wind_NED(m/s)，4:6 external_force_NED(N)，7:9 external_torque_FRD(N·m)，10 ground_enable(0/1)，11 drag_enable(0/1)，12:15 rotor_effectiveness([0,1])。
+- PlantParameters：26 doubles，依次为 mass、J(:)完整3×3矩阵（MATLAB列主序9项）、kf、motor_tau、drag(3)、rate_damping、ground_k、ground_c、ground_down、contact_lever_FRD(3)、gravity、skid_half_span(2)、ground_friction。
+- J 必须对称正定；当前 Flight SIM_ONLY 惯量数值恰好对角。刚体角加速度通过 Cholesky 求解 J*alpha=rhs，不显式求逆。
+- 所有状态/参数/wrench/environment 输入必须有限；四元数非零、电机转速非负；ground/drag 标志严格为 0/1，电机效能在 [0,1]。不合法输入由 S-Function 直接拒绝。
+- 第一版 ground_friction=0，明确不建水平地面摩擦。该参数位保留但不得在没有验证用例前改成非零。
