@@ -39,7 +39,7 @@ GroundContact fixture 用有符号间隙 gap=ground_D-p_contact_D 判定：gap�
 
 ## 4. 传感器与 M2 入口
 
-设 l_I 为 CG→IMU，v_I=v_CG+C*(ω×l_I)，a_I=a_CG+C*(α×l_I+ω×(ω×l_I))，其中 ω=ω_b/N0、α为同刻局部角加速度。原始 gyro=ω+C'*ω_ie^0，比力 f_I=C'*(a_I-g0+2*ω_ie^0×v_I)。当前 SIM sensor adapter 已加入固定 N0 Earth-rate/Coriolis 项、CG→IMU 杆臂角加速度与向心加速度、IMU→GNSS 天线位置/速度杆臂，并用初始速度/角速度初始化差分器、屏蔽首个无差分 IMU 样本。P07/P08 对应的杆臂与静止 IMU 物理检查已有脚本；安装矩阵的端到端校准、bias/scale 注入、随机噪声、独立采样队列和 sample/capture/arrival 延迟仍未完成。
+设 l_I 为 CG→IMU，v_I=v_CG+C*(ω×l_I)，a_I=a_CG+C*(α×l_I+ω×(ω×l_I))，其中 ω=ω_b/N0、α为同刻局部角加速度。原始 gyro=ω+C'*ω_ie^0，比力 f_I=C'*(a_I-g0+2*ω_ie^0×v_I)。当前 SIM sensor adapter 已加入固定 N0 Earth-rate/Coriolis 项、CG→IMU 杆臂角加速度与向心加速度、IMU→GNSS 天线位置/速度杆臂，并用初始速度/角速度初始化差分器、屏蔽首个无差分 IMU 样本。P07/P08 对应的杆臂与静止 IMU 物理检查已有脚本。P09 已在 M2 标准样本出口实现安装矩阵、残余 bias/scale 与多源高斯噪声；随机流按 seed/source/sample-index/axis 派生，不依赖 RK4 调用次数，回归脚本验证 seed 重复性、轴间独立性和 IMU STD。P10 的独立采样队列及 sample/capture/arrival 延迟仍未完成。
 
 GNSS 点按天线 LLH/速度合成，Mag N0 场[25,0,40]uT；Baro 以合成压力高度基准100m和 Up 位移生成，再用 M2 同一压力转换函数的逆生成 pressure。该100m压力基准是明确合成假设，不把椭球高等同实测压力高度；h_baro0 由 M3 锁存。
 
@@ -77,4 +77,4 @@ Truth 只有 SensorFrontend 和只读 Evaluator 可动态读取；初始化来�
 
 ## SensorParameters 合同
 
-SensorParameters 为 19 doubles：[gravity, magnetic_field_NED(3), earth_rate_NED(3), initial_velocity_NED(3), initial_rate_FRD(3), imu_to_cg_FRD(3), antenna_from_imu_FRD(3)]。IMU 杆臂按 CG→IMU = -imu_to_cg 解释，GNSS 天线杆臂为 CG→IMU + IMU→antenna。确定性 IMU 模型计算杆臂切向/向心加速度、固定 N0 Earth-rate gyro 和 Coriolis 比力；首样本差分未有效时不置 IMU valid 位。P-07/P-08 已有组件测试，P-09 噪声/bias/scale 和 P-10 多速率采样/传输延迟仍待实现。
+SensorParameters 为 19 doubles：[gravity, magnetic_field_NED(3), earth_rate_NED(3), initial_velocity_NED(3), initial_rate_FRD(3), imu_to_cg_FRD(3), antenna_from_imu_FRD(3)]。SensorModelParameters 为 54 doubles，携带随机种子、IMU/MAG 安装矩阵、残余 bias/scale、IMU/MAG/GNSS/Baro 噪声 STD。IMU 杆臂按 CG→IMU = -imu_to_cg 解释，GNSS 天线杆臂为 CG→IMU + IMU→antenna。P-07/P-08 已有组件测试；P-09 的可复现噪声和残余误差注入已实现，P-10 多速率采样/传输延迟仍待实现。
