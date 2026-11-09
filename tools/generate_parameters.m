@@ -229,5 +229,5 @@ if dictionaryChanged, saveChanges(dictionary); end
 cfg.derived=values;
 cfg.derived.EarthRotationRadps=earthRotationRadps;
 save(fullfile(validationFolder,'generated_parameters.mat'),'cfg');
-fprintf('Generated SIM_ONLY parameter view: Plant26, Allocation4x4, P0 22, Qc 19.\n');
+fprintf('Generated SIM_ONLY parameter view: Plant26, Sensor19+Model54, Timing10, Allocation4x4, P0 22, Qc 19.\n');
 end
