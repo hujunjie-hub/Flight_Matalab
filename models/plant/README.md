@@ -27,7 +27,7 @@ RotorWrench/GroundWrench 均为 FRD 六维 wrench。刚体内核将机体系力�
 
 `[mass, J(:), kf, motor_tau, dragN, dragE, dragD, rate_damping, ground_k, ground_c, ground_D, contact_lever_F, contact_lever_R, contact_lever_D, gravity, skid_half_x, skid_half_y, ground_friction]`
 
-`J(:)` 是完整 3×3 转动惯量矩阵，按 MATLAB 列优先顺序展开，占 9 个元素。刚体内核计算 `J*omega`、`omega×J*omega` 和 `J\\rhs`，支持非对角惯性耦合；参数必须对称正定。所有单位见 spec/QuadPlant-system.md。参数向量长度固定为 26。
+`J(:)` 是完整 3×3 转动惯量矩阵，按 MATLAB 列优先顺序展开，占 9 个元素。刚体内核计算 `J*omega`、`omega×J*omega` 和 `J^{-1}rhs`，支持非对角惯性耦合；参数必须对称正定。所有单位见 spec/QuadPlant-system.md。参数向量长度固定为 26。
 
 ## Fail-closed 约束
 
