@@ -23,16 +23,16 @@
 
 RotorWrench/GroundWrench 均为 FRD 六维 wrench。刚体内核将机体系力旋转到固定 NED；Environment 的外力已是 NED，外力矩是 FRD。
 
-## PlantParameters（20 doubles）
+## PlantParameters（26 doubles）
 
-[mass, Jxx, Jyy, Jzz, kf, motor_tau, dragN, dragE, dragD, rate_damping, ground_k, ground_c, ground_D, contact_lever_F, contact_lever_R, contact_lever_D, gravity, skid_half_x, skid_half_y, ground_friction]
+`[mass, J(:), kf, motor_tau, dragN, dragE, dragD, rate_damping, ground_k, ground_c, ground_D, contact_lever_F, contact_lever_R, contact_lever_D, gravity, skid_half_x, skid_half_y, ground_friction]`
 
-所有单位见 spec/QuadPlant-system.md。参数向量长度固定为 20。当前内核只支持对角惯量。
+`J(:)` 是完整 3×3 转动惯量矩阵，按 MATLAB 列优先顺序展开，占 9 个元素。刚体内核计算 `J*omega`、`omega×J*omega` 和 `J\\rhs`，支持非对角惯性耦合；参数必须对称正定。所有单位见 spec/QuadPlant-system.md。参数向量长度固定为 26。
 
 ## Fail-closed 约束
 
 - 所有状态、参数、wrench 和环境元素必须有限。
-- 质量、惯量对角线、电机推力系数、电机时间常数、地面刚度和重力必须为正。
+- 质量、惯量矩阵正定性、电机推力系数、电机时间常数、地面刚度和重力必须满足正值约束。
 - 阻力、角阻尼、接触阻尼、摩擦和 skid 半跨距不能为负。
 - 四元数范数必须非零；四路电机转速不能为负。
 - ground/drag flag 必须严格为 0 或 1；rotor_effectiveness 必须在 [0,1]。
