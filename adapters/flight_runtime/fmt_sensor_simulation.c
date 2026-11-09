@@ -46,19 +46,19 @@ static int validate_parameters(const double *p)
         return 0;
 
     /* Firmware contracts expire from physical sample time, not queue release time. */
-    if (pipeline + transports[FMT_SENSOR_SIM_IMU] >= 5000u ||
+    if (pipeline + transports[FMT_SENSOR_SIM_IMU] + FMT_SENSOR_SIM_FIXED_STEP_US >= 5000u ||
         pipeline + transports[FMT_SENSOR_SIM_IMU] >=
             (FMT_SENSOR_SIM_QUEUE_CAPACITY - 2u) * periods[FMT_SENSOR_SIM_IMU])
         return 0;
-    if (transports[FMT_SENSOR_SIM_GNSS] >= 20000u ||
+    if (transports[FMT_SENSOR_SIM_GNSS] + FMT_SENSOR_SIM_FIXED_STEP_US >= 20000u ||
         transports[FMT_SENSOR_SIM_GNSS] >=
             (FMT_SENSOR_SIM_QUEUE_CAPACITY - 2u) * periods[FMT_SENSOR_SIM_GNSS])
         return 0;
-    if (transports[FMT_SENSOR_SIM_MAG] >= 100000u ||
+    if (transports[FMT_SENSOR_SIM_MAG] + FMT_SENSOR_SIM_FIXED_STEP_US >= 100000u ||
         transports[FMT_SENSOR_SIM_MAG] >=
             (FMT_SENSOR_SIM_QUEUE_CAPACITY - 2u) * periods[FMT_SENSOR_SIM_MAG])
         return 0;
-    if (transports[FMT_SENSOR_SIM_BARO] >= 20000u ||
+    if (transports[FMT_SENSOR_SIM_BARO] + FMT_SENSOR_SIM_FIXED_STEP_US >= 20000u ||
         transports[FMT_SENSOR_SIM_BARO] >=
             (FMT_SENSOR_SIM_QUEUE_CAPACITY - 2u) * periods[FMT_SENSOR_SIM_BARO])
         return 0;
@@ -182,6 +182,7 @@ int fmt_sensor_sim_step(FmtSensorSimState *state, const double truth[18],
                     return -2;
             }
             due_events[channel] = queue->events[queue->head];
+            due_events[channel].release_us = now_us;
             due_events[channel].valid = 1u;
             queue->head = (queue->head + 1u) % FMT_SENSOR_SIM_QUEUE_CAPACITY;
             --queue->count;
