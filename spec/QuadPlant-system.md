@@ -1,54 +1,100 @@
 # QuadPlant 系统规格
 
-状态：设计草案；2026-11-05。属于[FlightSIM系统](FlightSIM-system.md)的MIL物理侧，只有FMT_MILSIM激活。
+状态：SIM_ONLY 物理模型；2026-11-09。属于 FlightSIM 的 MIL 物理侧，仅由 FMT_MILSIM 激活。
 
-## 1. 用途和证据
+## 1. 用途和证据边界
 
-为MPC/SO(3)/Rate PID/分配/FMS提供可重复的四旋翼软件闭环。已有MC-Plant可供结构/公式参考，其默认质量0.886kg、J等来自旧合成模型，未提供本项目实物推力台架、惯量、风场或ESC测试，因此不能将旧默认值当实机辨识。
+为 MPC / SO(3) / Rate PID / 控制分配 / FMS 提供可重复的四旋翼软件闭环。Plant 采用固定质量六自由度刚体、四电机一阶转速、线性空气阻力、几何门控地面接触和可控外部扰动。
 
-选取固定质量6DOF刚体、四电机一阶转速、保守线性阻力、非穿透接触近似和可控传感器效应。首版不增加未经数据支撑的复杂桨盘、柔性、CFD、真实鸟撞或电化学模型。
+本模型中的 Flight 车辆配置仍标记为 SIM_ONLY 合成配置，不代表实机辨识结果。当前没有实物推力台架、惯量测量、风场测试或 ESC 动态测试数据。真实参数接入前必须记录来源、单位、标定条件、误差和版本；不得把仿真通过解释为实机精度或飞行放行。
 
-## 2. 接口分类
+## 2. 输入、输出和坐标约定
 
 | 类别 | 输入/输出 | 单位/基准 |
 |---|---|---|
-| u 命令 | 经M7虚拟帧提交的四路等效推力 | N，相对CG的四电机定义 |
-| w 扰动 | 风NED、外力/力矩、地面、传感器故障脚本 | m/s、N、Nm；显式frame |
-| y 测量 | IMU/固定GNSS PVT、PPS及历元/Baro/Mag、SIM接地传感器 | 标准样本、独立授时事件和物理sample time |
-| z 真值 | CG p/v/q/ω、α、电机ω/推力、接触力 | double；只读评价与传感器合成 |
+| u 命令 | 经执行器帧应用后的四路目标推力 | N，电机顺序沿用 Flight |
+| w 扰动 | 风、外力、外力矩、地面开关、电机效能 | m/s、N、N·m、无量纲 |
+| y 测量 | IMU、GNSS/PPS、Baro、Mag、GroundContact | 标准样本、独立授时事件和物理采样时刻 |
+| z 真值 | CG 位置/速度/姿态/角速度、电机转速/推力、接触力 | double，只供传感器合成和只读评价 |
 
-Command→motor→force/torque→rigid body→measurement的全链必须闭合。PlantTruth不直接进入Estimator/FMS/Controller；已配置初态允许同时初始化仿真与估计器，并记录各自先验不确定度。
+PlantState 为 17 维 double：
 
-GNSS接收机和PPS固定启用；天空遮挡/卫星信号不可用是场景质量故障，不能删除GNSS模型或关闭源配置。PVT从天线运动合成，PPS/UTC从独立时钟场景生成；三者分别注入失效并接受T-GNSS-01..06验证，不从机体truth直接修改导航能力或源健康。
+[p_NED(3), v_NED(3), q_0b(wxyz)(4), omega_b/N0(3), motor_omega(4)]
 
-## 3. 范围和初始工作点
+- N0：绑定初始 Origin 的固定局部 NED。
+- FRD：机体前-右-下坐标系。
+- C_0b：FRD 向量转换到固定 N0 的方向余弦矩阵，按行存储。
+- 四元数：scalar-first [w,x,y,z]，表示 body 到 N0 的姿态。
+- omega_b/N0：机体相对固定 N0 的角速度，表达在 FRD；不是当前地理 NED 导航系角速度。
 
-局部NED、FRD、CG，名义飞行在原点附近8m窗口，倾角≤25deg、速度≤2m/s、rate≤[2,2,1]rad/s。Origin设在初始CG，局部p0=0、地面D=0.15m；初值CG位于地面上方0.15m，速度0、q单位、ω0、电机0；WGS锚点为明确合成45degN/0degE/100m椭球高，不声称是实际起飞点或AMSL。
+Environment 固定为 15 个 double，字段顺序不能私自调整：
 
-| 量 | SIM_ONLY基准 | 来源/性质 |
+| MATLAB 下标 | 字段 | 单位/坐标 |
 |---|---|---|
-| m / J | 1.5kg / diag[.02,.02,.04]kg·m² | 本规格合成fixture |
-| 臂长 / gamma | .225m / [.02,-.02,.02,-.02]m | X布局合成反扭矩比 |
-| 推力上限 | 10N/电机，总40N | 合成，满足保守MPC悬停域 |
-| k_f / motor_tau | 1e-5 N/(rad/s)^2 / .04s | 合成电机模型 |
-| drag / rate damping | diag[.1,.1,.15]kg/s / .002Nm·s/rad | 合成阻尼 |
-| 地面k/c | 5000N/m / 100N·s/m | 合成柔性接触，非实测起落架 |
-| 重力/地球常数 | 与选定WGS函数生成结果相同 | 不另手填第二个g |
+| 1:3 | wind_NED | m/s，固定 NED 风速 |
+| 4:6 | external_force_NED | N，固定 NED 外力 |
+| 7:9 | external_torque_FRD | N·m，机体 FRD 外力矩 |
+| 10 | ground_enable | 0 或 1 |
+| 11 | drag_enable | 0 或 1 |
+| 12:15 | rotor_effectiveness | 每个电机 [0,1] |
 
-真实参数接入前必须有来源、单位、标定条件/误差和版本；本轮不从现有Plant默认值推断电机、桨叶或电池型号。
+RotorWrench 和 GroundWrench 均为 FRD 机体系六维力/力矩。刚体模型只在合力计算时将机体系力旋转到固定 NED；Environment 中的外力已是 NED，不得再次旋转。Environment 外力矩明确为 FRD，不得当作 NED 力矩直接相加。
 
-## 4. 物理需求映射
+Command → Motor → RotorWrench → RigidBody → SensorSimulation 的物理因果链必须闭合。PlantTruth 不得直接进入 Estimator、FMS 或 Controller；仅允许初始化、传感器合成和只读 Evaluator 访问真值。
 
-| 需求 | 结果 | 验收 |
+## 3. 范围和 SIM_ONLY 工作点
+
+局部仿真范围为 Origin 附近约 8 m，名义倾角不超过 25°、速度不超过 2 m/s、角速度不超过 [2,2,1] rad/s。Origin 绑定初始 CG，局部位置初值为零，地面 D=0.15 m；WGS 锚点为合成 45°N/0°E/100 m 椭球高，不代表真实起飞点或 AMSL。
+
+| 参数 | 当前参数视图 | 来源/性质 |
 |---|---|---|
-| PSYS-001 | 电机/载荷与几何符号准确 | P-01..03 |
-| PSYS-002 | 刚体/重力/姿态数值一致 | P-04..06、P-12 |
-| PSYS-003 | 传感器运动学、噪声、时间有来源 | P-07..10 |
-| PSYS-004 | 接触有几何门控，初始化基准一致 | P-11、P-15..16 |
-| PSYS-005 | 扰动/真值隔离 | P-13..14 |
+| 质量 m | 1.5 kg | Flight/config/vehicle_model.yaml，仍为 SIM_ONLY |
+| 转动惯量 J | diag[0.025, 0.025, 0.04] kg·m² | Flight 合成配置；当前内核只支持对角惯量 |
+| 电机位置 | (+0.18,-0.18)、(+0.18,+0.18)、(-0.18,+0.18)、(-0.18,-0.18) m | Flight 合成配置，FRD |
+| 径向力臂 | 0.254558 m | 从电机坐标推导，不独立手填 |
+| 偏航力矩系数 | [-0.02,+0.02,-0.02,+0.02] m | Flight 合成配置，带符号 |
+| 电机推力限制 | 0～15 N/电机 | Flight 合成配置 |
+| 电机推力系数 k_f | 1e-5 N/(rad/s)² | SIM_ONLY 合成参数 |
+| 电机时间常数 | 0.03 s | Flight 合成配置，四电机当前相同 |
+| 线性阻力 | [0.1,0.1,0.15] kg/s | SIM_ONLY 合成参数 |
+| 角速度阻尼 | 0.002 N·m·s/rad | SIM_ONLY 合成参数 |
+| 地面刚度/阻尼 | 5000 N/m / 100 N·s/m | SIM_ONLY 接触近似，不是实测起落架 |
+| 地面 D | 0.15 m | 固定局部 NED 场景参数 |
 
-## 5. 验收与限制
+注意区分两个不同的限制：Plant 的物理电机推力上限来自 Flight 车辆配置，为 15 N；当前独立 M7/DShot 帧量化夹具的力曲线为 0～10 N。后者不是 Plant 的物理推力上限，二者不可共用同一个参数字段。
 
-验收先子系统开环、再物理侧开环、最后系统闭环；详见[Plant测试](QuadPlant-test-plan.md)。应满足静止比力、单电机扭矩符号、对称悬停、能量/无推力极限、步长减半收敛和接触有限值。只有这些证据通过，才把Plant用于控制整定。
+Plant 初始状态 p_D=0、接地点杆臂 D=0.15 m、地面 D=0.15 m，代表无预压缩的几何接触初值。开启地面接触后会出现短暂悬架压缩/稳定过程；它不是静态受力平衡初值。静态支撑验收另使用 delta=mg/k 的压缩量，当前约 2.94 mm。
 
-目标是功能MIL，不要求实时运行或VR渲染；Host运行慢不能推断固件超时，Host运行快也不能证明H723可用。外层fixed-step discrete 500us，Plant内部显式RK4；传感器延迟、量化code和固定500us帧应用延迟进入闭环，不能用理想状态反馈掩盖延迟。
+## 4. 动力学和接触
+
+电机模型：
+
+omega_cmd = sqrt(clamp(f_cmd, f_min, f_max) / k_f)
+
+omega_dot = (omega_cmd - omega) / tau
+
+f_actual = k_f * omega^2 * rotor_effectiveness
+
+转子力沿 body -Z 方向。力矩由 r_i × F_i 和带符号偏航反扭矩系数构成。电机编号和几何矩阵从 Flight 配置生成；不允许在 MATLAB 中另写一套电机顺序。
+
+刚体模型：
+
+p_dot = v_NED
+
+v_dot = C_0b * F_body / m + F_external_NED / m + [0,0,g]
+
+omega_dot = J^-1 * (tau_body + tau_external_FRD - omega × J*omega - D*omega)
+
+q_dot = 0.5 * q ⊗ [0, omega_b/N0]
+
+当前刚体内核使用对角惯量。参数生成时会拒绝非对角惯量，避免静默丢弃惯性耦合项。若未来 Flight 引入非对角惯量，必须扩展完整矩阵动力学和测试，不能仅修改 YAML。
+
+空气阻力为 -D_v * (v_NED - wind_NED)，仅在 drag_enable=1 时生效。
+
+地面接触按四个接触点逐点计算。只有接触点进入地面后才产生弹簧/阻尼力；离地时严格为零。法向力向 NED Up 方向作用，并通过接触杆臂产生 CG 力矩。水平摩擦采用正则化 Coulomb 近似。模型不做状态瞬移或穿透投影修正；基准落体穿透超过 2 cm 或出现 NaN/Inf 即失败。
+
+## 5. 验收和限制
+
+先做组件开环，再做 Plant 物理开环，最后才允许进入系统闭环。当前代码覆盖电机、载荷、自由落体、悬停、姿态符号、RK4 步长收敛、损失效能、接触、坐标变换、风阻和输入拒绝。传感器杆臂、Earth 项、噪声统计、采样延迟和真值隔离仍需独立验收。
+
+目标是功能 MIL，不要求实时运行。Host 运行快慢不能推断 H723 实时性。当前 Plant 采用 double 精度和固定步长显式 RK4；固件公开接口的 single 转换、传感器延迟和执行器帧应用延迟属于系统闭环边界，不可用理想状态反馈掩盖。
