@@ -33,7 +33,8 @@ static int validate_parameters(const double *p)
     if (!p || !finite_values(p, FMT_SENSOR_SIM_PARAMETER_COUNT)) return 0;
     for (unsigned i = 0; i < 4; ++i) {
         if (!integer_value(p[period_index[i]], &periods[i]) ||
-            periods[i] < 500u || periods[i] % 500u != 0u ||
+            (i == FMT_SENSOR_SIM_IMU ? periods[i] < 1000u || periods[i] % 1000u != 0u
+                                  : periods[i] < 500u || periods[i] % 500u != 0u) ||
             !integer_value(p[delay_index[i]], &delays[i])) return 0;
     }
     if (!integer_value(p[FMT_TIMING_IMU_PIPELINE_DELAY], &pipeline) ||
@@ -96,21 +97,8 @@ int fmt_sensor_sim_step(FmtSensorSimState *state, const double truth[18],
     elapsed = now_us - state->epoch_us;
     memset(due_events, 0, sizeof(FmtSensorSimEvent) * 4u);
 
-    /* Release events only when their arrival time has elapsed. The event
-     * retains sample/capture/arrival epochs; the 500-us task observes it on
-     * the first scheduler tick at or after arrival. */
-    for (unsigned channel = 0; channel < 4; ++channel) {
-        FmtSensorSimQueue *queue = &state->queues[channel];
-        if (queue->count && queue->events[queue->head].arrival_us <= now_us) {
-            due_events[channel] = queue->events[queue->head];
-            due_events[channel].valid = 1u;
-            queue->head = (queue->head + 1u) % FMT_SENSOR_SIM_QUEUE_CAPACITY;
-            --queue->count;
-        }
-    }
-
-    if (elapsed == 0u) return 0;
-    for (unsigned channel = 0; channel < 4; ++channel) {
+    if (elapsed != 0u) {
+        for (unsigned channel = 0; channel < 4; ++channel) {
         const uint64_t period = (uint64_t)p[period_index[channel]];
         const unsigned mask = (unsigned)truth[FMT_SENSOR_VALID];
         FmtSensorSimEvent event;
@@ -133,6 +121,19 @@ int fmt_sensor_sim_step(FmtSensorSimState *state, const double truth[18],
         }
         if (!finite_values(event.values, width[channel])) return -1;
         if (!queue_push(&state->queues[channel], &event)) return -2;
+        }
+    }
+
+    /* Release due events after scheduling so a zero-delay source is delivered
+     * at its sample epoch, not one fixed-step later. */
+    for (unsigned channel = 0; channel < 4; ++channel) {
+        FmtSensorSimQueue *queue = &state->queues[channel];
+        if (queue->count && queue->events[queue->head].arrival_us <= now_us) {
+            due_events[channel] = queue->events[queue->head];
+            due_events[channel].valid = 1u;
+            queue->head = (queue->head + 1u) % FMT_SENSOR_SIM_QUEUE_CAPACITY;
+            --queue->count;
+        }
     }
     return 0;
 }
