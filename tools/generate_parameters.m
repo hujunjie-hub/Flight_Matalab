@@ -86,7 +86,7 @@ assert(failure==0,'Flight:Inertia','Inertia must be positive definite.');
 runtimePath=fullfile(root,'..','Flight','applications','runtime','runtime.c');
 runtimeSource=fileread(runtimePath);
 gravityToken=regexp(runtimeSource, ...
-    'out->guidance\\.payload\\.gravity_mps2\\s*=\\s*([0-9.]+)f','tokens','once');
+    'out->guidance\.payload\.gravity_mps2\s*=\s*([0-9.]+)f','tokens','once');
 assert(~isempty(gravityToken),'Flight:GravitySource', ...
     'Could not find the Flight Host SIL gravity assignment.');
 gravity=str2double(gravityToken{1});
