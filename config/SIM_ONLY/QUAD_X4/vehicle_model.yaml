@@ -8,6 +8,7 @@
   "rate_damping_nm_s": 0.002,
   "ground_stiffness_npm": 5000,
   "ground_damping_ns_pm": 100,
+  "ground_friction": 0,
   "ground_down_m": 0.15,
   "skid_half_span_m": [0.12, 0.12],
   "contact_lever_frd_m": [0,0,0.15],
