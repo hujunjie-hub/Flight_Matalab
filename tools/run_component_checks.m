@@ -1,5 +1,5 @@
 function report=run_component_checks(gccDir)
-%RUN_COMPONENT_CHECKS Rebuild the Host SIL/model ABI and run implemented component gates.
+%RUN_COMPONENT_CHECKS Rebuild the Host SIL/model ABI and run current-branch MATLAB acceptance gates.
 if nargin<1, gccDir='D:\STM32CubeCLT\mingw64\bin'; end
 root=flight_startup;
 file=fullfile(root,'work','validation','component_checks.json');

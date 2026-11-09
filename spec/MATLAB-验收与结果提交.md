@@ -196,7 +196,7 @@ P-14 不在上述 Plant 开环脚本中执行，由 `tests/verify_truth_isolatio
 - 同级 `Flight` 仓库的 branch/commit SHA，以及本项目 `git rev-parse HEAD` 输出。
 - 若失败，保留完整异常标识、错误消息、堆栈、失败前后的关键输出；不要只发最后一行红色报错或截图。
 
-建议运行时保存命令窗口日志：
+**必须保存命令窗口日志**，否则缺少构建/仿真过程中的完整上下文：
 
 ```matlab
 root=flight_startup;
