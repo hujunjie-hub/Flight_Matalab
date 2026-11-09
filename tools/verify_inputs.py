@@ -165,16 +165,16 @@ def main():
             assert (isinstance(sensor[field], int) and not isinstance(sensor[field], bool)
                     and 0 <= sensor[field] <= upper), f'{field} must be a bounded nonnegative integer microsecond value'
         assert (
-            sensor['imu_pipeline_delay_us'] + sensor['imu_transport_delay_us'] < 5000
+            sensor['imu_pipeline_delay_us'] + sensor['imu_transport_delay_us'] + 500 < 5000
         ), 'IMU arrival must precede the firmware 5-ms sample expiry'
         assert (
-            sensor['gnss_transport_delay_us'] < 20000
+            sensor['gnss_transport_delay_us'] + 500 < 20000
         ), 'GNSS arrival must precede the firmware 20-ms sample expiry'
         assert (
-            sensor['baro_transport_delay_us'] < 20000
+            sensor['baro_transport_delay_us'] + 500 < 20000
         ), 'Barometer arrival must precede the firmware 20-ms sample expiry'
         assert (
-            sensor['mag_transport_delay_us'] < 100000
+            sensor['mag_transport_delay_us'] + 500 < 100000
         ), 'Magnetometer arrival must precede the firmware 100-ms sample expiry'
         for field in ('imu_sample_period_us', 'mag_sample_period_us',
                       'baro_sample_period_us', 'gnss_sample_period_us'):
