@@ -140,13 +140,24 @@ finish(model);
 end
 
 if startStage<=8
-model='FMT_PlantSensors';make(model,folder);
-fmt_edit(model,'root',{
-    settings(model),port('Inport','PlantState','x',1,17), ...
-    port('Inport','SignedGapM','gap',2,1),port('Outport','SensorFrame','out',1,18), ...
-    block('S-Function','RigidBodySensorKinematics','sensor', ...
-        struct('Parameters','SensorParameters,SensorModelParameters','FunctionName','fmt_plant_sensors_sfun')), ...
-    wire('#x.y1','#sensor.u1'),wire('#gap.y1','#sensor.u2'),wire('#sensor.y1','#out.u1')});
+model='FMT_PlantSensors';
+modelFile=fullfile(folder,[model '.slx']);
+if isfile(modelFile)
+    if bdIsLoaded(model), close_system(model,0); end
+    load_system(modelFile);
+    sensorBlock=[model '/RigidBodySensorKinematics'];
+    assert(getSimulinkBlockHandle(sensorBlock)>0,'Flight:SensorModelBlock', ...
+        'Existing FMT_PlantSensors is missing RigidBodySensorKinematics.');
+    set_param(sensorBlock,'Parameters','SensorParameters,SensorModelParameters');
+else
+    make(model,folder);
+    fmt_edit(model,'root',{
+        settings(model),port('Inport','PlantState','x',1,17), ...
+        port('Inport','SignedGapM','gap',2,1),port('Outport','SensorFrame','out',1,18), ...
+        block('S-Function','RigidBodySensorKinematics','sensor', ...
+            struct('Parameters','SensorParameters,SensorModelParameters','FunctionName','fmt_plant_sensors_sfun')), ...
+        wire('#x.y1','#sensor.u1'),wire('#gap.y1','#sensor.u2'),wire('#sensor.y1','#out.u1')});
+end
 finish(model);
 end
 end
