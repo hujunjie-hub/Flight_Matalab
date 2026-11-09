@@ -3,8 +3,21 @@ function build_pid_allocation_probe
 root=fileparts(fileparts(mfilename('fullpath')));folder=fullfile(root,'tests','g2','models');
 if ~isfolder(folder),mkdir(folder);end
 addpath(folder);model='FMT_PIDAllocationProbe';
-assert(~bdIsLoaded(model)&&~isfile(fullfile(folder,[model '.slx'])),'Flight:Exists','Feedback probe exists.');
-new_system(model);open_system(model);save_system(model,fullfile(folder,[model '.slx']));
+modelFile=fullfile(folder,[model '.slx']);
+if isfile(modelFile)
+    if bdIsLoaded(model), save_system(model); close_system(model); end
+    load_system(modelFile);
+    blocks=find_system(model,'SearchDepth',1,'BlockType','S-Function');
+    assert(numel(blocks)==1,'Flight:FeedbackModel','Expected one allocator S-Function.');
+    set_param(blocks{1},'Parameters','AllocationMatrices');
+    result=char(model_check(model,'root','["all"]'));
+    assert(contains(result,'status: healthy'),'Flight:FeedbackStructure','%s',result);
+    save_system(model,modelFile);
+    close_system(model);
+    return;
+end
+assert(~bdIsLoaded(model),'Flight:Exists','Feedback probe is already loaded.');
+new_system(model);open_system(model);save_system(model,modelFile);
 ids=fmt_edit(model,'root',{
     struct('op','configure','target',['config:' model],'params',struct('SolverType','Fixed-step','Solver','FixedStepDiscrete', ...
     'FixedStep','0.001','EnableMultiTasking','off','DataDictionary','Flight_Parameters.sldd', ...
@@ -19,15 +32,13 @@ ids=fmt_edit(model,'root',{
     b('Constant','ThrustRequest','thrust',struct('Value','15')), ...
     b('Constant','MotorBounds','bounds',struct('Value','[zeros(4,1);10*ones(4,1)]')), ...
     b('SubSystem','RatePID','pid',struct), ...
-    b('S-Function','Allocator','allocate',struct('Parameters','AllocationGeometry','FunctionName','fmt_x4_allocate_sfun')), ...
+    b('S-Function','Allocator','allocate',struct('Parameters','AllocationMatrices','FunctionName','fmt_x4_allocate_sfun')), ...
     b('Mux','RequestedWrench','wrench',struct('Inputs','2')), ...
     b('Outport','RequestedTorque','tau',struct('Port','1')),b('Outport','Integral','I',struct('Port','2')), ...
     b('Outport','CommitCount','count',struct('Port','3')),b('Outport','AllocationValid','valid',struct('Port','4')), ...
     b('Outport','AllocatedForce','force',struct('Port','5')), ...
     b('Terminator','DerivativeDiagnostic','unusedD',struct),b('Terminator','AchievedWrench','unusedW',struct), ...
     b('Terminator','AllocationScale','unusedScale',struct)});
-% Current allocation residual must stay inside one native M6 diagram scope.
-% A separate PID Model Reference hides partial feedthrough behind its boundary.
 build_rate_pid(model,ids.pid);
 connections={ ...
     w('#desired.y1','#pid.u1'),w('#omega.y1','#pid.u2'),w('#dt.y1','#pid.u3'), ...
@@ -43,9 +54,12 @@ for k=1:numel(connections)
     end
 end
 fmt_edit(model,'root',connections,'incremental');
-result=char(model_check(model,'root','["all"]'));assert(contains(result,'status: healthy'),'Flight:FeedbackStructure','%s',result);
-save_system(model);
-fid=fopen(fullfile(root,'tests','g2','pid_feedback_probe_ids.json'),'w');cleanup=onCleanup(@()fclose(fid));
+result=char(model_check(model,'root','["all"]'));
+assert(contains(result,'status: healthy'),'Flight:FeedbackStructure','%s',result);
+save_system(model,modelFile);
+close_system(model);
+fid=fopen(fullfile(root,'tests','g2','pid_feedback_probe_ids.json'),'w');
+cleanup=onCleanup(@()fclose(fid));
 fprintf(fid,'%s\n',jsonencode(ids));
 end
 
