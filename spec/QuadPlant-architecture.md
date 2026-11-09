@@ -31,7 +31,7 @@ GeodesyAdapter 严格区分点和向量：r_e=r0_e+C_e0*p0，v_e=C_e0*v0，R_0b=
 
 SIM_ONLY 专属参数包括转速到推力系数、空气阻力、转动阻尼和地面接触。ω_cmd=sqrt(max(f_cmd,0)/k_f)，motorω_dot=(ω_cmd-motorω)/tau，f_actual=k_f*motorω²。Plant 物理电机上限跟随 Flight vehicle config；当前 M7 DShot 虚拟量化曲线仍限制命令为0..10N。F_i=[0,0,-f_i]，τ_i=r_i×F_i+[0,0,gamma_i*f_i]。loss-of-effectiveness 是 Plant 内部物理故障，不把该真值直接写 M6/M7 能力 mask。
 
-相对空气速度阻力 -Fdrag*v_air，转动阻尼 -Kω；所有外力先注明 frame 再变换。PlantParameters 固定19项：p[0]=mass，p[1..3]=diag(J)，p[4]=kf，p[5]=motor tau，p[6..8]=NED drag，p[9]=rate damping，p[10..12]=ground stiffness/damping/down，p[13..15]=contact lever FRD，p[16]=gravity，p[17..18]=skid half-span。参数由 generate_parameters 统一生成；任何维度或物理范围不匹配都应在模型运行前失败。M7 输入 N 来自量化 code 逆映射，无第二次 PWM 解释。电机ω/实际力只到传感器和只读评价，ESC反馈 NONE。
+相对空气速度阻力 -Fdrag*v_air，转动阻尼 -Kω；所有外力先注明 frame 再变换。PlantParameters 固定26项：p[0]=mass，p[1..9]=完整 J(:)（MATLAB列主序），p[10]=kf，p[11]=motor tau，p[12..14]=NED drag，p[15]=rate damping，p[16]=ground stiffness，p[17]=ground damping，p[18]=ground down，p[19..21]=contact lever FRD，p[22]=gravity，p[23..24]=skid half-span，p[25]=ground friction。参数由 generate_parameters 统一生成；任何维度、对称正定性或物理范围不匹配都应在模型运行前失败。M7 输入 N 来自量化 code 逆映射，无第二次 PWM 解释。电机ω/实际力只到传感器和只读评价，ESC反馈 NONE。
 
 接触必须先按几何门控：p_contact_D<ground_D 时 Fn=0，与下降速度无关；否则 δ=p_contact_D-ground_D，Fn=max(0,k*δ+c*v_contact_D)，向 N0 Up 作用并产生 CG 力矩。接地之外不得有阻尼悬浮力；离地后不粘地，不用状态投影/瞬移纠正穿透。第一版地面摩擦参数明确为 μ=0，不产生水平接触力；超2cm基准穿透或非有限即 FAIL。
 
