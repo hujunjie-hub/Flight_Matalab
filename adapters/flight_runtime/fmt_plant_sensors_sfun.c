@@ -96,7 +96,8 @@ static void mdlOutputs(SimStruct *S, int_T tid)
         ssSetErrorStatus(S, "SensorParameters must contain exactly 19 finite doubles.");
         return;
     }
-    if (!isfinite(dt) || dt <= 0.0 || !isfinite(gap)) {
+    if (!(parameter[PARAM_GRAVITY] > 0.0) || !isfinite(dt) || dt <= 0.0 || !isfinite(gap) ||
+        !fmt_finite_vector(previous, SENSOR_STATE_COUNT)) {
         ssSetErrorStatus(S, "Invalid sensor sample interval or ground gap.");
         return;
     }
@@ -172,6 +173,9 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     if (imu_derivative_valid) sensor[FMT_SENSOR_VALID] |= FMT_IMU_VALID;
     /* GroundContact: signed gap <= 1 mm and penetration <= 20 mm. */
     sensor[FMT_SENSOR_CONTACT] = (gap <= 0.001 && gap >= -0.02) ? 1.0 : 0.0;
+    if (!fmt_finite_vector(sensor, FMT_SENSOR_WIDTH)) {
+        ssSetErrorStatus(S, "Nonfinite sensor output from PlantSensorKinematics.");
+    }
 }
 
 #define MDL_UPDATE
