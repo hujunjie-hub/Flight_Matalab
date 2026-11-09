@@ -49,6 +49,21 @@ def main():
         baseline = read(ROOT / 'config/flight_baseline.json')
         for name, digest in baseline['sources_sha256'].items():
             assert sha(flight / name) == digest, f'Flight baseline changed: {name}'
+
+        flight_vehicle = read(flight / 'config/vehicle_model.yaml')
+        finite(flight_vehicle)
+        assert flight_vehicle['profile'] == 'QUAD_X4' and flight_vehicle['status'] == 'SIM_ONLY'
+        assert flight_vehicle['mass_kg'] > 0 and len(flight_vehicle['inertia_frd_kgm2']) == 9
+        assert len(flight_vehicle['motor_position_frd_m']) == 4
+        assert all(len(position) == 3 for position in flight_vehicle['motor_position_frd_m'])
+        assert len(flight_vehicle['motor_yaw_torque_ratio_m']) == 4
+        assert len(flight_vehicle['motor_min_thrust_n']) == 4
+        assert len(flight_vehicle['motor_max_thrust_n']) == 4
+        assert len(flight_vehicle['motor_time_constant_s']) == 4
+        assert all(0 <= lo < hi for lo, hi in zip(
+            flight_vehicle['motor_min_thrust_n'], flight_vehicle['motor_max_thrust_n']))
+        assert all(tau > 0 for tau in flight_vehicle['motor_time_constant_s'])
+
         osqp = (ROOT / lock['osqp']['root']).resolve()
         assert sha(osqp / 'UPSTREAM_LOCK.json') == lock['osqp']['runtime_lock_sha256'], 'OSQP runtime lock changed'
         runtime = read(osqp / 'UPSTREAM_LOCK.json')
@@ -57,6 +72,7 @@ def main():
         kf = ROOT / lock['kf_gins_matlab']['path']
         for name, digest in lock['kf_gins_matlab']['files'].items():
             assert sha(kf / name) == digest, f'KF-GINS reference changed: {name}'
+
         hashes = {}
         config = {}
         for file in sorted((ROOT / 'config/SIM_ONLY/QUAD_X4').iterdir()):
@@ -65,25 +81,33 @@ def main():
                 finite(value)
                 assert value['status'] == 'SIM_ONLY', f'Missing synthetic source tag: {file.name}'
                 config[file.stem] = value
-                hashes[str(file.relative_to(ROOT)).replace('\\', '/')] = sha(file)
+                hashes[str(file.relative_to(ROOT)).replace('\\\\', '/')] = sha(file)
         assert set(config) == {'vehicle_model', 'sensor_alignment', 'estimator_tuning',
                                'controller_tuning', 'profile_manifest'}, 'Expected four COREs and readonly Profile'
+
         p = config['profile_manifest']
         for flag in ('gnss_installed', 'gnss_enabled', 'pps_installed', 'pps_enabled'):
             assert p.get(flag) is True, f'Fixed device flag must be true: {flag}'
         assert p['implementation'] == 'HOST_NATIVE_V2' and p['firmware_equivalent'] is False
         assert p['base_step_us'] == 500
+        assert len(p['dshot_force_curve_n']) == 2 and p['dshot_force_curve_n'][1] > p['dshot_force_curve_n'][0]
+        assert p['frame_slew_nps'] * p['frame_period_ticks'] * .0005 >= max(p['dshot_force_curve_n']) / 1999
+
         v = config['vehicle_model']
-        assert v['mass_kg'] > 0 and len(v['inertia_frd_kgm2']) == 9
-        assert len(v['plant_state0']) == 17 and len(v['motor_max_thrust_n']) == 4
-        assert all(0 <= lo < hi for lo, hi in zip(v['motor_min_thrust_n'], v['motor_max_thrust_n']))
-        assert p['frame_slew_nps'] * p['frame_period_ticks'] * .0005 >= max(v['motor_max_thrust_n']) / 1999
+        assert v['motor_thrust_coefficient_n_s2'] > 0
+        assert len(v['drag_ned_kgps']) == 3 and all(value >= 0 for value in v['drag_ned_kgps'])
+        assert v['ground_stiffness_npm'] > 0 and v['ground_damping_ns_pm'] >= 0
+        assert len(v['plant_state0']) == 17
+        assert len(v['origin_llh_rad_m']) == 3
+        assert len(config['sensor_alignment']['magnetic_field_ned_ut']) == 3
+
         e = config['estimator_tuning']
         assert (e['error_state_rank'], e['noise_rank']) == (22, 19)
         assert e['bias_correlation_time_s'] > 0
         report.update(status='PASS', headers_verified=len(lock['headers']),
                       osqp_files_verified=len(runtime['files']),
                       kf_files_verified=len(lock['kf_gins_matlab']['files']),
+                      flight_vehicle_source='Flight/config/vehicle_model.yaml',
                       config_hashes=hashes,
                       config_content_sha256=hashlib.sha256(json.dumps(config, sort_keys=True, separators=(',', ':')).encode()).hexdigest())
     except Exception as error:
@@ -97,4 +121,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
