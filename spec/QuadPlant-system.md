@@ -50,6 +50,6 @@ GNSS 接收机和 PPS 固定启用；天空遮挡/卫星信号不可用是场景
 
 ## 5. 验收与限制
 
-验收先子系统开环、再集成物理开环、最后 MIL 闭环；详见 QuadPlant-test-plan.md。当前已有部分 Plant 数学测试脚本，但并不代表已在 MATLAB 执行。只有 P-01..17 适用项和共享 FCS 合格，才可把 Plant 用于控制整定。
+验收先子系统开环、再集成物理开环、最后 MIL 闭环；详见 QuadPlant-test-plan.md。当前已有部分 Plant 数学测试脚本，但并不代表已在 MATLAB 执行。只有 P-01..18 适用项和共享 FCS 合格，才可把 Plant 用于控制整定。
 
 目标是功能 MIL，不要求实时运行或 VR 渲染；Host 运行慢不能推断固件超时，Host 运行快也不能证明 H723 可用。外层 fixed-step discrete 500us，Plant 内部显式 RK4；传感器延迟、量化 code 和固定500us帧应用延迟进入闭环，不能用理想状态反馈掩盖延迟。
