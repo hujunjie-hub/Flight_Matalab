@@ -22,7 +22,7 @@ def main(project, flight, build, dll):
     paths = [flight / name for name in ("SConstruct", ".config") if (flight / name).is_file()]
     for folder in ("config", "applications", "middleware", "sensor_device", "board",
                    "libraries/HAL_Drivers/drivers", "tests/runtime/stubs", "tests/simulation",
-                   "tests/time"):
+                   "tests/time", "tests/drivers"):
         paths.extend(p for p in (flight / folder).rglob("*")
                      if p.is_file() and p.suffix in {".h", ".hpp", ".c", ".cpp", ".yaml", ".ps1"})
     lib = ctypes.CDLL(str(dll))
