@@ -161,18 +161,21 @@ values.RateIlimit=c.rate_integral_limit_nm(:);
 values.FrameQuantizerParameters=[profile.dshot_force_curve_n(2);profile.frame_slew_nps];
 
 fields=fieldnames(values);
+dictionaryChanged=false;
 for k=1:numel(fields)
     name=fields{k};
     if exist(section,name)
         entry=getEntry(section,name);
         if ~isequal(getValue(entry),values.(name))
             setValue(entry,values.(name));
+            dictionaryChanged=true;
         end
     else
         addEntry(section,name,values.(name));
+        dictionaryChanged=true;
     end
 end
-saveChanges(dictionary);
+if dictionaryChanged, saveChanges(dictionary); end
 cfg.derived=values;
 cfg.derived.EarthRotationRadps=earthRotationRadps;
 save(fullfile(validationFolder,'generated_parameters.mat'),'cfg');
