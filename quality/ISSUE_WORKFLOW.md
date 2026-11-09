@@ -136,7 +136,7 @@ pwsh -File .\tools\archive_validation_run.ps1
 
 - 每次发现问题，Issue 必须引用发现它的 `RUN_ID` 和具体报告。
 - 修复后，Issue 必须同时引用修复 commit/PR 和回归 `RUN_ID`。
-- 优先将 ZIP 附加到对应 GitHub Issue；若文件过大或附件不可用，将 ZIP 发给验收方，并在 Issue 中记录文件名、SHA-256 和提交日期。
+- 优先将 ZIP 附加到对应 GitHub Issue；若文件过大或附件不可用，将 ZIP 发给验收方，并在 Issue 中记录文件名、ZIP SHA-256 和提交日期。
 - 不把每次原始 MAT、日志和临时报告提交到 Git，避免仓库膨胀；需要作为阶段基线长期保存的摘要/manifest，另行经过评审后提交到 `spec/validation/`。
 - 多个问题由同一运行发现时，可以共用同一个 RUN_ID/ZIP，不重复复制整套证据；各 Issue 指向相关报告和文件。
 

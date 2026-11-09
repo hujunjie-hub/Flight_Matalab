@@ -72,5 +72,6 @@
     "no PARTIAL/NOT_RUN/UNVERIFIED promoted to PASS",
     "issue body and append-only status history updated"
   ],
-  "issue_numbering_note": "GitHub Issues and Pull Requests share the repository issue-number sequence; derive FMAT ID from the actual GitHub Issue number. Do not assume the first issue is #1."
+  "issue_numbering_note": "GitHub Issues and Pull Requests share the repository issue-number sequence; derive FMAT ID from the actual GitHub Issue number. Do not assume the first issue is #1.",
+  "zip_checksum_sidecar": "work/validation/archives/<RUN_ID>.zip.sha256"
 }

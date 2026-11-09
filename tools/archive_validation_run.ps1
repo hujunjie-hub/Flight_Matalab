@@ -114,6 +114,9 @@ Compress-Archive -Path (Join-Path $runDirectory "*") -DestinationPath $zipPath -
 if (-not (Test-Path -LiteralPath $zipPath -PathType Leaf)) {
     throw "Archive ZIP was not created: $zipPath"
 }
+$zipSha256 = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+$checksumPath = "${zipPath}.sha256"
+"${zipSha256}  $(Split-Path $zipPath -Leaf)" | Set-Content -LiteralPath $checksumPath -Encoding ascii
 
 # Preserve the immutable archive, then clear only the current top-level workspace.
 foreach ($item in $payloadItems) {
@@ -125,6 +128,8 @@ foreach ($item in $payloadItems) {
     component_status = $componentStatus
     archive_directory = $runDirectory
     archive_zip = $zipPath
+    archive_zip_sha256 = $zipSha256
+    checksum_file = $checksumPath
     artifact_count = $artifactHashes.Count
     source_fingerprint_sha256 = $sourceFingerprint
 }
