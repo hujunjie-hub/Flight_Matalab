@@ -25,14 +25,15 @@
 - Plant S-Function 对状态、环境、wrench、参数和输出做有限值检查；ground/drag 开关严格为 0/1，rotor_effectiveness 限定 [0,1]。
 - 第一版地面摩擦系数明确设为 0；增加静态 mg/k 支撑、无水平摩擦、FRD/NED 变换、风阻、250 μs 独立 RK4 参考和输入拒绝测试。
 - 传感器参数合同增加 SensorModelParameters（54 项），包括 IMU/MAG 安装矩阵、gyro/accel/mag 残余 bias/scale、IMU/MAG/GNSS/Baro 噪声 STD 和固定随机种子；随机数由 seed/source/sample-index/axis 无状态派生，不随 RK4 子步或调用顺序变化。SensorTimingParameters（10 项）已接入 MIL Host SIL 独立事件队列：IMU/GNSS/MAG/Baro 分别按配置周期采样，保留 sample/capture/arrival/release 四个时间，区分物理到达和 500 μs 队列实际交付时刻；队列统计 generated/suppressed/released/accepted，并验证缺测导致的序号缺口、计数守恒、队列容量和固件样本有效期。
-- 当前代码覆盖 P-01～P-09、P-11～P-13、P-15～P-21；P-07/P-08 覆盖杆臂运动学和静止 IMU，P-09 已加入相同 seed 重复性、不同 seed 独立性、IMU 噪声 STD 95% 卡方区间、轴间相关性及 bias/scale 注入测试。P-10a 的多速率队列、sample/capture/arrival 和缺测计数已有独立 `verify_sensor_event_timing`；P-10b 的真实 Flight TimeService 核心已由 `verify_time_service_sync` 单独回归，但 Host MIL 的 GNSS PPS raw capture、UM982 RECTIME 和 UTC epoch/time-domain 注入链仍未接入。`pps_backend` 明确为 `DISABLED_LOCAL_MONOTONIC`，因此 P-10 整体仍为 PARTIAL。P-14 已由 verify_truth_isolation 实现并纳入 run_component_checks。
+- 当前代码覆盖 P-01～P-09、P-11～P-13、P-15～P-21；P-07/P-08 覆盖杆臂运动学和静止 IMU，P-09 已加入相同 seed 重复性、不同 seed 独立性、IMU 噪声 STD 95% 卡方区间、轴间相关性及 bias/scale 注入测试。P-10a 的多速率队列、sample/capture/arrival 和缺测计数已有独立 `verify_sensor_event_timing`；P-10b 的真实 Flight TimeService 核心已由 `verify_time_service_sync` 单独回归；GNSS PVT 失锁、UTC/PPS 独立失效、Holdover 和重捕获由 `verify_gnss_time_recovery` 复用 Flight 上游测试回归，但 Host MIL 的 GNSS PPS raw capture、UM982 RECTIME 和 UTC epoch/time-domain 注入链仍未接入。`pps_backend` 明确为 `DISABLED_LOCAL_MONOTONIC`，因此 P-10 整体仍为 PARTIAL。P-14 已由 verify_truth_isolation 实现并纳入 run_component_checks。
 
 本阶段需在用户 MATLAB 环境执行 run_component_checks；该入口会先运行输入预检、重建 build_native_kernels、生成参数字典，再执行 verify_parameter_view、verify_plant_open_loop（内部调用 verify_sensor_event_timing）及已实现组件检查。也可单独执行 build_native_kernels、generate_parameters、verify_parameter_view 和 verify_plant_open_loop；后者会调用 verify_sensor_event_timing。需要只调试队列时可单独执行 verify_sensor_event_timing。必须保存实际运行报告、MATLAB 版本、求解器与模型 Hash。Plant 报告必须保持 PARTIAL，不能解释为完整物理模型验收、HIL 实时性 PASS 或实机飞行放行。
 
 ## P-10b 时间服务核心回归（代码状态）
 
 - 新增 fmt_time_service_probe MEX wrapper，直接编译同级 Flight/sensor_device/time_base/systime.c，并调用上游 Flight/tests/time/test_time_service.c，不复制或重写 TimeService 算法。
-- build_native_kernels 会构建该 MEX；run_component_checks 会执行 verify_time_service_sync 并保存 work/validation/time_service_sync_report.json。
+- 新增 fmt_gnss_outage_probe MEX wrapper，编译同级 Flight 的 systime.c、sensor_sample.c、sensor_filter.c、sensor_calibration.c，并调用 tests/drivers/test_gnss_outage.c；覆盖 GNSS 无 Fix/PVT 过期、PPS 与 UTC 分别失效、Holdover、PPS 重捕获和坏边沿拒绝。
+- build_native_kernels 会构建两个 MEX；run_component_checks 会执行 verify_time_service_sync 和 verify_gnss_time_recovery，分别保存 work/validation/time_service_sync_report.json 与 work/validation/gnss_time_recovery_report.json。
 - 上游测试覆盖单调时间映射、PPS 周期门限/频率锁定/失锁 holdover、UTC observation 必须与 PPS 配对、UTC 映射不确定度、外部时钟映射和 time_epoch 不连续拒绝。
-- 该回归使用合成 PpsCaptureEvent 与确定性 tick source，只证明 TimeService 核心算法；不证明 TIM2 capture ISR、UM982 UART RECTIME 解码、PPS/UTC 在 MILSIM 中端到端运行。当前 Flight/tests/simulation/sil_flight.c 的时间服务接口仍为 STATUS_NOT_READY stub，故 P-10 整体保持 PARTIAL。
+- 两组回归使用合成 PpsCaptureEvent 与确定性 tick source；GNSS recovery 测试还调用真实 GNSS sample normalization/filter。它们验证固件算法核心，不证明 TIM2 capture ISR、UM982 UART RECTIME 解码、PPS/UTC 在 MILSIM 中端到端运行。当前 Flight/tests/simulation/sil_flight.c 的时间服务接口仍为 STATUS_NOT_READY stub，故 P-10 整体保持 PARTIAL。
 - MATLAB/MEX 编译与执行尚未在本次环境运行；本阶段代码状态不能写成实测 PASS。
