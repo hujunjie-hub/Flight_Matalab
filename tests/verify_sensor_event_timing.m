@@ -1,7 +1,7 @@
-function report=verify_sensor_event_timing
+function report=verify_sensor_event_timing(cfg)
 %VERIFY_SENSOR_EVENT_TIMING Verify multirate sample/capture/arrival queues and loss accounting.
 root=flight_startup;
-cfg=generate_parameters;
+if nargin<1, cfg=generate_parameters; end
 timing=cfg.derived.SensorTimingParameters(:);
 epochUs=1000000;
 timesUs=(epochUs:500:epochUs+1200000)';
