@@ -1,16 +1,21 @@
-function report=run_component_checks
-%RUN_COMPONENT_CHECKS Run implemented component gates, never full-system acceptance.
+function report=run_component_checks(gccDir)
+%RUN_COMPONENT_CHECKS Rebuild the Host SIL/model ABI and run implemented component gates.
+if nargin<1, gccDir='D:\\STM32CubeCLT\\mingw64\\bin'; end
 root=flight_startup;
 file=fullfile(root,'work','validation','component_checks.json');
 report=struct('scope','IMPLEMENTED_COMPONENTS_ONLY','status','IN_PROGRESS', ...
     'checks',struct);
 write(file,report);
 try
-    % Rebuild Plant/native gateways so checks cannot silently use stale MEX binaries.
+    % Rebuild the upstream Host SIL DLL and every affected Simulink/MEX ABI.
+    runtimeScript=fullfile(root,'tools','build_flight_runtime.ps1');
+    [runtimeStatus,runtimeMessage]=system(sprintf('pwsh -File "%s" -GccDir "%s"', ...
+        runtimeScript,gccDir));
+    assert(runtimeStatus==0,'Flight:RuntimeBuild','%s',runtimeMessage);
     build_native_kernels;
     generate_parameters;
     build_plant_models(8);
-    refresh_sensor_binding(fullfile(root,'simulation','FMT_MILSIM.slx'),'FMT_MILSIM/sensor');
+    build_flight_models;
     build_actuation_components;
     build_pid_allocation_probe;
     report.source_fingerprint=fingerprint(root);
@@ -34,18 +39,6 @@ catch exception
 end
 write(file,report);
 fprintf('Component checks completed; Plant acceptance coverage remains partial.\n');
-end
-
-function refresh_sensor_binding(modelFile,blockPath)
-assert(isfile(modelFile),'Flight:SensorModel','Missing model file: %s',modelFile);
-[~,model]=fileparts(modelFile);
-if bdIsLoaded(model), close_system(model,0); end
-load_system(modelFile);
-assert(getSimulinkBlockHandle(blockPath)>0,'Flight:SensorModelBlock', ...
-    'Missing sensor S-Function block: %s',blockPath);
-set_param(blockPath,'Parameters','SensorParameters,SensorModelParameters,SensorTimingParameters');
-save_system(model);
-close_system(model,0);
 end
 
 function value=fingerprint(root)
