@@ -165,9 +165,11 @@ def main():
                     and sensor[field] >= 0), f'{field} must be a nonnegative integer microsecond value'
         for field in ('imu_sample_period_us', 'mag_sample_period_us',
                       'baro_sample_period_us', 'gnss_sample_period_us'):
+            minimum = 1000 if field == 'imu_sample_period_us' else 500
+            alignment = 1000 if field == 'imu_sample_period_us' else 500
             assert (isinstance(sensor[field], int) and not isinstance(sensor[field], bool)
-                    and sensor[field] >= 500 and sensor[field] % 500 == 0), \
-                f'{field} must be a positive 500-us aligned sample period'
+                    and sensor[field] >= minimum and sensor[field] % alignment == 0), \
+                f'{field} must be aligned to its consumer task period'
         assert (isinstance(sensor['random_seed'], int) and not isinstance(sensor['random_seed'], bool)
                 and 0 < sensor['random_seed'] <= 0xffffffff), 'random_seed must be a nonzero uint32'
         assert sensor['gnss_backend'] == 'SIM_PVT'
