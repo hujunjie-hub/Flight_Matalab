@@ -1,5 +1,5 @@
 function cfg=generate_parameters
-%GENERATE_PARAMETERS Derive the SIM_ONLY parameter view from explicit sources.
+%GENERATE_PARAMETERS Build one validated SIM_ONLY parameter view from Flight.
 root=fileparts(fileparts(mfilename('fullpath')));
 folder=fullfile(root,'config','SIM_ONLY','QUAD_X4');
 names={'vehicle_model','sensor_alignment','estimator_tuning','controller_tuning','profile_manifest'};
@@ -11,8 +11,6 @@ for k=1:numel(names)
         'Only the explicit synthetic fixture is supported.');
 end
 
-% Flight owns the physical geometry, motor limits and yaw convention.
-% SIM_ONLY owns only the plant effects that are absent from the firmware.
 simVehicle=cfg.vehicle_model;
 v=simVehicle;
 p=cfg.profile_manifest;
@@ -21,12 +19,16 @@ flight=jsondecode(fileread(fullfile(root,'..','Flight','config','vehicle_model.y
 assert(strcmp(flight.profile,'QUAD_X4') && strcmp(flight.status,'SIM_ONLY'), ...
     'Flight:PlantProfile','Expected the Flight SIM_ONLY QUAD_X4 vehicle.');
 
-vehicleFields={'mass_kg','inertia_frd_kgm2','motor_position_frd_m', ...
+% These fields are shared by firmware configuration and simulation.
+sharedFields={'mass_kg','inertia_frd_kgm2','motor_position_frd_m', ...
     'motor_yaw_torque_ratio_m','motor_min_thrust_n','motor_max_thrust_n'};
-for k=1:numel(vehicleFields)
-    field=vehicleFields{k};
+for k=1:numel(sharedFields)
+    field=sharedFields{k};
+    assert(isequal(simVehicle.(field),flight.(field)), ...
+        'Flight:VehicleConfigDrift','SIM_ONLY %s differs from Flight/config/vehicle_model.yaml.',field);
     v.(field)=flight.(field);
 end
+
 position=flight.motor_position_frd_m';
 assert(isequal(size(position),[3 4]),'Flight:MotorGeometry', ...
     'The X4 allocator requires four FRD motor positions.');
@@ -44,22 +46,30 @@ assert(max(abs(position(1,:)-expectedX))<1e-10 && ...
 yaw=v.motor_yaw_torque_ratio_m(:);
 assert(numel(yaw)==4 && all(isfinite(yaw)) && abs(yaw(1))>1e-12 && ...
        max(abs(yaw-yaw(1)*[1;-1;1;-1]))<1e-10, ...
-    'Flight:YawGeometry','Flight yaw coefficients do not match the X4 allocator motor ordering.');
-assert(all(flight.motor_time_constant_s==flight.motor_time_constant_s(1)), ...
-    'Flight:MotorDynamics','The current plant uses a shared rotor time constant.');
+    'Flight:YawGeometry','Flight yaw coefficients do not match the X4 motor ordering.');
+motorTau=flight.motor_time_constant_s(:);
+assert(numel(motorTau)==4 && all(isfinite(motorTau)) && ...
+       max(abs(motorTau-motorTau(1)))<1e-12 && ...
+       abs(simVehicle.motor_time_constant_s-motorTau(1))<1e-12, ...
+    'Flight:MotorDynamics','The current Plant requires one shared rotor time constant.');
 v.arm_length_m=armLength;
-v.motor_time_constant_s=flight.motor_time_constant_s(1);
+v.motor_time_constant_s=motorTau(1);
 cfg.vehicle_model=v;
 
 assert(p.gnss_installed && p.gnss_enabled && p.pps_installed && p.pps_enabled, ...
     'Flight:RequiredGNSS','GNSS and PPS must be installed and enabled.');
 assert(v.mass_kg>0 && all(v.motor_max_thrust_n>v.motor_min_thrust_n), ...
     'Flight:PhysicalParameters','Invalid vehicle parameters.');
+assert(abs(p.frame_quantizer_max_thrust_n-p.dshot_force_curve_n(2))<1e-12, ...
+    'Flight:FrameQuantizer','Frame quantizer limit must match its independent DShot force curve.');
 assert(e.error_state_rank==22 && e.noise_rank==19, ...
     'Flight:FilterRank','Expected Project22/Qc19.');
+
 J=reshape(v.inertia_frd_kgm2,3,3);
+assert(max(abs(J-diag(diag(J))),[],'all')<1e-12, ...
+    'Flight:InertiaModel','The current rigid-body kernel supports diagonal inertia only.');
 [~,failure]=chol(J);
-assert(failure==0,'Flight:Inertia','Inertia must be SPD.');
+assert(failure==0,'Flight:Inertia','Inertia must be symmetric positive definite.');
 
 gravity=9.80665;
 wrench=[zeros(2,4);-ones(1,4);-position(2,:);position(1,:);yaw'];
@@ -67,12 +77,17 @@ magneticField=cfg.sensor_alignment.magnetic_field_ned_ut(:);
 assert(numel(magneticField)==3 && all(isfinite(magneticField)), ...
     'Flight:MagneticField','SIM_ONLY NED magnetic field must contain three finite values.');
 
-% p=[mass;Jdiag;kf;tau;drag(3);rateDamping;kGround;cGround;groundD;lever(3);gravity;skidSpan(2);groundFriction].
+% PlantParameters = [mass; Jdiag(3); kf; tau; drag(3); rateDamping;
+% groundK; groundC; groundDown; contactLever_FRD(3); gravity;
+% skidHalfSpan(2); groundFriction] -- exactly 20 doubles.
 plantParameters=[v.mass_kg;diag(J);simVehicle.motor_thrust_coefficient_n_s2; ...
     v.motor_time_constant_s;simVehicle.drag_ned_kgps(:);simVehicle.rate_damping_nm_s; ...
     simVehicle.ground_stiffness_npm;simVehicle.ground_damping_ns_pm; ...
     simVehicle.ground_down_m;simVehicle.contact_lever_frd_m(:);gravity; ...
     simVehicle.skid_half_span_m(:);simVehicle.ground_friction];
+assert(numel(plantParameters)==20 && all(isfinite(plantParameters)) && ...
+       all(plantParameters([1:6 17])>0) && all(plantParameters([7:10 12 18:20])>=0), ...
+    'Flight:PlantParameters','Invalid 20-element Plant parameter vector.');
 std=e.initial_std;
 initialStd=[std.position_m(:);std.velocity_mps(:);deg2rad(std.attitude_deg(:)); ...
     std.gyro_bias_radps(:);std.accel_bias_mps2(:);std.gyro_scale(:); ...
@@ -100,10 +115,10 @@ end
 section=getSection(dictionary,'Design Data');
 values=struct('PlantParameters',plantParameters,'PlantState0',simVehicle.plant_state0(:), ...
     'WrenchMatrix',wrench,'MotorKf',simVehicle.motor_thrust_coefficient_n_s2, ...
-    'MotorTau',v.motor_time_constant_s,'MotorMaxN',v.motor_max_thrust_n(:), ...
-    'PlantStepS',p.base_step_us*1e-6,'GravityMps2',gravity, ...
-    'MagneticFieldNedUt',magneticField,'EstimatorP0',diag(initialStd.^2), ...
-    'EstimatorQc',diag(qc));
+    'MotorTau',v.motor_time_constant_s,'MotorMinN',v.motor_min_thrust_n(:), ...
+    'MotorMaxN',v.motor_max_thrust_n(:),'PlantStepS',p.base_step_us*1e-6, ...
+    'GravityMps2',gravity,'MagneticFieldNedUt',magneticField, ...
+    'EstimatorP0',diag(initialStd.^2),'EstimatorQc',diag(qc));
 c=cfg.controller_tuning;
 values.RateKp=c.rate_kp_nm_per_radps(:);
 values.RateKi=c.rate_ki_nm_per_rad(:);
@@ -111,10 +126,9 @@ values.RateKd=c.rate_kd_nm_per_radps2(:);
 values.RateKaw=c.rate_kaw_per_s(:);
 values.RateDcutoff=c.rate_d_cutoff_hz;
 values.RateIlimit=c.rate_integral_limit_nm(:);
-% The native allocator accepts radial arm length and signed motor-1 yaw ratio.
 values.AllocationGeometry=[v.arm_length_m;v.motor_yaw_torque_ratio_m(1)];
-% The independent frame-quantizer fixture intentionally retains its 0..10 N curve.
-values.FrameQuantizerParameters=[simVehicle.motor_max_thrust_n(1);p.frame_slew_nps];
+values.FrameQuantizerParameters=[p.frame_quantizer_max_thrust_n;p.frame_slew_nps];
+
 fields=fieldnames(values);
 for k=1:numel(fields)
     name=fields{k};
@@ -130,5 +144,6 @@ end
 saveChanges(dictionary);
 cfg.derived=values;
 save(fullfile(validationFolder,'generated_parameters.mat'),'cfg');
-fprintf('Generated SIM_ONLY parameter view: gravity %.12g m/s^2, P0 22, Qc 19.\n',gravity);
+fprintf('Generated SIM_ONLY parameter view: mass %.6g kg, arm %.6g m, max thrust %.6g N.\\n', ...
+    v.mass_kg,v.arm_length_m,max(v.motor_max_thrust_n));
 end
