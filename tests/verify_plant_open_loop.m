@@ -11,6 +11,9 @@ initial=cfg.derived.PlantState0;
 environment=[zeros(1,9),0,0,ones(1,4)];
 contactEnvironment=environment;
 contactEnvironment(10)=1;
+quietSensorModelParameters=cfg.derived.SensorModelParameters;
+quietSensorModelParameters(20:37)=0;
+quietSensorModelParameters(38:54)=0;
 results={};
 
 % P-02: four equal rotor forces create only body-down force.
@@ -96,7 +99,8 @@ for k=1:numel(profileTimes)
 end
 profileGap=ones(size(profileTimes));
 sensorRun=run_profile('FMT_PlantSensors',{profileStates,profileGap},profileTimes, ...
-    profileTimes(end),struct('SensorParameters',sensorParameters),0.0005);
+    profileTimes(end),struct('SensorParameters',sensorParameters, ...
+    'SensorModelParameters',quietSensorModelParameters),0.0005);
 sensorFrame=sensorRun.yout{1}.Values.Data(end,:);
 leverImu=-sensorParameters(14:16);
 leverAntenna=leverImu+sensorParameters(17:19);
@@ -117,7 +121,8 @@ staticState=initial;
 staticState(1:6)=0;
 staticState(7:10)=[1;0;0;0];
 staticState(11:13)=0;
-staticRun=run('FMT_PlantSensors',{staticState,1},0.001,struct,0.0005);
+staticRun=run('FMT_PlantSensors',{staticState,1},0.001, ...
+    struct('SensorModelParameters',quietSensorModelParameters),0.0005);
 staticFrame=staticRun.yout{1}.Values.Data(end,:);
 assert(abs(staticFrame(4))<1e-10 && abs(staticFrame(5))<1e-10 && ...
        abs(staticFrame(6)+g)<1e-10 && ...
@@ -129,13 +134,75 @@ movingParameters(8:10)=[1;0;0]; % Match the initial NED velocity to avoid a synt
 movingState=staticState;
 movingState(4:6)=[1;0;0];
 movingRun=run('FMT_PlantSensors',{movingState,1},0.001, ...
-    struct('SensorParameters',movingParameters),0.0005);
+    struct('SensorParameters',movingParameters, ...
+    'SensorModelParameters',quietSensorModelParameters),0.0005);
 movingFrame=movingRun.yout{1}.Values.Data(end,:);
 expectedCoriolis=2*cross(cfg.derived.EarthRateNedRadps,[1;0;0]);
 assert(norm(movingFrame(1:3)'-cfg.derived.EarthRateNedRadps,inf)<1e-12 && ...
        norm(movingFrame(4:6)'-[expectedCoriolis(1);expectedCoriolis(2);-g],inf)<1e-10, ...
     'Flight:P08','Fixed-N0 Earth-rate or Coriolis compensation is incorrect.');
 results{end+1}=passed('P-08','Static specific force, Earth-rate gyro and Coriolis compensation');
+
+% P-09: seeded sensor noise is repeatable, independent by axis and has the configured STD.
+noiseTimes=(0:0.0005:10)';
+noiseStates=repmat(staticState',numel(noiseTimes),1);
+noiseParameters=cfg.derived.SensorModelParameters;
+noiseRunA=run_profile('FMT_PlantSensors',{noiseStates,ones(size(noiseTimes))}, ...
+    noiseTimes,noiseTimes(end),struct('SensorParameters',cfg.derived.SensorParameters, ...
+    'SensorModelParameters',noiseParameters),0.0005);
+noiseRunB=run_profile('FMT_PlantSensors',{noiseStates,ones(size(noiseTimes))}, ...
+    noiseTimes,noiseTimes(end),struct('SensorParameters',cfg.derived.SensorParameters, ...
+    'SensorModelParameters',noiseParameters),0.0005);
+noiseDataA=noiseRunA.yout{1}.Values.Data;
+noiseDataB=noiseRunB.yout{1}.Values.Data;
+assert(isequaln(noiseDataA,noiseDataB), ...
+    'Flight:P09','Identical random seeds did not reproduce the sensor sequence.');
+noiseParametersOther=noiseParameters;
+noiseParametersOther(1)=noiseParametersOther(1)+1;
+noiseRunOther=run_profile('FMT_PlantSensors',{noiseStates,ones(size(noiseTimes))}, ...
+    noiseTimes,noiseTimes(end),struct('SensorParameters',cfg.derived.SensorParameters, ...
+    'SensorModelParameters',noiseParametersOther),0.0005);
+noiseDataOther=noiseRunOther.yout{1}.Values.Data;
+assert(max(abs(noiseDataA(:)-noiseDataOther(:)))>0, ...
+    'Flight:P09','Changing the seed did not change the sensor noise sequence.');
+
+% Take one sample per 1 kHz IMU epoch; the 500-us Plant calls must not
+% create extra independent IMU noise samples.
+sampleRows=3:2:numel(noiseTimes);
+gyroResidual=noiseDataA(sampleRows,1:3)- ...
+    repmat(cfg.derived.EarthRateNedRadps',numel(sampleRows),1);
+accelResidual=noiseDataA(sampleRows,4:6)- ...
+    repmat([0 0 -g],numel(sampleRows),1);
+for axis=1:3
+    assert(within_chi_square95(gyroResidual(:,axis),noiseParameters(38+axis-1)) && ...
+           within_chi_square95(accelResidual(:,axis),noiseParameters(41+axis-1)), ...
+        'Flight:P09','IMU noise STD fell outside the 95%% chi-square interval on axis %d.',axis);
+end
+gyroCorrelation=corrcoef(gyroResidual);
+assert(max(abs(gyroCorrelation([2 3 6])))<0.05, ...
+    'Flight:P09','Independent gyro axes show excessive sample correlation.');
+
+% Bias and scale errors are residuals after the M2 calibration boundary.
+biasScaleParameters=quietSensorModelParameters;
+biasScaleParameters(20:22)=[0.01;-0.02;0.03];
+biasScaleParameters(23:25)=[0.10;-0.20;0.30];
+biasScaleParameters(26:28)=[0.40;-0.30;0.20];
+biasScaleParameters(29:31)=[0.01;-0.02;0.03];
+biasScaleParameters(32:34)=[-0.01;0.02;0.03];
+biasScaleParameters(35:37)=[0.02;0.01;-0.01];
+biasRun=run('FMT_PlantSensors',{staticState,1},0.001, ...
+    struct('SensorModelParameters',biasScaleParameters),0.0005);
+biasFrame=biasRun.yout{1}.Values.Data(end,:);
+expectedGyro=cfg.derived.EarthRateNedRadps.*(1+biasScaleParameters(29:31))+ ...
+    biasScaleParameters(20:22);
+expectedAccel=[0;0;-g].*(1+biasScaleParameters(32:34))+biasScaleParameters(23:25);
+expectedMag=cfg.derived.MagneticFieldNedUt.*(1+biasScaleParameters(35:37))+ ...
+    biasScaleParameters(26:28);
+assert(norm(biasFrame(1:3)'-expectedGyro,inf)<1e-9 && ...
+       norm(biasFrame(4:6)'-expectedAccel,inf)<1e-9 && ...
+       norm(biasFrame(13:15)'-expectedMag,inf)<1e-9, ...
+    'Flight:P09','Configured sensor bias/scale errors were not applied in the sensor frame.');
+results{end+1}=passed('P-09','Seeded repeatable Gaussian noise, axis independence, bias and scale injection');
 
 % P-12: compare 5 s of 500-us Simulink RK4 against an independent 250-us RK4
 % reference while keeping command, environment and initial state identical.
@@ -312,7 +379,7 @@ expect_error(@()run('FMT_RigidBodyRHS',{initial,zeros(1,6),zeros(1,6),environmen
 results{end+1}=passed('P-21','Invalid environment, state and inertia rejected');
 
 implemented=cellfun(@(item)item.id,results,'UniformOutput',false);
-remaining={'P-09','P-10'};
+remaining={'P-10'};
 coverage=struct('status','PARTIAL','implemented_tests',{implemented}, ...
     'remaining_tests',{remaining},'implemented_count',numel(results), ...
     'required_plant_test_count',20);
@@ -427,6 +494,17 @@ w=q(1); x=q(2); y=q(3); z=q(4);
 C=[1-2*(y*y+z*z), 2*(x*y-w*z), 2*(x*z+w*y); ...
    2*(x*y+w*z), 1-2*(x*x+z*z), 2*(y*z-w*x); ...
    2*(x*z-w*y), 2*(y*z+w*x), 1-2*(x*x+y*y)];
+end
+
+function ok=within_chi_square95(samples,sigma)
+n=numel(samples);
+if n<100 || ~(sigma>0), ok=false; return; end
+degrees=n-1;
+chi_square=sum((samples-mean(samples)).^2)/(sigma^2);
+z=1.95996398454005;
+lower=degrees*(1-2/(9*degrees)-z*sqrt(2/(9*degrees)))^3;
+upper=degrees*(1-2/(9*degrees)+z*sqrt(2/(9*degrees)))^3;
+ok=chi_square>=lower && chi_square<=upper;
 end
 
 function expect_error(callback,expectedText,identifier)
