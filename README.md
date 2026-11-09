@@ -31,7 +31,7 @@ verify_flight_entries
 
 三个入口使用 500 μs 离散基步和正常仿真模式。固件 Host SIL 在每 1 ms 调用传感器与执行器任务，每 4 ms 调用通信，每 20 ms 调用 FMS 与 MPC，每 100 ms 调用监督任务。输出包含当前提交推力、飞控诊断和已发布导航，均在下一基步可读。当前 DLL 以单实例运行，每个 MATLAB 进程一次仿真一个入口。
 
-- `SensorFrame` 为 18 元素 double，依次为 FRD 角速度 rad/s、FRD 比力 m/s²、NED 位置 m、NED 速度 m/s、FRD 磁场 μT、相对气压高度 m、有效位掩码和接地状态。四组有效位依次为 1、2、4、8，分别代表 IMU、GNSS、磁力计和气压计；接地状态 0、1 分别代表空中和接地，其余值表示未知。由输入数据标明缺测，适配器按固件主机夹具节拍提交样本。
+- `SensorFrame` 为 18 元素 double，依次为 IMU 处 FRD 角速度 rad/s、IMU 处 FRD 比力 m/s²、GNSS 天线 NED 位置 m、GNSS 天线 NED 速度 m/s、FRD 磁场 μT、相对气压高度 m、有效位掩码和接地状态。四组有效位依次为 1、2、4、8，分别代表 IMU、GNSS、磁力计和气压计；接地状态 0、1 分别代表空中和接地，其余值表示未知。由输入数据标明缺测，适配器按固件主机夹具节拍提交样本。
 - `OperationRequest` 为 2 元素 double，即产品指令码及起飞高度 m。单步脉冲提交一次，0 表示本步没有指令。默认用 1、3、4、2 分别完成解锁、起飞、降落、上锁。
 - `ExternalNavFrame` 与 `PublishedNavFrame` 为 `uint8`，是同一主机构建的 `NavigationSnapshot` 和 `NavigationCapability`，顺序与时间戳均保留。宽度由 `config/flight_baseline.json` 提供。输入必须使用与本次构建匹配的接口契约版本、时钟域、历元和有效期。ExtINS 的 IMU 有效样本驱动生产传感器任务发布导航。默认文件记录当前 Host SIL 的配对结果。
 - `CommittedThrustN` 顺序沿用 `Flight/config/vehicle_model.yaml` 的左前、右前、右后、左后。只有有效的 M7 提交和匹配许可才产生推力。
