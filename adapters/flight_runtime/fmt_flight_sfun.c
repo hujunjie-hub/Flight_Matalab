@@ -25,11 +25,11 @@ static void mdlInitializeSizes(SimStruct *S)
     ssSetNumSFcnParams(S, PARAM_COUNT);
     if (ssGetNumSFcnParams(S) != ssGetSFcnParamsCount(S)) return;
     for (int i = 0; i < PARAM_COUNT; ++i) ssSetSFcnParamTunable(S, i, 0);
-    if (!ssSetNumInputPorts(S, 5) || !ssSetNumOutputPorts(S, 3) ||
+    if (!ssSetNumInputPorts(S, 6) || !ssSetNumOutputPorts(S, 3) ||
         !ssSetNumDWork(S, WORK_COUNT)) return;
-    const int input_widths[] = {FMT_SENSOR_WIDTH, FMT_COMMAND_WIDTH, nav_width(S), 1, FMT_SENSOR_SIM_PARAMETER_COUNT};
+    const int input_widths[] = {FMT_SENSOR_WIDTH, FMT_COMMAND_WIDTH, nav_width(S), 1, FMT_SENSOR_MODEL_PARAMETER_COUNT, FMT_SENSOR_SIM_PARAMETER_COUNT};
     const int output_widths[] = {4, FMT_STATUS_WIDTH, nav_width(S)};
-    const DTypeId types[] = {SS_DOUBLE, SS_DOUBLE, SS_UINT8, SS_DOUBLE, SS_DOUBLE};
+    const DTypeId types[] = {SS_DOUBLE, SS_DOUBLE, SS_UINT8, SS_DOUBLE, SS_DOUBLE, SS_DOUBLE};
     const char *state_names[] = {"CommittedThrust", "FlightDiagnostics", "NavigationFrame"};
     for (int i = 0; i < 3; ++i) {
         ssSetInputPortWidth(S, i, input_widths[i]);
@@ -43,7 +43,7 @@ static void mdlInitializeSizes(SimStruct *S)
         ssSetDWorkName(S, i, state_names[i]);
         ssSetDWorkUsedAsDState(S, i, 1);
     }
-    for (int i = 3; i < 5; ++i) {
+    for (int i = 3; i < 6; ++i) {
         ssSetInputPortWidth(S, i, input_widths[i]);
         ssSetInputPortDataType(S, i, types[i]);
         ssSetInputPortDirectFeedThrough(S, i, 0);
@@ -118,7 +118,7 @@ static void mdlUpdate(SimStruct *S, int_T tid)
     }
     if (runtime->step(ssGetInputPortRealSignal(S, 0), ssGetInputPortRealSignal(S, 1),
                       ssGetInputPortSignal(S, 2), ssGetInputPortRealSignal(S, 4),
-                      ssGetDWork(S, MOTORS),
+                      ssGetInputPortRealSignal(S, 5), ssGetDWork(S, MOTORS),
                       ssGetDWork(S, STATUS), ssGetDWork(S, NAV)))
         ssSetErrorStatus(S, "Flight SIL scheduler failed.");
 }
