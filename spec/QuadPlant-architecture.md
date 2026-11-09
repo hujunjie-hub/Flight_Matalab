@@ -77,4 +77,4 @@ Truth 只有 SensorFrontend 和只读 Evaluator 可动态读取；初始化来�
 
 ## SensorParameters 合同
 
-SensorParameters 为 19 doubles：[gravity, magnetic_field_NED(3), earth_rate_NED(3), initial_velocity_NED(3), initial_rate_FRD(3), imu_to_cg_FRD(3), antenna_from_imu_FRD(3)]。SensorModelParameters 为 54 doubles，携带随机种子、IMU/MAG 安装矩阵、残余 bias/scale、IMU/MAG/GNSS/Baro 噪声 STD。IMU 杆臂按 CG→IMU = -imu_to_cg 解释，GNSS 天线杆臂为 CG→IMU + IMU→antenna。P-07/P-08 已有组件测试；P-09 的可复现噪声和残余误差注入已实现；P-10a 多速率采样/传输队列已实现并由 `verify_sensor_event_timing` 检查，P-10b PPS raw capture/UTC epoch mapping 仍待实现。
+SensorParameters 为 19 doubles：[gravity, magnetic_field_NED(3), earth_rate_NED(3), initial_velocity_NED(3), initial_rate_FRD(3), imu_to_cg_FRD(3), antenna_from_imu_FRD(3)]。SensorModelParameters 为 54 doubles，携带随机种子、IMU/MAG 安装矩阵、残余 bias/scale、IMU/MAG/GNSS/Baro 噪声 STD。IMU 杆臂按 CG→IMU = -imu_to_cg 解释，GNSS 天线杆臂为 CG→IMU + IMU→antenna。P-07/P-08 已有组件测试；P-09 的可复现噪声和残余误差注入已实现；P-10a 多速率采样/传输队列已实现并由 `verify_sensor_event_timing` 检查；P-10b 的 Flight TimeService 核心由 `verify_time_service_sync` 复用上游测试回归，Host MIL 的 TIM2 capture/UM982 RECTIME/UTC epoch 端到端链仍待接入。
