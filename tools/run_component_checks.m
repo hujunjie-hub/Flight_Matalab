@@ -1,6 +1,6 @@
 function report=run_component_checks(gccDir)
 %RUN_COMPONENT_CHECKS Rebuild the Host SIL/model ABI and run implemented component gates.
-if nargin<1, gccDir='D:\\STM32CubeCLT\\mingw64\\bin'; end
+if nargin<1, gccDir='D:\STM32CubeCLT\mingw64\bin'; end
 root=flight_startup;
 file=fullfile(root,'work','validation','component_checks.json');
 report=struct('scope','IMPLEMENTED_COMPONENTS_ONLY','status','IN_PROGRESS', ...
