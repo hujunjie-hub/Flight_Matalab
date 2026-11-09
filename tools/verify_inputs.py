@@ -85,7 +85,11 @@ def main():
             assert sha(flight / name) == digest, f'Flight baseline changed: {name}'
         for required in ('sensor_device/time_base/systime.c',
                          'sensor_device/time_base/systime.h',
-                         'tests/time/test_time_service.c'):
+                         'tests/time/test_time_service.c',
+                         'tests/drivers/test_gnss_outage.c',
+                         'middleware/sensor/sample_normalization/sensor_sample.c',
+                         'middleware/sensor/measurement_filter/sensor_filter.c',
+                         'middleware/sensor/calibration/sensor_calibration.c'):
             assert required in baseline['sources_sha256'], f'Flight baseline must fingerprint {required}; rebuild the Host SIL baseline first'
 
         flight_vehicle = read(flight / 'config/vehicle_model.yaml')
@@ -202,7 +206,7 @@ def main():
                       plant_parameter_contract='FULL_3X3_INERTIA_26',
                       sensor_parameter_contract='SENSOR_19_IMU_ANTENNA_LEVERS_PLUS_SENSOR_MODEL_54',
                       sensor_timing_contract='TIMING_10_MULTIRATE_QUEUE_SAMPLE_CAPTURE_ARRIVAL',
-                      time_service_contract='UPSTREAM_PPS_UTC_CORE_REGRESSION',
+                      time_service_contract='UPSTREAM_PPS_UTC_CORE_AND_GNSS_RECOVERY_REGRESSION',
                       config_hashes=hashes,
                       config_content_sha256=hashlib.sha256(json.dumps(config, sort_keys=True, separators=(',', ':')).encode()).hexdigest())
     except Exception as error:
