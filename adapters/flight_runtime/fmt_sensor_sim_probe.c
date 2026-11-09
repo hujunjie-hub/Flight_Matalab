@@ -17,7 +17,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     const double *truth, *parameters, *times, *epoch_value;
     double *frames, *events;
     mwSize rows, columns;
-    uint64_t epoch_us;
+    uint64_t epoch_us, previous_time_us;
     FmtSensorSimState state;
 
     if (nrhs != 4 || nlhs != 2)
@@ -50,6 +50,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         floor(*epoch_value) != *epoch_value || *epoch_value > 9.0e15)
         mexErrMsgIdAndTxt("Flight:SensorProbeEpoch","Epoch must be an integer microsecond timestamp.");
     epoch_us = (uint64_t)*epoch_value;
+    previous_time_us = epoch_us;
     if (fmt_sensor_sim_init(&state, parameters, epoch_us) != 0)
         mexErrMsgIdAndTxt("Flight:SensorProbeParameters","Sensor timing parameters are invalid.");
 
@@ -65,6 +66,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (!isfinite(time_value) || time_value < 0.0 ||
             floor(time_value) != time_value || time_value > 9.0e15)
             mexErrMsgIdAndTxt("Flight:SensorProbeTime","Times must be integer microseconds.");
+        if ((uint64_t)time_value < previous_time_us ||
+            ((uint64_t)time_value - epoch_us) % 500u != 0u)
+            mexErrMsgIdAndTxt("Flight:SensorProbeOrder",
+                "Times must be monotonic and aligned to the 500-us scheduler.");
+        previous_time_us = (uint64_t)time_value;
         for (unsigned column = 0; column < 18; ++column)
             input[column] = truth[row + rows * column];
         if (fmt_sensor_sim_step(&state, input, (uint64_t)time_value, due) != 0)
