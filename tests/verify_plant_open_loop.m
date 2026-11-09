@@ -201,6 +201,10 @@ badEnvironment=environment;
 badEnvironment(12)=1.01;
 expect_error(@()run('FMT_RigidBodyRHS',{initial,zeros(1,6),zeros(1,6),badEnvironment}, ...
     0.001,struct,0.0005),'Invalid Plant Environment','Flight:P17');
+badFlagEnvironment=environment;
+badFlagEnvironment(10)=0.5;
+expect_error(@()run('FMT_RigidBodyRHS',{initial,zeros(1,6),zeros(1,6),badFlagEnvironment}, ...
+    0.001,struct,0.0005),'Invalid Plant Environment','Flight:P17');
 badState=initial;
 badState(1)=NaN;
 expect_error(@()run('FMT_RigidBodyRHS',{badState,zeros(1,6),zeros(1,6),environment}, ...
