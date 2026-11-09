@@ -106,3 +106,13 @@
 - 断言变为 `Flight:MILArm`（此前为 `Flight:MILTakeoff`）：解锁这一环先失败，尚未到起飞判定。
 - 证据归档：`work/validation/archives/20261109T164306449Z_9e5048c.zip`，SHA-256 `afa63f983668634ac59e2932baa213903a2954d5bf61149c2719dd5f7e3cdf9f`。
 - 台账：FMAT-0008 追加本轮诊断证据，状态仍为 REPRODUCED；其余 Issue 状态不变。
+## 2026-11-10 06:23 MATLAB 验收运行记录（PreArm 定位到水平位置有效性）
+
+- 分支/HEAD：`optimize/sil-physical-parameter-alignment` @ `3280e6a`（新增逐指令 ACK/PreArm 诊断与 `mil_diagnostics.json`），运行前工作区干净。
+- 结果：**FAIL**，仍在 `verify_flight_entries` 中止（`Flight:MILArm`）。构建链全通过。
+- 关键证据（`mil_diagnostics.json`）：
+  - `final_prearm_state=3`（REJECT）、`failed_mask=8`、`primary_reason=2`（PREARM_ITEM_FAIL）、`failed_count=1`。
+  - 失败掩码 bit3 对应 `PREARM_ID_ESTIMATOR_POSITION`；`maximum_navigation_mask=0xD7` 中缺少 bit3 `NAV_VALID_HORIZONTAL_POSITION` 与 bit5 `NAV_VALID_HORIZONTAL_VELOCITY`，垂直位置/速度正常。
+  - 四条指令 ack_state 均为 0（REJECTED）；解锁、起飞、降落三条 reason=2，上锁 reason=11。
+- 结论：阻断点收敛为「水平位置有效性未发布」，与姿态/IMU/遥控/执行器无关。
+- 证据归档：`work/validation/archives/20261109T222421249Z_3280e6a.zip`，SHA-256 `94c21e0edfa49672bd8b3623fe17ce5b9758d2ee2e84eab9604e91a7875dd69d`。
