@@ -43,7 +43,7 @@ if bdIsLoaded(model), close_system(model,0); end
 load_system(modelFile);
 assert(getSimulinkBlockHandle(blockPath)>0,'Flight:SensorModelBlock', ...
     'Missing sensor S-Function block: %s',blockPath);
-set_param(blockPath,'Parameters','SensorParameters,SensorModelParameters');
+set_param(blockPath,'Parameters','SensorParameters,SensorModelParameters,SensorTimingParameters');
 save_system(model);
 close_system(model,0);
 end
