@@ -130,5 +130,5 @@ end
 saveChanges(dictionary);
 cfg.derived=values;
 save(fullfile(validationFolder,'generated_parameters.mat'),'cfg');
-fprintf('Generated SIM_ONLY parameter view: gravity %.12g m/s^2, P0 22, Qc 19.\\n',gravity);
+fprintf('Generated SIM_ONLY parameter view: gravity %.12g m/s^2, P0 22, Qc 19.\n',gravity);
 end
