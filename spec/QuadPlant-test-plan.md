@@ -38,7 +38,7 @@ P-04/05/07/08 理想层关闭噪声、地面或电机动态的具体旁路必须
 
 ## 2. 当前脚本覆盖
 
-verify_plant_open_loop 当前代码覆盖 P-01..P-09、P-11..P-13、P-15..P-21；P-09 已实现同 seed 可复现、不同 seed 变化、IMU 白噪声 STD 的 95% 卡方区间、轴间独立性及 bias/scale 注入。P-10 队列子项由 `verify_sensor_event_timing` 独立检查多速率周期、sample/capture/arrival、队列释放迟到、计数守恒、缺测序号缺口、非法时间步/掩码和 freshness 边界；PPS/UTC epoch 映射仍待实现。P-14 truth 依赖图检查由 verify_truth_isolation 独立实现，并由 run_component_checks 调用。Plant 报告必须为 PARTIAL，且必须在 MATLAB/Simulink 环境实际执行；静态代码审查不算测试通过。
+verify_plant_open_loop 当前代码覆盖 P-01..P-09、P-10a、P-11..P-13、P-15..P-21；P-09 已实现同 seed 可复现、不同 seed 变化、IMU 白噪声 STD 的 95% 卡方区间、轴间独立性及 bias/scale 注入。P-10a 队列子项由 `verify_sensor_event_timing` 独立检查多速率周期、sample/capture/arrival、队列释放迟到、计数守恒、缺测序号缺口、非法时间步/掩码和 freshness 边界，并由 `verify_plant_open_loop` 调用；P-10b PPS/UTC epoch 映射仍待实现。P-14 truth 依赖图检查由 verify_truth_isolation 独立实现，并由 run_component_checks 调用。Plant 报告必须为 PARTIAL，且必须在 MATLAB/Simulink 环境实际执行；静态代码审查不算测试通过。
 
 ## 3. 系统闭环评价
 
