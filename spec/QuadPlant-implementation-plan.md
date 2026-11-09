@@ -6,7 +6,7 @@
 |---|---|---|
 | P0 物理接口冻结 | u/w/y/z bus、CG/frame/q/rate约定、参数表 | 已有规格；仍需核对所有接口与实际模型 |
 | P1 电机/分配载荷 | MotorDynamics、RotorWrench组件 | 源码已有；参数矩阵改为从 Flight 通用推导；需 MATLAB 数值回归 |
-| P2 刚体/接触 | 17维 PlantState/四阶段 RK4、Environment、几何门控 GroundContact | 源码已增加完整惯量、Cholesky 求解、输入 fail-closed、静态压缩和独立步长参考；需 MATLAB 数值回归 |
+| P2 刚体/接触 | 17维 PlantState/四阶段 RK4、Environment、几何门控 GroundContact | 源码已增加完整惯量、Cholesky 求解、输入 fail-closed、静态压缩和独立步长参考；需 MATLAB 数值回归 P-04..P-06、P-11..P-13、P-15..P-21 |
 | P3 传感器 | 采样、杆臂、Earth项、noise/bias/delay | 当前只实现固定 N0 Earth/Coriolis 与确定性基础测量；杆臂、噪声、bias、队列/延迟仍未完成 |
 | P4 物理侧集成 | FMT_QuadPlant/FMT_SensorSimulation模型引用 | 有基础模型；需接口因果链、无代数环和输出单位测试 |
 | P5 系统闭环 | 仅接 M7 已提交帧与 M2 标准入口 | FMS/Control 合格后运行 MIL；truth 无捷径 |
