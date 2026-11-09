@@ -97,7 +97,7 @@ for channel=1:4
         'Flight:SensorSequenceGap','%s missing sample did not create one observable sequence gap.',names{channel});
 end
 
-% Reject unsupported rates, queue-overflow configurations, non-monotonic time,
+% Reject unsupported rates, unsafe delay horizons, non-monotonic time,
 % skipped fixed steps and malformed validity masks instead of silently drifting.
 invalid=timing;
 invalid(1)=500;
@@ -106,7 +106,7 @@ expect_probe_error(truth(1:20,:),invalid,timesUs(1:20),epochUs, ...
 invalid=timing;
 invalid(5)=40000;
 expect_probe_error(truth,invalid,timesUs,epochUs, ...
-    'Flight:SensorTimingQueueBound','A delay exceeding the bounded queue horizon was accepted.');
+    'Flight:SensorTimingDelayBound','A delay outside the supported delivery horizon was accepted.');
 invalid=timing;
 invalid(6)=5000; % IMU pipeline + transport now exceeds its 5-ms validity horizon.
 expect_probe_error(truth,invalid,timesUs,epochUs, ...
