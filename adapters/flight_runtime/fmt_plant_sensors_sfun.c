@@ -2,6 +2,7 @@
 #define S_FUNCTION_LEVEL 2
 #include "simstruc.h"
 #include <math.h>
+#include <string.h>
 #include "fmt_flight_runtime.h"
 #include "../../models/plant/fmt_rotation.h"
 
@@ -18,7 +19,8 @@ static void mdlInitializeSizes(SimStruct *S)
         ssSetInputPortRequiredContiguous(S, i, 1);
     }
     ssSetOutputPortWidth(S, 0, FMT_SENSOR_WIDTH);
-    ssSetNumDiscStates(S, 3);
+    /* Previous velocity (3) and a first-difference-valid flag (1). */
+    ssSetNumDiscStates(S, 4);
     ssSetNumSampleTimes(S, 1);
 }
 
@@ -28,41 +30,61 @@ static void mdlInitializeSampleTimes(SimStruct *S)
     ssSetOffsetTime(S, 0, 0);
 }
 
+#define MDL_INITIALIZE_CONDITIONS
+static void mdlInitializeConditions(SimStruct *S)
+{
+    const mxArray *parameter = ssGetSFcnParam(S, 0);
+    const double *p = mxGetPr(parameter);
+    double *state = ssGetRealDiscStates(S);
+    if (!mxIsDouble(parameter) || mxIsComplex(parameter) || mxIsSparse(parameter) ||
+        mxGetNumberOfElements(parameter) != 10 || !p) {
+        ssSetErrorStatus(S, "Sensor parameters must be [gravity; mag_NED(3); earth_rate_NED(3); initial_velocity_NED(3)].");
+        return;
+    }
+    for (int i = 0; i < 10; ++i) {
+        if (!isfinite(p[i])) {
+            ssSetErrorStatus(S, "Sensor parameter contains a nonfinite value.");
+            return;
+        }
+    }
+    memcpy(state, p + 7, 3 * sizeof(double));
+    state[3] = 0;
+}
+
 static void mdlOutputs(SimStruct *S, int_T tid)
 {
     (void)tid;
+    const mxArray *parameterArray = ssGetSFcnParam(S, 0);
+    const double *parameter;
     const double *x = ssGetInputPortRealSignal(S, 0);
     const double *previous_velocity = ssGetRealDiscStates(S);
     const double gap = *ssGetInputPortRealSignal(S, 1);
-    const mxArray *parameter = ssGetSFcnParam(S, 0);
-    const double *parameters = mxGetPr(parameter);
+    const double dt = ssGetSampleTime(S, 0);
     const double *field_ned_ut;
-    double rotation[9], specific_force[3];
+    const double *earth_rate_ned;
+    double gravity, rotation[9], specific_force[3], coriolis[3];
     double *sensor = ssGetOutputPortRealSignal(S, 0);
-    mwSize parameter_count = mxGetNumberOfElements(parameter);
-    double gravity;
+    int imu_derivative_valid;
 
-    /* A scalar is accepted only for compatibility with pre-v2 saved models.
-       New models pass [gravity; magnetic_field_ned_ut] from the data dictionary. */
-    if (!mxIsDouble(parameter) || mxIsComplex(parameter) || mxIsSparse(parameter) ||
-        !parameters || (parameter_count != 1 && parameter_count != 4)) {
-        ssSetErrorStatus(S, "Sensor parameters must be [gravity; NED magnetic field(3)].");
+    if (!mxIsDouble(parameterArray) || mxIsComplex(parameterArray) ||
+        mxIsSparse(parameterArray) || mxGetNumberOfElements(parameterArray) != 10 ||
+        !(parameter = mxGetPr(parameterArray))) {
+        ssSetErrorStatus(S, "Sensor parameters must contain exactly 10 doubles.");
         return;
     }
-    gravity = parameters[0];
-    if (!isfinite(gravity)) {
-        ssSetErrorStatus(S, "Plant gravity is nonfinite.");
+    if (!isfinite(dt) || dt <= 0 || !isfinite(gap)) {
+        ssSetErrorStatus(S, "Invalid sensor sample interval or ground gap.");
         return;
     }
-    if (parameter_count == 4) {
-        field_ned_ut = parameters + 1;
-    } else {
-        static const double legacy_field_ned_ut[3] = {25.0, 0.0, 40.0};
-        field_ned_ut = legacy_field_ned_ut;
+    for (int i = 0; i < 10; ++i) {
+        if (!isfinite(parameter[i])) {
+            ssSetErrorStatus(S, "Sensor parameter contains a nonfinite value.");
+            return;
+        }
     }
-    for (int i = 0; i < 3; ++i) {
-        if (!isfinite(field_ned_ut[i])) {
-            ssSetErrorStatus(S, "NED magnetic field contains a nonfinite value.");
+    for (int i = 0; i < 17; ++i) {
+        if (!isfinite(x[i])) {
+            ssSetErrorStatus(S, "Plant state contains a nonfinite value.");
             return;
         }
     }
@@ -70,31 +92,47 @@ static void mdlOutputs(SimStruct *S, int_T tid)
         ssSetErrorStatus(S, "Plant attitude is invalid.");
         return;
     }
+
+    gravity = parameter[0];
+    field_ned_ut = parameter + 1;
+    earth_rate_ned = parameter + 4;
+    imu_derivative_valid = previous_velocity[3] > 0.5;
     for (int i = 0; i < 3; ++i) {
-        specific_force[i] = (x[i + 3] - previous_velocity[i]) / .0005;
+        specific_force[i] = imu_derivative_valid
+            ? (x[i + 3] - previous_velocity[i]) / dt : 0.0;
         sensor[FMT_SENSOR_POSITION + i] = x[i];
         sensor[FMT_SENSOR_VELOCITY + i] = x[i + 3];
-        sensor[FMT_SENSOR_GYRO + i] = x[i + 10];
     }
+    fmt_cross(earth_rate_ned, x + 3, coriolis);
+    for (int i = 0; i < 3; ++i) specific_force[i] += 2.0 * coriolis[i];
     specific_force[2] -= gravity;
+
     for (int axis = 0; axis < 3; ++axis) {
         sensor[FMT_SENSOR_ACCEL + axis] = 0;
+        sensor[FMT_SENSOR_GYRO + axis] = x[10 + axis];
         sensor[FMT_SENSOR_MAG + axis] = 0;
         for (int i = 0; i < 3; ++i) {
-            sensor[FMT_SENSOR_ACCEL + axis] += rotation[3 * i + axis] * specific_force[i];
-            sensor[FMT_SENSOR_MAG + axis] += rotation[3 * i + axis] * field_ned_ut[i];
+            const double c_body_from_ned = rotation[3 * i + axis];
+            sensor[FMT_SENSOR_ACCEL + axis] += c_body_from_ned * specific_force[i];
+            sensor[FMT_SENSOR_MAG + axis] += c_body_from_ned * field_ned_ut[i];
+            sensor[FMT_SENSOR_GYRO + axis] += c_body_from_ned * earth_rate_ned[i];
         }
     }
     sensor[FMT_SENSOR_BARO] = -x[2];
-    sensor[FMT_SENSOR_VALID] = FMT_IMU_VALID | FMT_GNSS_VALID | FMT_MAG_VALID | FMT_BARO_VALID;
-    sensor[FMT_SENSOR_CONTACT] = gap < .06 && fabs(x[5]) < .2;
+    sensor[FMT_SENSOR_VALID] = FMT_GNSS_VALID | FMT_MAG_VALID | FMT_BARO_VALID;
+    if (imu_derivative_valid) sensor[FMT_SENSOR_VALID] |= FMT_IMU_VALID;
+    /* GroundContact: signed gap <= 1 mm and penetration <= 20 mm. */
+    sensor[FMT_SENSOR_CONTACT] = (gap <= 0.001 && gap >= -0.02) ? 1.0 : 0.0;
 }
 
 #define MDL_UPDATE
 static void mdlUpdate(SimStruct *S, int_T tid)
 {
     (void)tid;
-    memcpy(ssGetRealDiscStates(S), ssGetInputPortRealSignal(S, 0) + 3, 3 * sizeof(double));
+    double *state = ssGetRealDiscStates(S);
+    const double *x = ssGetInputPortRealSignal(S, 0);
+    memcpy(state, x + 3, 3 * sizeof(double));
+    state[3] = 1;
 }
 
 static void mdlTerminate(SimStruct *S) { (void)S; }
