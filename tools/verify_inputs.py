@@ -166,16 +166,16 @@ def main():
                     and 0 <= sensor[field] <= upper), f'{field} must be a bounded nonnegative integer microsecond value'
         assert (
             sensor['imu_pipeline_delay_us'] + sensor['imu_transport_delay_us'] + 500 < 5000
-        ), 'IMU arrival must precede the firmware 5-ms sample expiry'
+        ), 'IMU arrival plus worst-case fixed-step release lateness must precede the firmware 5-ms sample expiry'
         assert (
             sensor['gnss_transport_delay_us'] + 500 < 20000
-        ), 'GNSS arrival must precede the firmware 20-ms sample expiry'
+        ), 'GNSS arrival plus worst-case fixed-step release lateness must precede the firmware 20-ms sample expiry'
         assert (
             sensor['baro_transport_delay_us'] + 500 < 20000
-        ), 'Barometer arrival must precede the firmware 20-ms sample expiry'
+        ), 'Barometer arrival plus worst-case fixed-step release lateness must precede the firmware 20-ms sample expiry'
         assert (
             sensor['mag_transport_delay_us'] + 500 < 100000
-        ), 'Magnetometer arrival must precede the firmware 100-ms sample expiry'
+        ), 'Magnetometer arrival plus worst-case fixed-step release lateness must precede the firmware 100-ms sample expiry'
         for field in ('imu_sample_period_us', 'mag_sample_period_us',
                       'baro_sample_period_us', 'gnss_sample_period_us'):
             minimum = 1000 if field == 'imu_sample_period_us' else 500
