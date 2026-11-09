@@ -73,3 +73,8 @@ Truth 只有 SensorFrontend 和只读 Evaluator 可动态读取；初始化来�
 - J 必须对称正定；当前 Flight SIM_ONLY 惯量数值恰好对角。刚体角加速度通过 Cholesky 求解 J*alpha=rhs，不显式求逆。
 - 所有状态/参数/wrench/environment 输入必须有限；四元数非零、电机转速非负；ground/drag 标志严格为 0/1，电机效能在 [0,1]。不合法输入由 S-Function 直接拒绝。
 - 第一版 ground_friction=0，明确不建水平地面摩擦。该参数位保留但不得在没有验证用例前改成非零。
+
+
+## SensorParameters 合同
+
+SensorParameters 为 19 doubles：[gravity, magnetic_field_NED(3), earth_rate_NED(3), initial_velocity_NED(3), initial_rate_FRD(3), imu_to_cg_FRD(3), antenna_from_imu_FRD(3)]。IMU 杆臂按 CG→IMU = -imu_to_cg 解释，GNSS 天线杆臂为 CG→IMU + IMU→antenna。确定性 IMU 模型计算杆臂切向/向心加速度、固定 N0 Earth-rate gyro 和 Coriolis 比力；首样本差分未有效时不置 IMU valid 位。P-07/P-08 已有组件测试，P-09 噪声/bias/scale 和 P-10 多速率采样/传输延迟仍待实现。
