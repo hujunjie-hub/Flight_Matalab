@@ -56,4 +56,4 @@ verify_flight_entries
 
 ## MATLAB 测试与验收
 
-当前分支的唯一自动化验收入口为 `run_component_checks`。该入口会重建 Host SIL/MEX/模型、刷新 MIL 回放数据，并运行当前已实现的组件与三入口回放测试。测试数据集、每项验收阈值、必需报告、已知缺口和结果提交方式统一见 [MATLAB 仿真测试数据集与验收标准](spec/MATLAB-验收与结果提交.md)。验收后请提交整个 `work/validation/` 目录；不要使用旧报告或静态审查结果代替本次 MATLAB 运行结果。
+当前分支的唯一自动化验收入口为 `run_component_checks`。该入口会重建 Host SIL/MEX/模型、刷新 MIL 回放数据，并运行当前已实现的组件与三入口回放测试。测试数据集、每项验收阈值、必需报告、已知缺口和结果提交方式统一见 [MATLAB 仿真测试数据集与验收标准](spec/MATLAB-验收与结果提交.md)。验收后执行 `pwsh -File .\\tools\\archive_validation_run.ps1` 生成唯一 RUN_ID 和证据 ZIP，再将 ZIP 附加到对应 GitHub Issue 或发给验收方。问题登记、状态流转和关闭规则见 [问题闭环规范](quality/ISSUE_WORKFLOW.md)。不要使用旧报告或静态审查结果代替本次 MATLAB 运行结果。

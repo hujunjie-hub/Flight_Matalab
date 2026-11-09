@@ -186,17 +186,7 @@ P-14 不在上述 Plant 开环脚本中执行，由 `tests/verify_truth_isolatio
 5. Flight 三入口当前集成验收为 26 s 默认任务，不等于旧版系统规格中所有 30 s、故障矩阵、MPC RMS 和覆盖率要求均已实现。
 6. 当前所有结果仅是 PC MATLAB/Simulink + Windows Host SIL/SIM_ONLY 模型验证，不构成 MCU 实时性、PIL/HIL、传感器实物标定或实飞放行。
 
-## 8. 结果提交给验收方
-
-每次运行后请将以下内容打包发回：
-
-- `work/validation/` 整个目录，至少包含本文件第 4 节列出的全部 JSON 报告、`current_source_fingerprint.json` 和 MATLAB Diary 日志。
-- 本次生成的 `scenarios/flight_sil_recording.mat`（若它相对仓库基线发生变化）。
-- MATLAB 版本/Release、操作系统、`mex -setup C` 选中的编译器、MinGW 路径。
-- 同级 `Flight` 仓库的 branch/commit SHA，以及本项目 `git rev-parse HEAD` 输出。
-- 若失败，保留完整异常标识、错误消息、堆栈、失败前后的关键输出；不要只发最后一行红色报错或截图。
-
-**必须保存命令窗口日志**，否则缺少构建/仿真过程中的完整上下文：
+每次运行后，先关闭 Diary，再归档；不要直接覆盖上一轮证据。
 
 ```matlab
 root=flight_startup;
@@ -208,19 +198,21 @@ run_component_checks;
 diary off;
 ```
 
-如果运行中断导致 `diary off` 未执行，可在命令窗口单独执行 `diary off`。不要删除失败现场或覆盖失败报告后再提交。
+然后在仓库根目录执行：
+
+```powershell
+pwsh -File .\\tools\\archive_validation_run.ps1
+```
+
+归档脚本会生成唯一 `RUN_ID`，把本轮所有 JSON 报告、Diary、源数据指纹和本次 `flight_sil_recording.mat` 副本放入 `work/validation/archives/<RUN_ID>/`，生成 `<RUN_ID>.zip`，并记录 Flight_Matalab/Flight commit、运行状态及每个文件的 SHA-256。归档成功后只清空当前工作区顶层临时文件，历史 `archives/` 不会被删除。每个 RUN_ID 不可覆盖；失败或中断的运行也要归档，状态保留为 FAIL/INCOMPLETE。
+
+`work/` 已由 `.gitignore` 排除，因此原始 MAT、日志和每轮报告不直接提交到 Git。把 ZIP 附加到对应 GitHub Issue；若附件不可用或过大，就把 ZIP 发给验收方，并在 Issue 中登记文件名、SHA-256 和提交日期。不要只发截图或最后一行报错。
+
+问题登记、状态流转、证据目录和关闭标准见 [问题闭环规范](../quality/ISSUE_WORKFLOW.md)。每个 Issue 必须引用发现它的 RUN_ID；修复后还必须引用修复 commit 和新的回归 RUN_ID。
 
 ## 9. 我方验收输出
 
-收到结果后将按本文件和 `spec/validation/matlab_acceptance_manifest.json` 逐项核对：
-
-1. 确认分支/提交 SHA、Flight 上游版本、模型/配置/测试/数据 SHA-256 与本次运行一致。
-2. 检查每个必需报告是否存在、是否来自同一运行、顶层状态与子项状态是否自洽。
-3. 对照数值阈值复核实际误差、计数守恒、序列缺口、仿真终态和 replay 一致性。
-4. 区分真正失败、预期 PARTIAL、未运行和证据不足；识别脚本没有覆盖但文档要求的缺口。
-5. 输出验收结论、问题清单、严重级别、复现入口和建议修复顺序；修复后再要求复测。
-
-任何没有原始报告或可复现证据支持的结果都标为 `UNVERIFIED`，不会凭口头描述或截图认定 PASS。
+收到运行包后，除测试验收外，还会按 [问题闭环规范](../quality/ISSUE_WORKFLOW.md) 对每个独立问题建立/更新 GitHub Issue，分配 `FMAT-xxxx` 编号，记录严重级别、当前状态、复现步骤和证据。问题未经过修复后回归验收，不会关闭。
 
 ## 10. 相关文档
 
@@ -228,4 +220,6 @@ diary off;
 - [系统级目标验收矩阵](FlightSIM-test-plan.md)
 - [实现状态](../IMPLEMENTATION_STATUS.md)
 - [数据与依赖锁](validation/matlab_acceptance_manifest.json)
+- [问题闭环规范](../quality/ISSUE_WORKFLOW.md)
+- [问题关闭清单](../quality/ISSUE_CLOSURE_CHECKLIST.md)
 - [项目运行说明](../README.md)

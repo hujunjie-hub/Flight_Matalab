@@ -54,3 +54,8 @@ Host方案统一标HOST_NATIVE_V2：约束驱动retimer/GoalConnector、固定gr
 ## 当前分支 MATLAB 实际验收
 
 规格文档中的目标矩阵不自动代表代码已实现或已执行。当前分支的可执行测试入口、数据集版本、实际断言阈值、报告清单和结果提交格式，以 [MATLAB 仿真测试数据集与验收标准](MATLAB-验收与结果提交.md) 及 [机器可读验收清单](validation/matlab_acceptance_manifest.json) 为准。
+
+
+## 问题登记与闭环
+
+所有缺陷、测试失败和验收阻塞统一登记在 GitHub Issues；编号、状态、严重级别、证据 RUN_ID、修复 commit 和回归结果按 [问题闭环规范](../quality/ISSUE_WORKFLOW.md) 管理。每次 MATLAB 运行的原始证据归档在被 Git 忽略的 `work/validation/archives/`，不与版本化的 `spec/validation/` 验收标准混放。

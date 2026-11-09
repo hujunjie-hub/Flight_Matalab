@@ -268,5 +268,14 @@
     "PID report retains NOT_RUN fields for complete M6 time-context guard and closed-loop rate step.",
     "Actuation report retains NOT_RUN fields for permit lifecycle, 500 us frame application and ground-stop transaction.",
     "No MCU real-time, PIL/HIL, hardware sensor calibration or flight-release claim."
-  ]
+  ],
+  "issue_workflow": {
+    "document": "quality/ISSUE_WORKFLOW.md",
+    "closure_checklist": "quality/ISSUE_CLOSURE_CHECKLIST.md",
+    "github_issue_template": ".github/ISSUE_TEMPLATE/matlab-acceptance-issue.md",
+    "issue_id_format": "FMAT-{github_issue_number:04d}",
+    "status_manifest": "quality/issue-workflow.json",
+    "archive_script": "tools/archive_validation_run.ps1",
+    "run_archive_root": "work/validation/archives"
+  }
 }
