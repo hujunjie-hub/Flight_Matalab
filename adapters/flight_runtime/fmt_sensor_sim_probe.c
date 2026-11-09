@@ -15,14 +15,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
     const mxArray *truth_array, *parameter_array, *time_array, *epoch_array;
     const double *truth, *parameters, *times, *epoch_value;
-    double *frames, *events;
+    double *frames, *events, *statistics = NULL;
     mwSize rows, columns;
-    uint64_t epoch_us, previous_time_us;
+    uint64_t epoch_us;
     FmtSensorSimState state;
 
-    if (nrhs != 4 || nlhs != 2)
+    if (nrhs != 4 || nlhs < 2 || nlhs > 3)
         mexErrMsgIdAndTxt("Flight:SensorProbeArguments",
-            "Usage: [frames,events]=fmt_sensor_sim_probe(truth18,parameters10,times_us,epoch_us).");
+            "Usage: [frames,events,stats]=fmt_sensor_sim_probe(truth18,parameters10,times_us,epoch_us).");
     truth_array = prhs[0];
     parameter_array = prhs[1];
     time_array = prhs[2];
@@ -50,12 +50,15 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         floor(*epoch_value) != *epoch_value || *epoch_value > 9.0e15)
         mexErrMsgIdAndTxt("Flight:SensorProbeEpoch","Epoch must be an integer microsecond timestamp.");
     epoch_us = (uint64_t)*epoch_value;
-    previous_time_us = epoch_us;
     if (fmt_sensor_sim_init(&state, parameters, epoch_us) != 0)
         mexErrMsgIdAndTxt("Flight:SensorProbeParameters","Sensor timing parameters are invalid.");
 
     plhs[0] = mxCreateDoubleMatrix(rows, 18, mxREAL);
-    plhs[1] = mxCreateDoubleMatrix(rows, 16, mxREAL);
+    plhs[1] = mxCreateDoubleMatrix(rows, 20, mxREAL);
+    if (nlhs == 3) {
+        plhs[2] = mxCreateDoubleMatrix(4, 8, mxREAL);
+        statistics = mxGetPr(plhs[2]);
+    }
     frames = mxGetPr(plhs[0]);
     events = mxGetPr(plhs[1]);
 
@@ -66,25 +69,21 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (!isfinite(time_value) || time_value < 0.0 ||
             floor(time_value) != time_value || time_value > 9.0e15)
             mexErrMsgIdAndTxt("Flight:SensorProbeTime","Times must be integer microseconds.");
-        if ((uint64_t)time_value < previous_time_us ||
-            ((uint64_t)time_value - epoch_us) % 500u != 0u)
-            mexErrMsgIdAndTxt("Flight:SensorProbeOrder",
-                "Times must be monotonic and aligned to the 500-us scheduler.");
-        previous_time_us = (uint64_t)time_value;
         for (unsigned column = 0; column < 18; ++column)
             input[column] = truth[row + rows * column];
         if (fmt_sensor_sim_step(&state, input, (uint64_t)time_value, due) != 0)
-            mexErrMsgIdAndTxt("Flight:SensorProbeStep","Sensor event queue failed.");
+            mexErrMsgIdAndTxt("Flight:SensorProbeStep","Sensor event queue rejected time, mask, or queue state.");
 
         frame[FMT_SENSOR_CONTACT] = input[FMT_SENSOR_CONTACT];
         for (unsigned channel = 0; channel < 4; ++channel) {
             const FmtSensorSimEvent *event = &due[channel];
-            const mwSize event_base = row + rows * (channel * 4u);
+            const mwSize event_base = row + rows * (channel * 5u);
             if (!event->valid) continue;
             events[event_base] = 1.0;
-            events[row + rows * (channel * 4u + 1u)] = (double)event->sample_us;
-            events[row + rows * (channel * 4u + 2u)] = (double)event->capture_us;
-            events[row + rows * (channel * 4u + 3u)] = (double)event->arrival_us;
+            events[row + rows * (channel * 5u + 1u)] = (double)event->sample_us;
+            events[row + rows * (channel * 5u + 2u)] = (double)event->capture_us;
+            events[row + rows * (channel * 5u + 3u)] = (double)event->arrival_us;
+            events[row + rows * (channel * 5u + 4u)] = (double)event->sequence;
             switch (channel) {
             case FMT_SENSOR_SIM_IMU:
                 memcpy(frame + FMT_SENSOR_GYRO, event->values, 3u * sizeof(double));
@@ -107,8 +106,24 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             default:
                 mexErrMsgIdAndTxt("Flight:SensorProbeChannel","Unknown sensor channel.");
             }
+            if (fmt_sensor_sim_mark_accepted(&state, channel) != 0)
+                mexErrMsgIdAndTxt("Flight:SensorProbeAccounting","Released event could not be marked accepted.");
         }
         for (unsigned column = 0; column < 18; ++column)
             frames[row + rows * column] = frame[column];
+    }
+
+    if (statistics) {
+        for (unsigned channel = 0; channel < 4; ++channel) {
+            const FmtSensorSimChannelStats *s = &state.stats[channel];
+            statistics[channel + 4u * 0u] = (double)s->opportunities;
+            statistics[channel + 4u * 1u] = (double)s->generated;
+            statistics[channel + 4u * 2u] = (double)s->suppressed;
+            statistics[channel + 4u * 3u] = (double)s->released;
+            statistics[channel + 4u * 4u] = (double)s->accepted;
+            statistics[channel + 4u * 5u] = (double)state.queues[channel].count;
+            statistics[channel + 4u * 6u] = (double)s->queue_overflow;
+            statistics[channel + 4u * 7u] = (double)state.sequence[channel];
+        }
     }
 }
