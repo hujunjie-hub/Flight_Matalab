@@ -27,13 +27,13 @@ GeodesyAdapter 严格区分点和向量：r_e=r0_e+C_e0*p0，v_e=C_e0*v0，R_0b=
 
 ## 3. 电机、载荷和接地
 
-电机顺序、FRD 坐标、偏航符号、质量、惯量、推力上下限和一阶时间常数由同级 Flight/config/vehicle_model.yaml 提供。当前 Flight 合成配置的四个位置为 [0.18,-0.18,0]、[0.18,0.18,0]、[-0.18,0.18,0]、[-0.18,-0.18,0] m，偏航系数为 [-.02,+.02,-.02,+.02] m；这组参数没有硬件辨识证据。当前刚体内核只支持对角惯量，参数生成会拒绝非对角惯量，不能静默丢弃惯量积。
+电机顺序、FRD 坐标、偏航符号、质量、惯量、推力上下限和一阶时间常数由同级 Flight/config/vehicle_model.yaml 提供。当前 Flight 合成配置的四个位置为 [0.18,-0.18,0]、[0.18,0.18,0]、[-0.18,0.18,0]、[-0.18,-0.18,0] m，偏航系数为 [-.02,+.02,-.02,+.02] m；这组参数没有硬件辨识证据。刚体内核支持完整 3×3 对称正定惯量矩阵，使用完整 J·ω、ω×(J·ω) 和 Cholesky 求解 J·α=rhs；参数生成和 S-Function 会拒绝非对称或非正定矩阵。当前 Flight 合成数值恰好为对角矩阵。
 
 SIM_ONLY 专属参数包括转速到推力系数、空气阻力、转动阻尼和地面接触。ω_cmd=sqrt(max(f_cmd,0)/k_f)，motorω_dot=(ω_cmd-motorω)/tau，f_actual=k_f*motorω²。Plant 物理电机上限跟随 Flight vehicle config；当前 M7 DShot 虚拟量化曲线仍限制命令为0..10N。F_i=[0,0,-f_i]，τ_i=r_i×F_i+[0,0,gamma_i*f_i]。loss-of-effectiveness 是 Plant 内部物理故障，不把该真值直接写 M6/M7 能力 mask。
 
 相对空气速度阻力 -Fdrag*v_air，转动阻尼 -Kω；所有外力先注明 frame 再变换。PlantParameters 固定19项：p[0]=mass，p[1..3]=diag(J)，p[4]=kf，p[5]=motor tau，p[6..8]=NED drag，p[9]=rate damping，p[10..12]=ground stiffness/damping/down，p[13..15]=contact lever FRD，p[16]=gravity，p[17..18]=skid half-span。参数由 generate_parameters 统一生成；任何维度或物理范围不匹配都应在模型运行前失败。M7 输入 N 来自量化 code 逆映射，无第二次 PWM 解释。电机ω/实际力只到传感器和只读评价，ESC反馈 NONE。
 
-接触必须先按几何门控：p_contact_D<ground_D 时 Fn=0，与下降速度无关；否则 δ=p_contact_D-ground_D，Fn=max(0,k*δ+c*v_contact_D)，向 N0 Up 作用并产生 CG 力矩。接地之外不得有阻尼悬浮力；离地后不粘地，不用状态投影/瞬移纠正穿透。第一版明确不建水平地面摩擦；超2cm基准穿透或非有限即 FAIL。
+接触必须先按几何门控：p_contact_D<ground_D 时 Fn=0，与下降速度无关；否则 δ=p_contact_D-ground_D，Fn=max(0,k*δ+c*v_contact_D)，向 N0 Up 作用并产生 CG 力矩。接地之外不得有阻尼悬浮力；离地后不粘地，不用状态投影/瞬移纠正穿透。第一版地面摩擦参数明确为 μ=0，不产生水平接触力；超2cm基准穿透或非有限即 FAIL。
 
 GroundContact fixture 用有符号间隙 gap=ground_D-p_contact_D 判定：gap≤1mm 且穿透 δ≤2cm、测量有效时给 CONTACT；合法静态压缩不会因 abs(gap)>1mm 丢失接地，sample 每500us、TTL1000us；无随机误判为名义假设，drop/stuck 在独立故障场景注入。M4 仍需 Nav 加速度/速度和2s dwell，不能只凭该位宣布 LANDED。
 
@@ -60,6 +60,6 @@ IMU 原始捕获时刻在 M2 减已知2000us一次；STANDARD 消息直接携带
 
 ## 5. 数值证据和限制
 
-P-12 在同一500us外层调用内比较一次500us RK4与两个250us RK4子步，保持 Frame 应用延迟、sensor采样/arrival、输入保持和随机序列完全相同，只改变物理积分精度。子步内不再触发 Chart/队列/噪声。连续块或 Aerospace 6DOF 不能直接混入活动方案；若以后整体换积分策略，需重验执行时序/符号/收敛再替换本方案。
+P-12 对比 500us Simulink RK4 与独立 250us RK4 参考，使用相同初始状态、输入保持和无接触环境；当前参考只覆盖平滑无接触轨迹，不代表传感器队列/事件时序已验收。子步内不再触发 Chart/队列/噪声。连续块或 Aerospace 6DOF 不能直接混入活动方案；若以后整体换积分策略，需重验执行时序/符号/收敛再替换本方案。
 
 Truth 只有 SensorFrontend 和只读 Evaluator 可动态读取；初始化来自同一 Scenario 先验配置而非运行中 truth 反馈。没有 HIL 实时性或飞行安全放行结论。
