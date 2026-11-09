@@ -101,9 +101,49 @@ assert(norm(wrench-[0 0 -expectedNormal 0 0 0],inf)<1e-8, ...
     'Flight:P17','Unexpected horizontal ground friction or moment.');
 results{end+1}=passed('P-17','No horizontal ground friction in first-version Plant');
 
+% P-19: invalid states, environment values and inertia matrices fail closed.
+badEnvironment=environment;
+badEnvironment(12)=1.01;
+expect_error(@()run('FMT_RigidBodyRHS',{cfg.derived.PlantState0',zeros(1,6), ...
+    zeros(1,6),badEnvironment},.001,struct), ...
+    'Invalid Plant Environment','Flight:P19');
+badState=cfg.derived.PlantState0;
+badState(1)=NaN;
+expect_error(@()run('FMT_RigidBodyRHS',{badState',zeros(1,6), ...
+    zeros(1,6),environment},.001,struct), ...
+    'Invalid PlantState','Flight:P19');
+badState=cfg.derived.PlantState0;
+badState(14)=-1;
+expect_error(@()run('FMT_RigidBodyRHS',{badState',zeros(1,6), ...
+    zeros(1,6),environment},.001,struct), ...
+    'Invalid PlantState','Flight:P19');
+badParameters=cfg.derived.PlantParameters;
+badParameters(3)=badParameters(3)+.01; % Break J21/J12 symmetry.
+expect_error(@()run('FMT_RigidBodyRHS',{cfg.derived.PlantState0',zeros(1,6), ...
+    zeros(1,6),environment},.001,struct('PlantParameters',badParameters)), ...
+    'Invalid PlantParameters','Flight:P19');
+results{end+1}=passed('P-19','Invalid state, environment and inertia rejected');
+
+% P-20: the rigid-body RHS must preserve non-diagonal inertia and gyro coupling.
+customParameters=cfg.derived.PlantParameters;
+Jfull=[.03 .002 .001;.002 .04 .003;.001 .003 .05];
+customParameters(2:10)=Jfull(:);
+angularState=cfg.derived.PlantState0;
+angularState(11:13)=[.3;.2;.1];
+omega=angularState(11:13);
+torque=[.1;-.2;.3];
+out=run('FMT_RigidBodyRHS',{angularState', [0 0 0 torque'], ...
+    zeros(1,6),environment},.001,struct('PlantParameters',customParameters));
+derivative=out.yout{1}.Values.Data(end,:);
+expectedAngularAcceleration=(Jfull\\(torque- ...
+    cfg.derived.PlantParameters(16)*omega-cross(omega,Jfull*omega)))';
+assert(norm(derivative(11:13)-expectedAngularAcceleration,inf)<1e-9, ...
+    'Flight:P20','Full inertia/gyroscopic coupling was not applied correctly.');
+results{end+1}=passed('P-20','Full non-diagonal inertia and gyroscopic coupling');
+
 report=struct('scope','PLANT_COMPONENT_OPEN_LOOP','status','PARTIAL_PASS', ...
-    'coverage','P-01..P-06,P-11,P-15..P-17', ...
-    'tests',{results},'all_P01_P17_accepted',false, ...
+    'coverage','P-01..P-06,P-11,P-15..P-17,P-19..P-20', ...
+    'tests',{results},'all_P01_P20_accepted',false, ...
     'not_run_test_ids',{{'P-07','P-08','P-09','P-10','P-12','P-13','P-14'}}, ...
     'system_closed_loop','NOT_RUN','gravity_mps2',g);
 fid=fopen(fullfile(root,'work','validation','plant_open_loop_report.json'),'w');
@@ -127,6 +167,18 @@ end
 out=sim(in);
 assert(abs(out.tout(end)-stop)<1e-12, ...
     'Flight:PlantEarlyStop','Plant run ended early.');
+end
+
+function expect_error(callback,expectedText,identifier)
+failed=false;
+try
+    callback();
+catch exception
+    failed=true;
+    assert(contains(exception.message,expectedText),identifier, ...
+        'Unexpected failure while checking invalid input: %s',exception.message);
+end
+assert(failed,identifier,'Invalid Plant input was not rejected.');
 end
 
 function result=passed(id,description)
