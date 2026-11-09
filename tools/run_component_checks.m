@@ -22,6 +22,7 @@ try
     report.checks.native_kernels='PASS';
     report.checks.time_service=verify_time_service_sync;
     report.checks.gnss_time_recovery=verify_gnss_time_recovery;
+    report.checks.rectime_time_mapping=verify_rectime_time_mapping;
     report.checks.parameters=verify_parameter_view;
     report.checks.osqp=verify_osqp_gate;
     report.checks.execution=verify_execution_gate;
