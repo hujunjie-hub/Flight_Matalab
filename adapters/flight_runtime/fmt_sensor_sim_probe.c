@@ -54,7 +54,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mexErrMsgIdAndTxt("Flight:SensorProbeParameters","Sensor timing parameters are invalid.");
 
     plhs[0] = mxCreateDoubleMatrix(rows, 18, mxREAL);
-    plhs[1] = mxCreateDoubleMatrix(rows, 20, mxREAL);
+    plhs[1] = mxCreateDoubleMatrix(rows, 24, mxREAL);
     if (nlhs == 3) {
         plhs[2] = mxCreateDoubleMatrix(4, 8, mxREAL);
         statistics = mxGetPr(plhs[2]);
@@ -77,13 +77,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         frame[FMT_SENSOR_CONTACT] = input[FMT_SENSOR_CONTACT];
         for (unsigned channel = 0; channel < 4; ++channel) {
             const FmtSensorSimEvent *event = &due[channel];
-            const mwSize event_base = row + rows * (channel * 5u);
+            const mwSize event_base = row + rows * (channel * 6u);
             if (!event->valid) continue;
             events[event_base] = 1.0;
-            events[row + rows * (channel * 5u + 1u)] = (double)event->sample_us;
-            events[row + rows * (channel * 5u + 2u)] = (double)event->capture_us;
-            events[row + rows * (channel * 5u + 3u)] = (double)event->arrival_us;
-            events[row + rows * (channel * 5u + 4u)] = (double)event->sequence;
+            events[row + rows * (channel * 6u + 1u)] = (double)event->sample_us;
+            events[row + rows * (channel * 6u + 2u)] = (double)event->capture_us;
+            events[row + rows * (channel * 6u + 3u)] = (double)event->arrival_us;
+            events[row + rows * (channel * 6u + 4u)] = (double)event->release_us;
+            events[row + rows * (channel * 6u + 5u)] = (double)event->sequence;
             switch (channel) {
             case FMT_SENSOR_SIM_IMU:
                 memcpy(frame + FMT_SENSOR_GYRO, event->values, 3u * sizeof(double));
