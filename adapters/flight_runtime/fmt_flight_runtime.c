@@ -253,13 +253,6 @@ static int inject_simulated_baro(const FmtSensorSimEvent *event,
         ++failures;
         return -1;
     }
-#ifdef FLIGHT_GROUND_STATION
-    if (ground_online) {
-        const float pressure_pa = 101325.0f *
-            powf(1.0f - measurement.payload.baro.altitude_m / 44330.0f, 5.255f);
-        sensor_calibration_feed_baro(pressure_pa, event->arrival_us);
-    }
-#endif
     return 0;
 }
 
