@@ -50,3 +50,27 @@
 ## MATLAB 验收依据（2026-11-09）
 
 当前分支的测试数据集、运行入口、逐项阈值、报告清单和已知未实现范围统一由 [MATLAB 仿真测试数据集与验收标准](spec/MATLAB-验收与结果提交.md) 及其机器可读清单 `spec/validation/matlab_acceptance_manifest.json` 管理。`run_component_checks` 已作为完整验收入口：重建依赖后运行 `verify_flight_entries(true)` 刷新 MIL 回放数据，再执行已实现组件 gate 并生成最终输入指纹。当前预期仍为 `PARTIAL_PASS`，不能把 P-10 Host MIL PPS/RECTIME 端到端缺口解释为通过。
+
+
+## 2026-11-09 MATLAB 验收运行记录（FAIL）
+
+- 仓库/分支：`hujunjie-hub/Flight_Matalab` · `optimize/sil-physical-parameter-alignment` · HEAD `74104d8`，工作区干净。
+- 环境：MATLAB `26.2.0.3433840 (R2026b) Update 1`，Windows x64；Host SIL 用 MinGW-w64 GCC `D:\STM32CubeCLT\mingw64\bin`；Flight 上游 `edf32b4e39cdae014aa76870dc821882807a6905`。
+- 入口与结果：`run_component_checks`，**FAIL**。第 1 步 Host SIL 构建失败（`Flight:RuntimeBuild`，`parameter_store.h` 未找到）。`build_native_kernels` 及之后全部组件 gate、MIL/DataSIM/ExtINS 回放、`current_source_fingerprint.json` 均为 NOT_RUN 或缺失，不得视为通过。
+- 证据归档：`work/validation/archives/20261109T115735527Z_74104d8.zip`，SHA-256 `ae8e3085a0aa61e7e21c44ceea5b38cf3188528f0144366bd4567d2b6a807128`。
+- 问题台账：GitHub Issues 是唯一台账，本轮登记 FMAT-0002～FMAT-0010，其中 FMAT-0007 与构建阻断无关、FMAT-0008/FMAT-0009 需在构建阻断解除后按新 RUN_ID 复现。
+
+| ID | 级别 | 组件 | 摘要 |
+|---|---|---|---|
+| FMAT-0002 | S1 | BUILD | adapter 编译缺少 `middleware/param` 头文件路径 |
+| FMAT-0003 | S1 | BUILD | `external_dependencies.lock.json` 三个契约头文件哈希过期 |
+| FMAT-0004 | S1 | SENSOR | 适配器在 `double` 数组上按位或，MEX 编译失败 |
+| FMAT-0005 | S1 | OTHER | `max(...,'all')` 在 R2026b 非法（5 处） |
+| FMAT-0006 | S1 | OTHER | `removeEntry` 在 R2026b 已移除 |
+| FMAT-0007 | S2 | OTHER | `verify_truth_isolation` 期望块名与 `FMT_MILSIM.slx` 不一致 |
+| FMAT-0008 | S1 | FMS | MIL 全程未解锁、无推力、无起飞，导航有效位恒 0（待复现） |
+| FMAT-0009 | S1 | PLANT | P-07 IMU 加速度差分仍用 Plant 基步（待复现） |
+| FMAT-0010 | S1 | BUILD | `config/flight_baseline.json` 与 `../Flight` 不符（9 缺失/58 漂移） |
+
+- 阻断链：FMAT-0002 → FMAT-0003 → FMAT-0010 → FMAT-0004 → FMAT-0005 → FMAT-0006；解除后才可能复现 FMAT-0008、FMAT-0009。
+- 本轮未修改代码；此前一轮的本地修补仅保存在 `git stash` 与 `work/local_r2026b_fixes_backup.patch` 中，未提交、未推送。
