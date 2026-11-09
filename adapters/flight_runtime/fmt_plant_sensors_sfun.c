@@ -5,6 +5,7 @@
 #include <string.h>
 #include "fmt_flight_runtime.h"
 #include "../../models/plant/fmt_rotation.h"
+#include "../../models/plant/fmt_plant_validation.h"
 
 /* SensorParameters (19):
  * gravity, magnetic_NED(3), earth_rate_NED(3), initial_velocity_NED(3),
