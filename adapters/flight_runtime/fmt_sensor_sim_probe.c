@@ -44,7 +44,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mxGetNumberOfElements(epoch_array) != 1 ||
         (offset_array && mxGetNumberOfElements(offset_array) != 1))
         mexErrMsgIdAndTxt("Flight:SensorProbeShape",
-            "Expected truth N-by-18, 10 parameters, N times and one epoch.");
+            "Expected truth N-by-18, 10 parameters, N times, one epoch and optional sample-time offset.");
 
     truth = mxGetPr(truth_array);
     parameters = mxGetPr(parameter_array);
