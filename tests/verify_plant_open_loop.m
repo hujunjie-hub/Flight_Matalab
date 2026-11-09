@@ -2,6 +2,10 @@ function report=verify_plant_open_loop
 %VERIFY_PLANT_OPEN_LOOP Run implemented Plant physics and numerical gates.
 root=flight_startup;
 cfg=generate_parameters;
+sensorModelFile=fullfile(root,'models','plant','FMT_PlantSensors.slx');
+assert(isfile(sensorModelFile),'Flight:SensorModel', ...
+    'Run build_plant_models(8) to create FMT_PlantSensors before Plant verification.');
+load_system(sensorModelFile);
 g=cfg.derived.GravityMps2;
 initial=cfg.derived.PlantState0;
 environment=[zeros(1,9),0,0,ones(1,4)];
@@ -73,16 +77,65 @@ assert(max(abs(vecnorm(pos(:,7:10),2,2)-1))<1e-6, ...
     'Flight:P06','Quaternion normalization failed.');
 results{end+1}=passed('P-06','Quaternion sign invariance and normalization');
 
-% P-12: compare the 500-us Simulink Plant against an independent 250-us RK4
-% reference while keeping the same input hold, environment and initial state.
+% P-07: nonzero IMU and GNSS antenna lever arms follow rigid-body point kinematics.
+% Earth rate is zeroed in this isolated geometry test; P-08 verifies it separately.
+sensorParameters=cfg.derived.SensorParameters;
+sensorParameters(5:7)=0;
+sensorParameters(14:16)=[0.10;0;0];  % IMU->CG; CG->IMU is the negative vector.
+sensorParameters(17:19)=[0.20;0;0];  % IMU->GNSS antenna.
+rotationRate=2.0;
+profileInitial=initial;
+profileInitial(1:6)=0;
+profileInitial(7:10)=[1;0;0;0];
+profileInitial(11:13)=[0;0;rotationRate];
+profileTimes=(0:0.0005:0.02)';
+profileStates=repmat(profileInitial',numel(profileTimes),1);
+for k=1:numel(profileTimes)
+    angle=rotationRate*profileTimes(k);
+    profileStates(k,7:10)=[cos(angle/2),0,0,sin(angle/2)];
+end
+profileGap=zeros(size(profileTimes));
+sensorRun=run_profile('FMT_PlantSensors',{profileStates,profileGap},profileTimes, ...
+    profileTimes(end),struct('SensorParameters',sensorParameters),0.0005);
+sensorFrame=sensorRun.yout{1}.Values.Data(end,:);
+leverImu=-sensorParameters(14:16);
+leverAntenna=leverImu+sensorParameters(17:19);
+omegaBody=[0;0;rotationRate];
+expectedImuAcceleration=cross(omegaBody,cross(omegaBody,leverImu));
+finalRotation=reference_rotation(profileStates(end,7:10));
+expectedAntennaPosition=profileStates(end,1:3)'+finalRotation*leverAntenna;
+expectedAntennaVelocity=profileStates(end,4:6)'+finalRotation*cross(omegaBody,leverAntenna);
+assert(norm(sensorFrame(4:6)'-[expectedImuAcceleration(1);expectedImuAcceleration(2); ...
+    expectedImuAcceleration(3)-g],inf)<1e-6 && ...
+    norm(sensorFrame(7:9)'-expectedAntennaPosition,inf)<1e-6 && ...
+    norm(sensorFrame(10:12)'-expectedAntennaVelocity,inf)<1e-6, ...
+    'Flight:P07','IMU/antenna lever-arm kinematics differ from rigid-body reference.');
+results{end+1}=passed('P-07','IMU acceleration and GNSS antenna position/velocity lever arms');
+
+% P-08: a stationary level IMU reports specific force -g on body Z and Earth rate.
+staticState=initial;
+staticState(1:6)=0;
+staticState(7:10)=[1;0;0;0];
+staticState(11:13)=0;
+staticRun=run('FMT_PlantSensors',{staticState,0},0.001,struct,0.0005);
+staticFrame=staticRun.yout{1}.Values.Data(end,:);
+assert(abs(staticFrame(4))<1e-10 && abs(staticFrame(5))<1e-10 && ...
+       abs(staticFrame(6)+g)<1e-10 && ...
+       norm(staticFrame(1:3)'-cfg.derived.EarthRateNedRadps,inf)<1e-12 && ...
+       bitand(uint32(staticFrame(17)),uint32(1))==1, ...
+    'Flight:P08','Static IMU specific force or fixed-N0 Earth-rate term is incorrect.');
+results{end+1}=passed('P-08','Static specific force and fixed-N0 Earth-rate gyro');
+
+% P-12: compare 5 s of 500-us Simulink RK4 against an independent 250-us RK4
+% reference while keeping command, environment and initial state identical.
 stepInitial=initial;
 stepInitial(7:10)=[cos(pi/6);0;0;sin(pi/6)];
 stepInitial(11:13)=[0.3;0.2;0.1];
-coarse=run('FMT_QuadPlant',{zeros(1,4),environment},0.5, ...
+coarse=run('FMT_QuadPlant',{zeros(1,4),environment},5.0, ...
     struct('PlantState0',stepInitial),0.0005);
 coarseState=coarse.yout{1}.Values.Data;
 referenceState=reference_integrate(stepInitial,zeros(1,4),environment, ...
-    cfg.derived,0.00025,0.5);
+    cfg.derived,0.00025,5.0);
 assert(size(coarseState,1)==size(referenceState,1), ...
     'Flight:P12','Simulink/reference Plant outputs do not share the same sample times.');
 positionError=max(abs(coarseState(:,1:3)-referenceState(:,1:3)),[],'all');
@@ -125,8 +178,10 @@ staticContact(3)=cfg.vehicle_model.mass_kg*g/cfg.vehicle_model.ground_stiffness_
 out=run('FMT_GroundRHS',{staticContact,contactEnvironment},0.001,struct,0.0005);
 normalForce=out.yout{3}.Values.Data(end);
 signedGap=out.yout{2}.Values.Data(end);
-assert(abs(normalForce-cfg.vehicle_model.mass_kg*g)<1e-8 && signedGap<0, ...
-    'Flight:P16','Static ground compression does not balance vehicle weight.');
+contactWrench=out.yout{1}.Values.Data(end,:);
+assert(abs(normalForce-cfg.vehicle_model.mass_kg*g)<1e-8 && signedGap<0 && ...
+       norm(contactWrench(4:6),inf)<1e-8, ...
+    'Flight:P16','Static ground compression does not balance weight or creates a net contact torque.');
 results{end+1}=passed('P-16','Static spring compression balances gravity');
 
 % P-11: baseline drop test must remain finite with bounded penetration.
@@ -236,14 +291,15 @@ expect_error(@()run('FMT_RigidBodyRHS',{initial,zeros(1,6),zeros(1,6),environmen
     'Invalid PlantParameters','Flight:P21');
 results{end+1}=passed('P-21','Invalid environment, state and inertia rejected');
 
-remaining={'P-07','P-08','P-09','P-10','P-14'};
 implemented=cellfun(@(item)item.id,results,'UniformOutput',false);
+remaining={'P-09','P-10'};
 coverage=struct('status','PARTIAL','implemented_tests',{implemented}, ...
-    'remaining_tests',{remaining});
+    'remaining_tests',{remaining},'implemented_count',numel(results), ...
+    'required_plant_test_count',20);
 report=struct('scope','PLANT_COMPONENT_OPEN_LOOP', ...
     'status','PARTIAL','implemented_gate_status','PASS', ...
     'tests',{results},'coverage',coverage,'remaining_tests',{remaining}, ...
-    'all_P01_P21_accepted',false,'system_closed_loop','NOT_RUN', ...
+    'all_plant_P01_P13_P15_P21_accepted',false,'system_closed_loop','NOT_RUN', ...
     'tests_executed_count',numel(results),'gravity_mps2',g);
 fid=fopen(fullfile(root,'work','validation','plant_open_loop_report.json'),'w');
 cleanup=onCleanup(@()fclose(fid));
@@ -271,6 +327,24 @@ assert(abs(out.tout(end)-stop)<1e-12, ...
     'Flight:PlantEarlyStop','Plant run ended early.');
 end
 
+
+function out=run_profile(model,signals,times,stop,variables,step)
+ds=Simulink.SimulationData.Dataset;
+for k=1:numel(signals)
+    ds{k}=timeseries(signals{k},times);
+end
+in=Simulink.SimulationInput(model);
+in=in.setExternalInput(ds);
+in=in.setModelParameter('StopTime',num2str(stop,17), ...
+    'FixedStep',num2str(step,17));
+names=fieldnames(variables);
+for k=1:numel(names)
+    in=in.setVariable(names{k},variables.(names{k}));
+end
+out=sim(in);
+assert(abs(out.tout(end)-stop)<1e-12, ...
+    'Flight:PlantEarlyStop','Sensor kinematics run ended early.');
+end
 
 function states=reference_integrate(initial,command,environment,derived,step,stop)
 % Independent high-resolution RK4 reference for smooth, no-contact Plant tests.
