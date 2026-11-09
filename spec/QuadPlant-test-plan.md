@@ -17,7 +17,7 @@
 | P-07 | 非零 IMU/天线杆臂旋转 | IMU 向心/切向加速度及 GNSS 天线位置/速度符合刚体解析式，误差≤1e-6（double理想层） |
 | P-08 | 静止水平IMU | specific force=[0,0,-g]，gyro含固定 N0 Earth-rate 项；不把固定 N0 相对 rate=0 当 gyro 全0 |
 | P-09 | 噪声 seed 重复/独立源 | 同 seed 序列相同；统计 STD 在长样本95%置信检查范围 |
-| P-10 | 多速率事件时序与 GNSS 时间基准 | P-10a 已实现 IMU/GNSS/MAG/Baro sample/capture/arrival/release 队列；P-10b 复用 Flight TimeService 与 GNSS outage 上游 host tests，验证 PPS 频率驯服、UTC/PPS 配对、UTC mapping、PVT/UTC/PPS 独立失效、holdover 和重捕获；Host MIL 的 TIM2 capture/UM982 RECTIME 注入链仍未接入 |
+| P-10 | 多速率事件时序与 GNSS 时间基准 | P-10a 已实现 IMU/GNSS/MAG/Baro sample/capture/arrival/release 队列；P-10b 复用 Flight TimeService、GNSS outage 和真实 Unicore ASCII parser 核心测试，验证 PPS 频率驯服、UTC/PPS 配对、RECTIMEA CRC/GPS-UTC 一致性、UTC mapping、PVT/UTC/PPS 独立失效、holdover 和重捕获；Host MIL 的 TIM2 capture ISR 与 UART/DMA→sensor_gnss_poll 注入链仍未接入 |
 | P-11 | 地面落体/起飞 | 非负 Fn、无 NaN/Inf，最大穿透<2cm（基准场景），离地后不保持接触力 |
 | P-12 | 积分步长收敛 | 5s悬停/偏航无接触场景，相同初始状态和四路推力保持下，500us Simulink RK4 与独立250us RK4参考比较：位置差<1e-3m、姿态差<1e-4rad；只验证Plant积分精度，不代表系统级时序验收 |
 | P-13 | loss-of-effectiveness/外力 | 真值改变经测量反映，不能直接给 M4“传感器坏”的标签 |
@@ -32,7 +32,7 @@
 
 P-12 不满足须整体重选积分细化/接触参数并更新方案，不能放宽阈值；改变物理步长时保持外层时序，避免把延迟变化当收敛。P-09统计窗口可用10s以上，StopTime必须有限。
 
-P-10a 事件队列由 `verify_sensor_event_timing` 检查固定 GNSS PVT、IMU/MAG/Baro 多速率 sample/capture/arrival；500 μs 队列 release 不能替代物理 capture。generated/suppressed/released/accepted 计数满足 opportunities=generated+suppressed、generated=released+pending、released=accepted；抑制样本后下一有效事件必须出现序号缺口。P-10b 由两个独立 gate 覆盖：`verify_time_service_sync` 编译同级 Flight 的真实 `sensor_device/time_base/systime.c` 并运行上游 `tests/time/test_time_service.c`，覆盖 PPS period gate/频率锁定/holdover、UTC observation 与 PPS 配对、UTC mapping 不确定度、外部时钟映射和 time_epoch 变化拒绝；`verify_gnss_time_recovery` 编译真实 TimeService 与 GNSS sample normalization/filter/calibration，并运行 `tests/drivers/test_gnss_outage.c`，覆盖有效 PVT/无 Fix、旧 PVT 拒绝、PVT loss 与 PPS/UTC health 解耦、UTC loss、PPS loss、holdover、重捕获和坏边沿拒绝。两者 PPS 输入均为合成 `PpsCaptureEvent`，不等同真实 TIM2 ISR；当前 Host SIL `sil_flight.c` 仍将 time service API stub 为 `STATUS_NOT_READY`，UM982 UART RECTIME 未进入 MIL。因此 P-10b 的算法与 GNSS 失效恢复有独立回归，端到端 Host MIL PPS/RECTIME 链仍未实现，P-10 整体不能标为 PASS。
+P-10a 事件队列由 `verify_sensor_event_timing` 检查固定 GNSS PVT、IMU/MAG/Baro 多速率 sample/capture/arrival；500 μs 队列 release 不能替代物理 capture。generated/suppressed/released/accepted 计数满足 opportunities=generated+suppressed、generated=released+pending、released=accepted；抑制样本后下一有效事件必须出现序号缺口。P-10b 由三个独立 gate 覆盖：`verify_time_service_sync` 编译真实 Flight `systime.c` 并运行上游 `tests/time/test_time_service.c`；`verify_gnss_time_recovery` 编译真实 TimeService 和 GNSS sample normalization/filter/calibration，并运行 `tests/drivers/test_gnss_outage.c`；`verify_rectime_time_mapping` 编译真实 `unicore_ascii.c` 与 `systime.c`，构造 RECTIMEA 字节帧，验证 CRC、GPS week/TOW 与 UTC 日历一致性、PPS 配对和 UTC mapping。三者 PPS 输入均为合成 `PpsCaptureEvent`，不等同真实 TIM2 ISR；当前 Host SIL `sil_flight.c` 仍将 time service API stub 为 `STATUS_NOT_READY`，UART/DMA 与 `sensor_gnss_poll` 尚未进入 MIL。因此 P-10b 的服务、解析和失效恢复核心有独立回归，端到端 Host MIL PPS/RECTIME 链仍未实现，P-10 整体不能标为 PASS。
 
 P-04/05/07/08 理想层关闭噪声、地面或电机动态的具体旁路必须在 fixture 记录；生产闭环不得继承这些测试旁路。P-11 基准为地面上方0.1m、零初速、无推力落体；另设高落差场景，不能把2cm门限外推到任意撞击。P-09采用10000个独立白噪声样本，按卡方双侧95%区间检验各轴方差；固定 seed 用于回归，未通过不得反复挑 seed。q差使用 atan2 度量。
 
