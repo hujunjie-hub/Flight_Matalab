@@ -12,7 +12,7 @@
 
 打开 `Flight_Matalab.prj`。默认闭环命令为解锁、起飞至 2 m、降落和上锁。两种回放共用默认 MIL 记录，其中 ExtINS 使用同一次 MIL 运行录制的 KF-GINS 导航作为外部输入。若刚从 Git 更新了代码或 SIM_ONLY 配置，不要沿用旧 DLL/MEX 和旧验证报告；先按下文重建，再执行 `run_component_checks` 刷新当前源代码证据。可在 MATLAB 执行 `verify_flight_entries` 复核三个入口。
 
-清理 `work/` 或换机后，在项目根目录重建 Windows Host SIL 运行库。默认编译器路径为 `D:\STM32CubeCLT\mingw64\bin`，可通过 `-GccDir` 指定兼容的 MinGW 目录。
+清理 `work/`、换机或更新同级 Flight 时间服务源码后，在项目根目录重建 Windows Host SIL 运行库；该步骤也会刷新 `flight_baseline.json`，锁定 `systime.c` 和上游时间服务回归源。默认编译器路径为 `D:\STM32CubeCLT\mingw64\bin`，可通过 `-GccDir` 指定兼容的 MinGW 目录。不要在旧 baseline 尚未包含 `tests/time/test_time_service.c` 时单独运行 `build_native_kernels`。
 
 ```powershell
 pwsh -File tools/build_flight_runtime.ps1
