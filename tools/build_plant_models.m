@@ -138,6 +138,17 @@ fmt_edit(model,'root',{
     wire('#state.y1','#out.u1'),wire('#step.y2','#norm.u1'),wire('#step.y3','#fn.u1'),wire('#step.y4','#gap.u1')});
 finish(model);
 end
+
+if startStage<=8
+model='FMT_PlantSensors';make(model,folder);
+fmt_edit(model,'root',{
+    settings(model),port('Inport','PlantState','x',1,17), ...
+    port('Inport','SignedGapM','gap',2,1),port('Outport','SensorFrame','out',1,18), ...
+    block('S-Function','RigidBodySensorKinematics','sensor', ...
+        struct('Parameters','SensorParameters','FunctionName','fmt_plant_sensors_sfun')), ...
+    wire('#x.y1','#sensor.u1'),wire('#gap.y1','#sensor.u2'),wire('#sensor.y1','#out.u1')});
+finish(model);
+end
 end
 
 function make(model,folder)
