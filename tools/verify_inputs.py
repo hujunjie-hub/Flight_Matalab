@@ -102,7 +102,13 @@ def main():
             assert v[field] == flight_vehicle[field], f'Plant vehicle field differs from Flight source: {field}'
         assert len(flight_vehicle['motor_time_constant_s']) == 4
         assert len(set(flight_vehicle['motor_time_constant_s'])) == 1
+        assert flight_vehicle['motor_time_constant_s'][0] > 0
         assert v['motor_time_constant_s'] == flight_vehicle['motor_time_constant_s'][0]
+        positions = flight_vehicle['motor_position_frd_m']
+        assert len(positions) == 4 and all(len(position) == 3 for position in positions)
+        arm_lengths = [math.hypot(position[0], position[1]) for position in positions]
+        assert max(arm_lengths) - min(arm_lengths) < 1e-12
+        assert math.isclose(v['arm_length_m'], arm_lengths[0], rel_tol=0, abs_tol=1e-12)
 
         inertia = matrix3(v['inertia_frd_kgm2'])
         scale = max(1.0, *(abs(value) for row in inertia for value in row))
