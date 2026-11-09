@@ -9,6 +9,8 @@ try
     [status,message]=system(sprintf('python -B "%s"',fullfile(root,'tools','verify_inputs.py')));
     assert(status==0,'Flight:InputPreflight','%s',message);
     generate_parameters;
+    build_actuation_components;
+    build_pid_allocation_probe;
     report.source_fingerprint=fingerprint(root);
     report.checks.parameters=verify_parameter_view;
     report.checks.osqp=verify_osqp_gate;
@@ -18,7 +20,8 @@ try
     report.checks.pid_allocator_feedback=verify_pid_allocator_feedback;
     report.checks.actuation=verify_actuation_components;
     assert(strcmp(report.source_fingerprint,fingerprint(root)),'Flight:InputsChanged','Model/code/configuration changed during the checks.');
-    report.status='PASS';
+    report.status='PARTIAL_PASS';
+    report.plant_coverage=report.checks.plant.coverage;
 catch exception
     report.status='FAIL';
     report.error=struct('identifier',exception.identifier,'message',exception.message);
@@ -26,7 +29,7 @@ catch exception
     rethrow(exception);
 end
 write(file,report);
-fprintf('Independent component checks: PASS.\n');
+fprintf('Component checks completed; Plant acceptance coverage remains partial.\n');
 end
 
 function value=fingerprint(root)
