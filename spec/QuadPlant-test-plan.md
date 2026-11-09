@@ -14,8 +14,8 @@
 | P-04 | 无推力/无drag自由落体0.1s，无地面 | Δv_D=g*t，Δp_D=.5g*t²，误差≤1e-6m/1e-6m/s |
 | P-05 | 恒定mg向上合力，无扰动2s | v漂移≤1e-6m/s；不得重复加gravity |
 | P-06 | q/-q与非零yaw初值 | 同一C_nb/物理轨迹；q范数误差≤1e-6 |
-| P-07 | 非零杆臂旋转 | IMU/天线运动符合刚体解析式，误差≤1e-6（double理想层） |
-| P-08 | 静止水平IMU | specific force=[0,0,-g]，gyro含相应 Earth 项；不把固定 N0 相对 rate=0 当 gyro 全0 |
+| P-07 | 非零 IMU/天线杆臂旋转 | IMU 向心/切向加速度及 GNSS 天线位置/速度符合刚体解析式，误差≤1e-6（double理想层） |
+| P-08 | 静止水平IMU | specific force=[0,0,-g]，gyro含固定 N0 Earth-rate 项；不把固定 N0 相对 rate=0 当 gyro 全0 |
 | P-09 | 噪声 seed 重复/独立源 | 同 seed 序列相同；统计 STD 在长样本95%置信检查范围 |
 | P-10 | 各 sensor delay/axis delay | sample/arrival分别正确；M2不重复补偿，计数与缺失可追溯 |
 | P-11 | 地面落体/起飞 | 非负 Fn、无 NaN/Inf，最大穿透<2cm（基准场景），离地后不保持接触力 |
