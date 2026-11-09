@@ -71,7 +71,7 @@ function finish(model,folder)
 result = char(model_check(model,'root','["all"]'));
 assert(contains(result,'status: healthy'),'Flight:Connectivity','%s',result);
 save_system(model,fullfile(folder,[model '.slx']));
-fprintf('Saved %s\\n',model);
+fprintf('Saved %s\n',model);
 end
 
 function op = settings(model)
