@@ -40,10 +40,10 @@ verify_flight_entries
 ## Plant 模型边界与验证
 
 - 质量、惯量、电机位置、偏航符号、推力上下限和电机时间常数来自同级 `Flight/config/vehicle_model.yaml`；SIM_ONLY 配置只保留推力系数、阻力、接触和 Origin 等仿真专属参数。
-- PlantParameters 固定为 26 项，SensorParameters 固定为 19 项，SensorModelParameters 固定为 54 项；前两者分别包含完整 3×3 对称正定惯量矩阵、Earth-rate/Coriolis 和 IMU/GNSS 杆臂参数，第三者承载安装矩阵、残余 bias/scale、各传感器噪声 STD 与随机种子；当前 Flight 合成惯量恰好为对角矩阵。第一版地面摩擦系数明确设为 0，不引入未验证的水平接触力。分配器使用从 Flight 电机几何推导的 4×4 effectiveness/inverse 矩阵。
+- PlantParameters 固定为 26 项，SensorParameters 固定为 19 项，SensorModelParameters 固定为 54 项；前两者分别包含完整 3×3 对称正定惯量矩阵、Earth-rate/Coriolis 和 IMU/GNSS 杆臂参数，第三者承载安装矩阵、残余 bias/scale、各传感器噪声 STD 与随机种子。另生成 SensorTimingParameters（10 项）保存各传感器采样周期、传输/管线延迟和时间不确定度，供 P-10 时序队列接入；当前 Flight 合成惯量恰好为对角矩阵。第一版地面摩擦系数明确设为 0，不引入未验证的水平接触力。分配器使用从 Flight 电机几何推导的 4×4 effectiveness/inverse 矩阵。
 - Plant S-Function 对状态、参数、wrench、环境和输出做 fail-closed 检查；完整对称正定 3×3 惯量由 Cholesky 求解，非法环境开关、电机效能越界、非对称/非正定惯量和非有限状态均拒绝。
 - MIL 传感器模型已加入固定 N0 Earth-rate/Coriolis 项、CG→IMU 杆臂加速度、IMU→GNSS 天线位置/速度杆臂，并屏蔽首个无法差分的 IMU 样本。P-09 已加入按 seed/source/sample-index/axis 派生的无状态高斯噪声、IMU/MAG 安装矩阵、残余 bias/scale 和 GNSS/气压噪声；同 seed 可复现，噪声索引不依赖 RK4 调用次数。P-10 的多速率采样队列及 sample/capture/arrival 传输时序仍未完成。
-- 完整组件检查入口为 `run_component_checks`：它先执行输入预检、重建原生 MEX 内核、生成数据字典参数；若缺少独立传感器探针模型则执行 `build_plant_models(8)`，再运行参数视图、Plant、真值隔离、控制和执行器组件测试。若只检查 Plant，可依次执行 `build_native_kernels`、`generate_parameters`、`build_plant_models(8)`、`verify_parameter_view`、`verify_plant_open_loop`、`verify_truth_isolation`。Plant 报告当前必须保持 PARTIAL；P-07/P-08 杆臂运动学、静止 IMU、Earth-rate/Coriolis 已有脚本，P-09 seeded noise/bias/scale 测试已加入；P-10 多速率采样、队列、sample/capture/arrival 延迟仍待实现。P-14 由 `verify_truth_isolation` 独立检查，并纳入 `run_component_checks`。以上脚本尚未在本次环境中执行 MATLAB/Simulink 验证。
+- 完整组件检查入口为 `run_component_checks`：它先执行输入预检、重建原生 MEX 内核、生成数据字典参数，刷新独立传感器探针及 MILSIM 的双参数绑定，再运行参数视图、Plant、真值隔离、控制和执行器组件测试。若只检查 Plant，可依次执行 `build_native_kernels`、`generate_parameters`、`build_plant_models(8)`、`verify_parameter_view`、`verify_plant_open_loop`、`verify_truth_isolation`。Plant 报告当前必须保持 PARTIAL；P-07/P-08 杆臂运动学、静止 IMU、Earth-rate/Coriolis 已有脚本，P-09 seeded noise/bias/scale 测试已加入；P-10 多速率采样、队列、sample/capture/arrival 延迟仍待实现。P-14 由 `verify_truth_isolation` 独立检查，并纳入 `run_component_checks`。以上脚本尚未在本次环境中执行 MATLAB/Simulink 验证。
 
 ## 基线与边界
 
