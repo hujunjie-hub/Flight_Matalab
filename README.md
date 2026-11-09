@@ -41,8 +41,8 @@ verify_flight_entries
 
 - 质量、惯量、电机位置、偏航符号、推力上下限和电机时间常数来自同级 `Flight/config/vehicle_model.yaml`；SIM_ONLY 配置只保留推力系数、阻力、接触和 Origin 等仿真专属参数。
 - Plant 参数向量固定为 26 项，包含完整 3×3 对称正定惯量矩阵；当前 Flight 合成惯量恰好为对角矩阵。第一版地面摩擦系数明确设为 0，不引入未验证的水平接触力。分配器使用从 Flight 电机几何推导的 4×4 effectiveness/inverse 矩阵。
-- Plant S-Function 对状态、参数、wrench、环境和输出做 fail-closed 检查；非法环境开关、电机效能越界、非对称/非正定惯量和非有限状态均拒绝。
-- MIL 传感器模型已加入固定 N0 Earth-rate/Coriolis 项，并屏蔽首个无法差分的 IMU 样本；它仍是确定性基础测量模型，非零杆臂、噪声、bias 和采样/传输延迟尚未完整实现。
+- Plant S-Function 对状态、参数、wrench、环境和输出做 fail-closed 检查；完整对称正定 3×3 惯量由 Cholesky 求解，非法环境开关、电机效能越界、非对称/非正定惯量和非有限状态均拒绝。
+- MIL 传感器模型已加入固定 N0 Earth-rate/Coriolis 项、CG→IMU 杆臂加速度、IMU→GNSS 天线位置/速度杆臂，并屏蔽首个无法差分的 IMU 样本。当前传感器默认杆臂为零，P07 使用非零合成杆臂验证运动学；模型仍是确定性基础测量，随机噪声、bias/scale 注入、多速率采样队列和 sample/capture/arrival 延迟尚未完成。
 - 完整组件检查入口为 `run_component_checks`：它先执行输入预检、重建原生 MEX 内核、生成数据字典参数，再运行参数视图、Plant、控制和执行器组件测试。若只检查 Plant，可依次执行 `build_native_kernels`、`generate_parameters`、`verify_parameter_view`、`verify_plant_open_loop`。Plant 报告当前必须保持 PARTIAL；P-07～P-10 传感器测试尚未完成。P-14 已由 verify_truth_isolation 独立检查，并纳入 run_component_checks。
 
 ## 基线与边界
