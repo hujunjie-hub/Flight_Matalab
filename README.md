@@ -42,7 +42,7 @@ verify_flight_entries
 - 质量、惯量、电机位置、偏航符号、推力上下限和电机时间常数来自同级 `Flight/config/vehicle_model.yaml`；SIM_ONLY 配置只保留推力系数、阻力、接触和 Origin 等仿真专属参数。
 - 当前 Plant 参数向量固定为 19 项；第一版地面模型不包含水平摩擦。分配器使用从 Flight 电机几何推导的 4×4 effectiveness/inverse 矩阵，不再使用假定电机顺序的单臂长公式。
 - MIL 传感器模型已加入固定 N0 Earth-rate/Coriolis 项，并屏蔽首个无法差分的 IMU 样本；它仍是确定性基础测量模型，非零杆臂、噪声、bias 和采样/传输延迟尚未完整实现。
-- 建议在 MATLAB 执行 `build_flight_models`、`build_actuation_components`、`build_pid_allocation_probe`，再执行 `run_component_checks`。Plant 报告目前为 `PARTIAL_PASS`，不代表 P-01..P-18 全部通过。
+- 建议在 MATLAB 执行 `build_flight_models`、`build_actuation_components`、`build_pid_allocation_probe`，再执行 `run_component_checks`。Plant 验收覆盖目前为部分覆盖，执行报告将明确列出已运行与未运行的 P 项；不代表 P-01..P-18 全部通过。
 
 ## 基线与边界
 
@@ -50,4 +50,4 @@ verify_flight_entries
 
 ### 仿真参数一致性
 
-`generate_parameters` 将 Flight 的电机坐标、偏航力矩系数和动力学参数写入 `Flight_Parameters.sldd`。本地 X4 数值分配器使用 Flight 的径向力臂及带符号的第一路偏航系数；它会拒绝不符合当前四电机编号/符号约定的几何配置，而不是静默套用旧参数。MIL 传感器的 NED 磁场由 `config/SIM_ONLY/QUAD_X4/sensor_alignment.yaml` 提供。修改磁场或物理配置后，重新执行 `build_flight_mex` 和 `build_flight_models`，再运行参数与组件检查。
+`generate_parameters` 将 Flight 的电机坐标、偏航力矩系数和动力学参数写入 `Flight_Parameters.sldd`。本地数值分配器使用从 Flight 四个电机坐标和偏航力矩系数推导的 4×4 effectiveness 矩阵及其逆矩阵，并在运行时检查矩阵互逆；不再假定特定电机排序。MIL 传感器的 NED 磁场由 `config/SIM_ONLY/QUAD_X4/sensor_alignment.yaml` 提供。修改磁场或物理配置后，重新执行 `build_flight_mex` 和 `build_flight_models`，再运行参数与组件检查。
