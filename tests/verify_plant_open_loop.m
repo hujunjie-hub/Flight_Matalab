@@ -177,20 +177,24 @@ assert(abs(derivative(4)-expectedDrag)<1e-10, ...
 results{end+1}=passed('P-19','Wind-relative linear drag');
 
 % P-20: a non-diagonal symmetric positive-definite inertia matrix must be used
-% in full, rather than silently reduced to its diagonal.
+% in both angular momentum and the gyroscopic term, not reduced to its diagonal.
 customParameters=cfg.derived.PlantParameters;
 Jfull=[.03 .002 .001;.002 .04 .003;.001 .003 .05];
 customParameters(2:10)=Jfull(:);
+angularState=initial;
+angularState(11:13)=[0.3;0.2;0.1];
 testTorque=[.1;-.2;.3];
-out=run('FMT_RigidBodyRHS',{initial, [0 0 0 testTorque'], zeros(1,6),environment}, ...
+out=run('FMT_RigidBodyRHS',{angularState, [0 0 0 testTorque'], zeros(1,6),environment}, ...
     0.001,struct('PlantParameters',customParameters),0.0005);
 derivative=out.yout{1}.Values.Data(end,:);
-expectedAngularAcceleration=(Jfull\testTorque)';
+omega=angularState(11:13);
+expectedAngularAcceleration=Jfull\(testTorque- ...
+    cfg.derived.PlantParameters(16)*omega-cross(omega,Jfull*omega));
 assert(norm(derivative(11:13)-expectedAngularAcceleration,inf)<1e-9, ...
-    'Flight:P20','Full non-diagonal inertia matrix was not applied correctly.');
-results{end+1}=passed('P-20','Full non-diagonal inertia matrix');
+    'Flight:P20','Full inertia/gyroscopic coupling was not applied correctly.');
+results{end+1}=passed('P-20','Full non-diagonal inertia and gyroscopic coupling');
 
-% P-17: invalid environment flags/effectiveness and nonfinite states fail closed.
+% P-17: invalid environment flags/effectiveness, states and inertia fail closed.
 badEnvironment=environment;
 badEnvironment(12)=1.01;
 expect_error(@()run('FMT_RigidBodyRHS',{initial,zeros(1,6),zeros(1,6),badEnvironment}, ...
@@ -199,7 +203,12 @@ badState=initial;
 badState(1)=NaN;
 expect_error(@()run('FMT_RigidBodyRHS',{badState,zeros(1,6),zeros(1,6),environment}, ...
     0.001,struct,0.0005),'Invalid PlantState','Flight:P17');
-results{end+1}=passed('P-17','Invalid Plant inputs rejected');
+badParameters=cfg.derived.PlantParameters;
+badParameters(3)=badParameters(3)+0.01; % Break J21/J12 symmetry.
+expect_error(@()run('FMT_RigidBodyRHS',{initial,zeros(1,6),zeros(1,6),environment}, ...
+    0.001,struct('PlantParameters',badParameters),0.0005), ...
+    'Invalid PlantParameters','Flight:P17');
+results{end+1}=passed('P-17','Invalid environment, state and inertia rejected');
 
 remaining={'P-07','P-08','P-09','P-10','P-14'};
 report=struct('scope','PLANT_COMPONENT_OPEN_LOOP', ...
