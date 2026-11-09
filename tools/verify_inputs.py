@@ -65,7 +65,7 @@ def main():
                 finite(value)
                 assert value['status'] == 'SIM_ONLY', f'Missing synthetic source tag: {file.name}'
                 config[file.stem] = value
-                hashes[str(file.relative_to(ROOT)).replace('\\', '/')] = sha(file)
+                hashes[str(file.relative_to(ROOT)).replace('\\\\', '/')] = sha(file)
         assert set(config) == {'vehicle_model', 'sensor_alignment', 'estimator_tuning',
                                'controller_tuning', 'profile_manifest'}, 'Expected four COREs and readonly Profile'
         p = config['profile_manifest']
@@ -73,11 +73,32 @@ def main():
             assert p.get(flag) is True, f'Fixed device flag must be true: {flag}'
         assert p['implementation'] == 'HOST_NATIVE_V2' and p['firmware_equivalent'] is False
         assert p['base_step_us'] == 500
+        assert p['frame_quantizer_max_thrust_n'] == p['dshot_force_curve_n'][1], \
+            'Frame quantizer fixture must match the independent DShot force curve'
+
         v = config['vehicle_model']
         assert v['mass_kg'] > 0 and len(v['inertia_frd_kgm2']) == 9
         assert len(v['plant_state0']) == 17 and len(v['motor_max_thrust_n']) == 4
         assert all(0 <= lo < hi for lo, hi in zip(v['motor_min_thrust_n'], v['motor_max_thrust_n']))
         assert p['frame_slew_nps'] * p['frame_period_ticks'] * .0005 >= max(v['motor_max_thrust_n']) / 1999
+
+        # Shared geometry and limits are mirrored only to make the SIM_ONLY
+        # configuration self-describing; Flight remains the authoritative source.
+        flight_vehicle = read(flight / 'config/vehicle_model.yaml')
+        for field in ('mass_kg', 'inertia_frd_kgm2', 'motor_position_frd_m',
+                      'motor_yaw_torque_ratio_m', 'motor_min_thrust_n', 'motor_max_thrust_n'):
+            assert v[field] == flight_vehicle[field], f'SIM_ONLY {field} differs from Flight vehicle config'
+        motor_tau = flight_vehicle['motor_time_constant_s']
+        assert len(motor_tau) == 4 and max(motor_tau) - min(motor_tau) < 1e-12
+        assert math.isclose(v['motor_time_constant_s'], motor_tau[0], rel_tol=0, abs_tol=1e-12)
+        positions = flight_vehicle['motor_position_frd_m']
+        arm = math.sqrt(positions[0][0] ** 2 + positions[0][1] ** 2)
+        assert math.isclose(v['arm_length_m'], arm, rel_tol=0, abs_tol=1e-12)
+        inertia = v['inertia_frd_kgm2']
+        assert all(abs(inertia[i * 3 + j]) < 1e-12
+                   for i in range(3) for j in range(3) if i != j), \
+            'The current rigid-body kernel supports diagonal inertia only'
+
         e = config['estimator_tuning']
         assert (e['error_state_rank'], e['noise_rank']) == (22, 19)
         assert e['bias_correlation_time_s'] > 0
@@ -91,10 +112,9 @@ def main():
         raise
     finally:
         report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+        report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\\n', encoding='utf-8')
     print(json.dumps({k: v for k, v in report.items() if k != 'config_hashes'}))
 
 
 if __name__ == '__main__':
     main()
-
