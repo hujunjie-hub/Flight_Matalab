@@ -210,7 +210,7 @@ expect_error(@()run('FMT_PlantSensors',{staticState,1},0.001, ...
 results{end+1}=passed('P-09','Seeded repeatable Gaussian noise, axis independence, bias/scale injection and invalid-config rejection');
 
 % P-10: sample, capture and arrival epochs are distinct and queue delivery is bounded.
-sensorTimingReport=verify_sensor_event_timing;
+sensorTimingReport=verify_sensor_event_timing(cfg);
 results{end+1}=passed('P-10a','Multi-rate sample/capture/arrival queue, counters and missing-sample sequence gaps');
 
 % P-12: compare 5 s of 500-us Simulink RK4 against an independent 250-us RK4
