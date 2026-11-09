@@ -38,6 +38,26 @@ def finite(value):
         assert math.isfinite(value), 'Nonfinite parameter'
 
 
+def matrix3(flat):
+    assert len(flat) == 9, 'Inertia tensor must contain nine elements'
+    return [flat[0:3], flat[3:6], flat[6:9]]
+
+
+def validate_spd_inertia(flat):
+    j = matrix3(flat)
+    scale = max(1.0, *(abs(value) for row in j for value in row))
+    tol = 1e-10 * scale
+    assert max(abs(j[i][k] - j[k][i]) for i in range(3) for k in range(3)) <= tol, \
+        'Inertia tensor must be symmetric'
+    a, b, c = j[0]
+    d, e, f = j[1]
+    g, h, i = j[2]
+    minor2 = a * e - b * d
+    determinant = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g)
+    assert a > 0 and minor2 > 0 and determinant > 0, \
+        'Inertia tensor must be positive definite'
+
+
 def main():
     report_path = ROOT / 'work/validation/input_preflight.json'
     report = {'scope': 'LOCKED_INPUT_PREFLIGHT', 'status': 'IN_PROGRESS'}
@@ -63,6 +83,10 @@ def main():
         assert all(0 <= lo < hi for lo, hi in zip(
             flight_vehicle['motor_min_thrust_n'], flight_vehicle['motor_max_thrust_n']))
         assert all(tau > 0 for tau in flight_vehicle['motor_time_constant_s'])
+        validate_spd_inertia(flight_vehicle['inertia_frd_kgm2'])
+        positions = flight_vehicle['motor_position_frd_m']
+        radii = [math.hypot(position[0], position[1]) for position in positions]
+        assert max(radii) - min(radii) < 1e-10, 'X4 motor arms must have equal radial length'
 
         osqp = (ROOT / lock['osqp']['root']).resolve()
         assert sha(osqp / 'UPSTREAM_LOCK.json') == lock['osqp']['runtime_lock_sha256'], 'OSQP runtime lock changed'
@@ -97,7 +121,10 @@ def main():
         assert v['motor_thrust_coefficient_n_s2'] > 0
         assert len(v['drag_ned_kgps']) == 3 and all(value >= 0 for value in v['drag_ned_kgps'])
         assert v['ground_stiffness_npm'] > 0 and v['ground_damping_ns_pm'] >= 0
+        assert v['ground_friction'] >= 0
         assert len(v['plant_state0']) == 17
+        assert math.sqrt(sum(value * value for value in v['plant_state0'][6:10])) > 1e-12
+        assert all(value >= 0 for value in v['plant_state0'][13:17])
         assert len(v['origin_llh_rad_m']) == 3
         assert len(config['sensor_alignment']['magnetic_field_ned_ut']) == 3
 
@@ -107,7 +134,7 @@ def main():
         report.update(status='PASS', headers_verified=len(lock['headers']),
                       osqp_files_verified=len(runtime['files']),
                       kf_files_verified=len(lock['kf_gins_matlab']['files']),
-                      flight_vehicle_source='Flight/config/vehicle_model.yaml',
+                      flight_vehicle_source='Flight/config/vehicle_model.yaml',\n                      plant_parameter_contract='FULL_3X3_INERTIA_26',
                       config_hashes=hashes,
                       config_content_sha256=hashlib.sha256(json.dumps(config, sort_keys=True, separators=(',', ':')).encode()).hexdigest())
     except Exception as error:
