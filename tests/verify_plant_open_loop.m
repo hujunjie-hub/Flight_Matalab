@@ -196,7 +196,18 @@ assert(norm(derivative(11:13)-expectedAngularAcceleration,inf)<1e-9, ...
     'Flight:P20','Full inertia/gyroscopic coupling was not applied correctly.');
 results{end+1}=passed('P-20','Full non-diagonal inertia and gyroscopic coupling');
 
-% P-17: invalid environment flags/effectiveness, states and inertia fail closed.
+% P-17: first-version contact has no horizontal friction, even while sliding.
+staticContact=cfg.derived.PlantState0;
+staticContact(3)=cfg.vehicle_model.mass_kg*g/cfg.vehicle_model.ground_stiffness_npm;
+staticContact(4)=1;
+out=run('FMT_GroundRHS',{staticContact,contactEnvironment},0.001,struct,0.0005);
+wrench=out.yout{1}.Values.Data(end,:);
+expectedNormal=cfg.vehicle_model.mass_kg*g;
+assert(norm(wrench-[0 0 -expectedNormal 0 0 0],inf)<1e-8, ...
+    'Flight:P21','First-version Plant unexpectedly applied horizontal ground friction.');
+results{end+1}=passed('P-17','No horizontal ground friction in first-version Plant');
+
+% P-21: invalid environment flags/effectiveness, states and inertia fail closed.
 badEnvironment=environment;
 badEnvironment(12)=1.01;
 expect_error(@()run('FMT_RigidBodyRHS',{initial,zeros(1,6),zeros(1,6),badEnvironment}, ...
@@ -214,7 +225,7 @@ badParameters(3)=badParameters(3)+0.01; % Break J21/J12 symmetry.
 expect_error(@()run('FMT_RigidBodyRHS',{initial,zeros(1,6),zeros(1,6),environment}, ...
     0.001,struct('PlantParameters',badParameters),0.0005), ...
     'Invalid PlantParameters','Flight:P17');
-results{end+1}=passed('P-17','Invalid environment, state and inertia rejected');
+results{end+1}=passed('P-21','Invalid environment, state and inertia rejected');
 
 remaining={'P-07','P-08','P-09','P-10','P-14'};
 report=struct('scope','PLANT_COMPONENT_OPEN_LOOP', ...
@@ -232,7 +243,8 @@ function out=run(model,signals,stop,variables,step)
 if nargin<5, step=0.0005; end
 ds=Simulink.SimulationData.Dataset;
 for k=1:numel(signals)
-    ds{k}=timeseries([signals{k};signals{k}],[0;stop]);
+    sample=reshape(signals{k},1,[]);
+    ds{k}=timeseries([sample;sample],[0;stop]);
 end
 in=Simulink.SimulationInput(model);
 in=in.setExternalInput(ds);
