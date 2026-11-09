@@ -10,7 +10,7 @@
 
 ## 运行
 
-打开 `Flight_Matalab.prj`。本机已构建依赖，可打开任意入口并点击 **运行**。默认闭环命令为解锁、起飞至 2 m、降落和上锁。两种回放共用默认 MIL 记录，其中 ExtINS 使用同一次 MIL 运行录制的 KF-GINS 导航作为外部输入。可在 MATLAB 执行 `verify_flight_entries` 复核三个入口。
+打开 `Flight_Matalab.prj`。默认闭环命令为解锁、起飞至 2 m、降落和上锁。两种回放共用默认 MIL 记录，其中 ExtINS 使用同一次 MIL 运行录制的 KF-GINS 导航作为外部输入。若刚从 Git 更新了代码或 SIM_ONLY 配置，不要沿用旧 DLL/MEX 和旧验证报告；先按下文重建，再执行 `run_component_checks` 刷新当前源代码证据。可在 MATLAB 执行 `verify_flight_entries` 复核三个入口。
 
 清理 `work/` 或换机后，在项目根目录重建 Windows Host SIL 运行库。默认编译器路径为 `D:\STM32CubeCLT\mingw64\bin`，可通过 `-GccDir` 指定兼容的 MinGW 目录。
 
@@ -18,7 +18,7 @@
 pwsh -File tools/build_flight_runtime.ps1
 ```
 
-然后在 MATLAB 打开项目，确认 `mex -setup C` 已配置，执行以下命令。
+然后在 MATLAB 打开项目，确认 `mex -setup C` 已配置，执行以下命令。源代码、接口或配置有更新时，建议直接执行 `run_component_checks`；该入口会重建运行库、MEX、参数字典和受影响模型，并保存本次验证报告。
 
 ```matlab
 build_flight_mex
