@@ -124,7 +124,18 @@ assert(abs(staticFrame(4))<1e-10 && abs(staticFrame(5))<1e-10 && ...
        norm(staticFrame(1:3)'-cfg.derived.EarthRateNedRadps,inf)<1e-12 && ...
        bitand(uint32(staticFrame(17)),uint32(1))==1, ...
     'Flight:P08','Static IMU specific force or fixed-N0 Earth-rate term is incorrect.');
-results{end+1}=passed('P-08','Static specific force and fixed-N0 Earth-rate gyro');
+movingParameters=cfg.derived.SensorParameters;
+movingParameters(8:10)=[1;0;0]; % Match the initial NED velocity to avoid a synthetic derivative impulse.
+movingState=staticState;
+movingState(4:6)=[1;0;0];
+movingRun=run('FMT_PlantSensors',{movingState,0},0.001, ...
+    struct('SensorParameters',movingParameters),0.0005);
+movingFrame=movingRun.yout{1}.Values.Data(end,:);
+expectedCoriolis=2*cross(cfg.derived.EarthRateNedRadps,[1;0;0]);
+assert(norm(movingFrame(1:3)'-cfg.derived.EarthRateNedRadps,inf)<1e-12 && ...
+       norm(movingFrame(4:6)'-[expectedCoriolis(1);expectedCoriolis(2);-g],inf)<1e-10, ...
+    'Flight:P08','Fixed-N0 Earth-rate or Coriolis compensation is incorrect.');
+results{end+1}=passed('P-08','Static specific force, Earth-rate gyro and Coriolis compensation');
 
 % P-12: compare 5 s of 500-us Simulink RK4 against an independent 250-us RK4
 % reference while keeping command, environment and initial state identical.
