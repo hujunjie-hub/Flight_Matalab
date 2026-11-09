@@ -38,6 +38,17 @@ def finite(value):
         assert math.isfinite(value), 'Nonfinite parameter'
 
 
+def matrix3(flat):
+    assert len(flat) == 9, 'Inertia must contain nine elements'
+    return [flat[0:3], flat[3:6], flat[6:9]]
+
+
+def determinant3(m):
+    return (m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+            - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+            + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]))
+
+
 def main():
     report_path = ROOT / 'work/validation/input_preflight.json'
     report = {'scope': 'LOCKED_INPUT_PREFLIGHT', 'status': 'IN_PROGRESS'}
@@ -57,6 +68,7 @@ def main():
         kf = ROOT / lock['kf_gins_matlab']['path']
         for name, digest in lock['kf_gins_matlab']['files'].items():
             assert sha(kf / name) == digest, f'KF-GINS reference changed: {name}'
+
         hashes = {}
         config = {}
         for file in sorted((ROOT / 'config/SIM_ONLY/QUAD_X4').iterdir()):
@@ -68,36 +80,39 @@ def main():
                 hashes[str(file.relative_to(ROOT)).replace('\\\\', '/')] = sha(file)
         assert set(config) == {'vehicle_model', 'sensor_alignment', 'estimator_tuning',
                                'controller_tuning', 'profile_manifest'}, 'Expected four COREs and readonly Profile'
+
         p = config['profile_manifest']
         for flag in ('gnss_installed', 'gnss_enabled', 'pps_installed', 'pps_enabled'):
             assert p.get(flag) is True, f'Fixed device flag must be true: {flag}'
         assert p['implementation'] == 'HOST_NATIVE_V2' and p['firmware_equivalent'] is False
         assert p['base_step_us'] == 500
-        assert p['frame_quantizer_max_thrust_n'] == p['dshot_force_curve_n'][1], \
-            'Frame quantizer fixture must match the independent DShot force curve'
+        assert p['frame_quantizer_max_thrust_n'] > 0
+        assert p['dshot_force_curve_n'] == [0, p['frame_quantizer_max_thrust_n']]
+        assert p['frame_slew_nps'] * p['frame_period_ticks'] * .0005 >= p['frame_quantizer_max_thrust_n'] / 1999
 
         v = config['vehicle_model']
         assert v['mass_kg'] > 0 and len(v['inertia_frd_kgm2']) == 9
         assert len(v['plant_state0']) == 17 and len(v['motor_max_thrust_n']) == 4
         assert all(0 <= lo < hi for lo, hi in zip(v['motor_min_thrust_n'], v['motor_max_thrust_n']))
-        assert p['frame_slew_nps'] * p['frame_period_ticks'] * .0005 >= max(v['motor_max_thrust_n']) / 1999
 
-        # Shared geometry and limits are mirrored only to make the SIM_ONLY
-        # configuration self-describing; Flight remains the authoritative source.
         flight_vehicle = read(flight / 'config/vehicle_model.yaml')
-        for field in ('mass_kg', 'inertia_frd_kgm2', 'motor_position_frd_m',
-                      'motor_yaw_torque_ratio_m', 'motor_min_thrust_n', 'motor_max_thrust_n'):
-            assert v[field] == flight_vehicle[field], f'SIM_ONLY {field} differs from Flight vehicle config'
-        motor_tau = flight_vehicle['motor_time_constant_s']
-        assert len(motor_tau) == 4 and max(motor_tau) - min(motor_tau) < 1e-12
-        assert math.isclose(v['motor_time_constant_s'], motor_tau[0], rel_tol=0, abs_tol=1e-12)
-        positions = flight_vehicle['motor_position_frd_m']
-        arm = math.sqrt(positions[0][0] ** 2 + positions[0][1] ** 2)
-        assert math.isclose(v['arm_length_m'], arm, rel_tol=0, abs_tol=1e-12)
-        inertia = v['inertia_frd_kgm2']
-        assert all(abs(inertia[i * 3 + j]) < 1e-12
-                   for i in range(3) for j in range(3) if i != j), \
-            'The current rigid-body kernel supports diagonal inertia only'
+        shared_fields = ('mass_kg', 'inertia_frd_kgm2', 'motor_position_frd_m',
+                         'motor_yaw_torque_ratio_m', 'motor_min_thrust_n', 'motor_max_thrust_n')
+        for field in shared_fields:
+            assert v[field] == flight_vehicle[field], f'Plant vehicle field differs from Flight source: {field}'
+        assert len(flight_vehicle['motor_time_constant_s']) == 4
+        assert len(set(flight_vehicle['motor_time_constant_s'])) == 1
+        assert v['motor_time_constant_s'] == flight_vehicle['motor_time_constant_s'][0]
+
+        inertia = matrix3(v['inertia_frd_kgm2'])
+        scale = max(1.0, *(abs(value) for row in inertia for value in row))
+        tolerance = 1e-10 * scale
+        assert abs(inertia[0][1] - inertia[1][0]) <= tolerance
+        assert abs(inertia[0][2] - inertia[2][0]) <= tolerance
+        assert abs(inertia[1][2] - inertia[2][1]) <= tolerance
+        assert inertia[0][0] > 0
+        assert inertia[0][0] * inertia[1][1] - inertia[0][1] ** 2 > 0
+        assert determinant3(inertia) > 0
 
         e = config['estimator_tuning']
         assert (e['error_state_rank'], e['noise_rank']) == (22, 19)
@@ -105,6 +120,9 @@ def main():
         report.update(status='PASS', headers_verified=len(lock['headers']),
                       osqp_files_verified=len(runtime['files']),
                       kf_files_verified=len(lock['kf_gins_matlab']['files']),
+                      flight_vehicle_fields_verified=len(shared_fields),
+                      plant_parameter_contract='FULL_3X3_INERTIA_26',
+                      frame_quantizer_max_thrust_n=p['frame_quantizer_max_thrust_n'],
                       config_hashes=hashes,
                       config_content_sha256=hashlib.sha256(json.dumps(config, sort_keys=True, separators=(',', ':')).encode()).hexdigest())
     except Exception as error:
@@ -112,7 +130,7 @@ def main():
         raise
     finally:
         report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\\n', encoding='utf-8')
+        report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
     print(json.dumps({k: v for k, v in report.items() if k != 'config_hashes'}))
 
 
