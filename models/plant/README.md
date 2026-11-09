@@ -49,4 +49,12 @@ J 必须是完整的对称正定 3×3 矩阵。当前 Flight SIM_ONLY 数值恰�
 
 该向量用于确定性基础传感器模型。IMU 杆臂按 CG→IMU = -imu_to_cg 解释；GNSS 天线杆臂为 CG→IMU + IMU→antenna。IMU 比力包含杆臂切向/向心加速度、固定 N0 Earth-rate 和 Coriolis 项。初始速度/角速度用于初始化差分状态，避免首样本产生人为导数脉冲；首个 IMU 差分尚未有效时，IMU valid 位保持清零。
 
-P-07/P-08 覆盖杆臂运动学、静止比力、Earth-rate gyro 和移动时 Coriolis。当前模型仍是确定性传感器：P-09 随机噪声/bias/scale 与可复现随机流、P-10 多速率采样和 sample/capture/arrival 延迟尚未实现。
+P-07/P-08 覆盖杆臂运动学、静止比力、Earth-rate gyro 和移动时 Coriolis。
+
+## SensorModelParameters（54 doubles）
+
+[seed, imu_installation(9 row-major), mag_installation(9 row-major), gyro_bias(3), accel_bias(3), mag_bias(3), gyro_scale_error(3), accel_scale_error(3), mag_scale_error(3), gyro_noise_std(3), accel_noise_std(3), mag_noise_std(3), gnss_position_noise_std(3), gnss_velocity_noise_std(3), baro_noise_std, baro_bias]
+
+当前 `scale_error` SIM_ONLY 配置按轴复制到 gyro/accel/mag 三组残余比例误差。bias/scale/noise 在模型的 M2 标准样本出口注入；安装矩阵从传感器轴旋转到 FRD。噪声由固定 seed、source、物理 sample index 和 axis 无状态生成，IMU/MAG/GNSS/Baro 分别按 1 kHz/100 Hz/10 Hz/50 Hz 的噪声样本索引取值，不依赖 Plant RK4 子步数。随机 seed 仅用于可重复仿真，不代表传感器实测噪声标定。
+
+P-09 的脚本覆盖同 seed 可复现、不同 seed 序列变化、IMU 噪声 STD 95% 卡方区间、轴间相关性以及 bias/scale 注入。P-10 多速率事件队列与 sample/capture/arrival 时间戳和传输延迟尚未完成。
