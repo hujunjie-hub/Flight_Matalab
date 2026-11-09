@@ -21,6 +21,7 @@ static uint16_t last_ack, last_reason;
 static FmtSensorSimState sensor_simulation;
 static int sensor_simulation_ready;
 static uint64_t sensor_simulation_epoch_us;
+static double sensor_model_parameters[FMT_SENSOR_MODEL_PARAMETER_COUNT];
 static double sensor_timing_parameters[FMT_SENSOR_SIM_PARAMETER_COUNT];
 static sensor_imu_config_t simulated_imu_config;
 static sensor_context_t simulated_imu_context;
@@ -194,7 +195,7 @@ static int inject_simulated_imu(const FmtSensorSimEvent *event)
     return 0;
 }
 
-static int inject_simulated_mag(const FmtSensorSimEvent *event)
+static int inject_simulated_mag(const FmtSensorSimEvent *event, const double *model_parameters)
 {
     SensorMeasurement measurement = {0};
     measurement.header = h(SOURCE_MAG, event->sample_us + 100000u);
@@ -212,7 +213,9 @@ static int inject_simulated_mag(const FmtSensorSimEvent *event)
     measurement.payload.mag.quality_flags = MAG_Q_FIELD_VALID | MAG_Q_CALIBRATED;
     for (unsigned axis = 0; axis < 3; ++axis) {
         measurement.payload.mag.field_frd_ut[axis] = (float)event->values[axis];
-        measurement.payload.mag.variance_ut2[axis] = 1.0f;
+        measurement.payload.mag.variance_ut2[axis] = (float)fmax(0.01, 
+            model_parameters[FMT_MODEL_MAG_NOISE + axis] *
+            model_parameters[FMT_MODEL_MAG_NOISE + axis]);
     }
     if (runtime_submit_measurement(&measurement) != STATUS_OK) {
         ++failures;
@@ -221,7 +224,7 @@ static int inject_simulated_mag(const FmtSensorSimEvent *event)
     return 0;
 }
 
-static int inject_simulated_baro(const FmtSensorSimEvent *event)
+static int inject_simulated_baro(const FmtSensorSimEvent *event, const double *model_parameters)
 {
     SensorMeasurement measurement = {0};
     measurement.header = h(SOURCE_BARO, event->sample_us + 20000u);
@@ -236,7 +239,8 @@ static int inject_simulated_baro(const FmtSensorSimEvent *event)
     measurement.payload.baro.sensor_instance_id = 3u;
     measurement.payload.baro.calibration_version = 1u;
     measurement.payload.baro.altitude_m = (float)event->values[0];
-    measurement.payload.baro.variance_m2 = 0.25f;
+    measurement.payload.baro.variance_m2 = (float)fmax(0.25,
+        model_parameters[FMT_MODEL_BARO_NOISE] * model_parameters[FMT_MODEL_BARO_NOISE]);
     measurement.payload.baro.quality_flags = 7u;
     if (runtime_submit_measurement(&measurement) != STATUS_OK) {
         ++failures;
@@ -245,7 +249,7 @@ static int inject_simulated_baro(const FmtSensorSimEvent *event)
     return 0;
 }
 
-static int inject_simulated_gnss(const FmtSensorSimEvent *event)
+static int inject_simulated_gnss(const FmtSensorSimEvent *event, const double *model_parameters)
 {
     const double radians_to_degrees = 57.29577951308232;
     const double meridian_radius_m = 6335439.32729282;
@@ -276,8 +280,12 @@ static int inject_simulated_gnss(const FmtSensorSimEvent *event)
     for (unsigned axis = 0; axis < 3; ++axis) {
         measurement.payload.gnss.velocity_ned_mps[axis] =
             (float)event->values[3u + axis];
-        measurement.payload.gnss.position_variance_m2[axis] = 0.25f;
-        measurement.payload.gnss.velocity_variance_m2ps2[axis] = 0.01f;
+        measurement.payload.gnss.position_variance_m2[axis] = (float)fmax(0.04,
+            model_parameters[FMT_MODEL_GNSS_POSITION_NOISE + axis] *
+            model_parameters[FMT_MODEL_GNSS_POSITION_NOISE + axis]);
+        measurement.payload.gnss.velocity_variance_m2ps2[axis] = (float)fmax(0.01,
+            model_parameters[FMT_MODEL_GNSS_VELOCITY_NOISE + axis] *
+            model_parameters[FMT_MODEL_GNSS_VELOCITY_NOISE + axis]);
     }
     if (runtime_submit_measurement(&measurement) != STATUS_OK) {
         ++failures;
@@ -287,20 +295,28 @@ static int inject_simulated_gnss(const FmtSensorSimEvent *event)
 }
 
 static int feed_simulated_sensor_events(const double *sensor_frame,
+                                        const double *model_parameters,
                                         const double *timing,
                                         uint64_t now_us)
 {
     FmtSensorSimEvent due[4];
+    if (!valid_group(model_parameters, FMT_SENSOR_MODEL_PARAMETER_COUNT)) {
+        ++failures;
+        return -1;
+    }
     if (!sensor_simulation_ready) {
         if (fmt_sensor_sim_init(&sensor_simulation, timing,
                                 sensor_simulation_epoch_us) != 0) {
             ++failures;
             return -1;
         }
+        memcpy(sensor_model_parameters, model_parameters, sizeof(sensor_model_parameters));
         memcpy(sensor_timing_parameters, timing, sizeof(sensor_timing_parameters));
         configure_simulated_imu(timing);
         sensor_simulation_ready = 1;
-    } else if (memcmp(sensor_timing_parameters, timing,
+    } else if (memcmp(sensor_model_parameters, model_parameters,
+                      sizeof(sensor_model_parameters)) != 0 ||
+               memcmp(sensor_timing_parameters, timing,
                       sizeof(sensor_timing_parameters)) != 0) {
         ++failures;
         return -1;
@@ -313,11 +329,11 @@ static int feed_simulated_sensor_events(const double *sensor_frame,
     if (due[FMT_SENSOR_SIM_IMU].valid &&
         inject_simulated_imu(&due[FMT_SENSOR_SIM_IMU]) != 0) return -1;
     if (due[FMT_SENSOR_SIM_GNSS].valid &&
-        inject_simulated_gnss(&due[FMT_SENSOR_SIM_GNSS]) != 0) return -1;
+        inject_simulated_gnss(&due[FMT_SENSOR_SIM_GNSS], model_parameters) != 0) return -1;
     if (due[FMT_SENSOR_SIM_MAG].valid &&
-        inject_simulated_mag(&due[FMT_SENSOR_SIM_MAG]) != 0) return -1;
+        inject_simulated_mag(&due[FMT_SENSOR_SIM_MAG], model_parameters) != 0) return -1;
     if (due[FMT_SENSOR_SIM_BARO].valid &&
-        inject_simulated_baro(&due[FMT_SENSOR_SIM_BARO]) != 0) return -1;
+        inject_simulated_baro(&due[FMT_SENSOR_SIM_BARO], model_parameters) != 0) return -1;
     return 0;
 }
 
@@ -344,6 +360,7 @@ __declspec(dllexport) int fmt_flight_start(int mode)
     elapsed_ticks = sil_requests = last_request = 0;
     sensor_simulation_ready = 0;
     memset(&sensor_simulation, 0, sizeof(sensor_simulation));
+    memset(sensor_model_parameters, 0, sizeof(sensor_model_parameters));
     memset(sensor_timing_parameters, 0, sizeof(sensor_timing_parameters));
     sensor_simulation_epoch_us = test_clock.monotonic_us;
     last_ack = last_reason = 0;
@@ -371,7 +388,8 @@ __declspec(dllexport) void fmt_flight_stop(void)
 }
 
 __declspec(dllexport) int fmt_flight_step(const double *s, const double *command,
-                                       const uint8_t *nav_in, const double *sensor_timing_parameters,
+                                       const uint8_t *nav_in, const double *sensor_model_parameters,
+                                       const double *sensor_timing_parameters,
                                        double *force, double *status, uint8_t *nav_out)
 {
     if (!attached)
@@ -382,7 +400,7 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
     if (external_mode())
         memcpy(&external_frame, nav_in, sizeof(external_frame));
     if (mode_active == FMT_MIL_SIM &&
-        feed_simulated_sensor_events(s, sensor_timing_parameters,
+        feed_simulated_sensor_events(s, sensor_model_parameters, sensor_timing_parameters,
                                      test_clock.monotonic_us) != 0)
         return -3;
 
