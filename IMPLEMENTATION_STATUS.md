@@ -14,3 +14,16 @@
 
 `implementation_manifest.json` 记录模型、录制数据、源码和仿真证据的完整性信息。单点接地在上锁后会倾倒，最终 SIM_ONLY 物理对象采用四点接地与正则化摩擦。ExtINS 的默认录制来源为 MIL 中的固件 KF-GINS。当前证据覆盖主机仿真与合成输入，STM32 时序、HIL 链路、实体执行器和实飞另行验证。
 
+
+
+## Plant 物理模型第二阶段（代码状态）
+
+以下是独立的 Plant 算法验证代码状态，不计入上表已实测通过的 Host SIL 结果。当前尚未在 MATLAB/Simulink 环境运行本阶段测试。
+
+- Plant 参数合同扩展为 26 项：质量、完整 J(:) 3×3 惯量、k_f、电机时间常数、阻力、角阻尼、地面接触、重力和摩擦系数。
+- 刚体角运动使用完整 J·omega、omega×(J·omega) 和 Cholesky 求解 J*alpha=rhs；参数入口拒绝非对称或非正定惯量。
+- Plant S-Function 对状态、环境、wrench、参数和输出做有限值检查；ground/drag 开关严格为 0/1，rotor_effectiveness 限定 [0,1]。
+- 第一版地面摩擦系数明确设为 0；增加静态 mg/k 支撑、无水平摩擦、FRD/NED 变换、风阻、250 μs 独立 RK4 参考和输入拒绝测试。
+- 当前代码覆盖 P-01～P-06、P-11～P-13、P-15～P-21；P-07～P-10（传感器运动学/噪声/时序）及 P-14（truth 图隔离）尚未实现。
+
+本阶段需在用户 MATLAB 环境执行 build_native_kernels、generate_parameters、verify_parameter_view 和 verify_plant_open_loop，并保存实际运行报告、MATLAB 版本、求解器与模型 Hash。Plant 报告必须保持 PARTIAL，不能解释为完整物理模型验收、HIL 实时性 PASS 或实机飞行放行。
