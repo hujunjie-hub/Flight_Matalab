@@ -57,4 +57,4 @@ P-07/P-08 覆盖杆臂运动学、静止比力、Earth-rate gyro 和移动时 Co
 
 当前 `scale_error` SIM_ONLY 配置按轴复制到 gyro/accel/mag 三组残余比例误差。bias/scale/noise 在模型的 M2 标准样本出口注入；安装矩阵从传感器轴旋转到 FRD。噪声由固定 seed、source、物理 sample index 和 axis 无状态生成，IMU/MAG/GNSS/Baro 分别按 1 kHz/100 Hz/10 Hz/50 Hz 的噪声样本索引取值，不依赖 Plant RK4 子步数。随机 seed 仅用于可重复仿真，不代表传感器实测噪声标定。
 
-P-09 的脚本覆盖同 seed 可复现、不同 seed 序列变化、IMU 噪声 STD 95% 卡方区间、轴间相关性以及 bias/scale 注入。P-10 多速率事件队列与 sample/capture/arrival 时间戳和传输延迟尚未完成。
+P-09 的脚本覆盖同 seed 可复现、不同 seed 序列变化、IMU 噪声 STD 95% 卡方区间、轴间相关性以及 bias/scale 注入。SensorTimingParameters 为 10 doubles：[imu_period, mag_period, baro_period, gnss_period, imu_pipeline_delay, imu_transport_delay, mag_transport_delay, baro_transport_delay, gnss_transport_delay, imu_pipeline_uncertainty]。该向量已由参数生成器和参数视图检查生成，当前尚未被 Sensor S-Function 消费；P-10 仍需接入独立采样/延迟队列，并将 sample/capture/arrival 元数据送入 Host SIL。
