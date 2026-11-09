@@ -160,8 +160,12 @@ values.RateIlimit=c.rate_integral_limit_nm(:);
 % The independent frame-quantizer fixture follows the SIM_ONLY DShot 0..10 N curve.
 values.FrameQuantizerParameters=[profile.dshot_force_curve_n(2);profile.frame_slew_nps];
 
-fields=fieldnames(values);
 dictionaryChanged=false;
+if exist(section,'AllocationGeometry')
+    removeEntry(section,'AllocationGeometry');
+    dictionaryChanged=true;
+end
+fields=fieldnames(values);
 for k=1:numel(fields)
     name=fields{k};
     if exist(section,name)
