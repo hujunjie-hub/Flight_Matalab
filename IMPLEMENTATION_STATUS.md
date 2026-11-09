@@ -24,6 +24,6 @@
 - 刚体角运动使用完整 J·omega、omega×(J·omega) 和 Cholesky 求解 J*alpha=rhs；参数入口拒绝非对称或非正定惯量。
 - Plant S-Function 对状态、环境、wrench、参数和输出做有限值检查；ground/drag 开关严格为 0/1，rotor_effectiveness 限定 [0,1]。
 - 第一版地面摩擦系数明确设为 0；增加静态 mg/k 支撑、无水平摩擦、FRD/NED 变换、风阻、250 μs 独立 RK4 参考和输入拒绝测试。
-- 当前代码覆盖 P-01～P-06、P-11～P-13、P-15～P-21；P-07～P-10（传感器运动学/噪声/时序）及 P-14（truth 图隔离）尚未实现。
+- 当前代码覆盖 P-01～P-06、P-11～P-13、P-15～P-21；P-07～P-10（传感器运动学/噪声/时序）尚未实现；P-14 已由 verify_truth_isolation 实现并纳入 run_component_checks。
 
 本阶段需在用户 MATLAB 环境执行 run_component_checks；该入口会先运行输入预检、重建 build_native_kernels、生成参数字典，再执行 verify_parameter_view、verify_plant_open_loop 及已实现组件检查。也可单独执行 build_native_kernels、generate_parameters、verify_parameter_view 和 verify_plant_open_loop。必须保存实际运行报告、MATLAB 版本、求解器与模型 Hash。Plant 报告必须保持 PARTIAL，不能解释为完整物理模型验收、HIL 实时性 PASS 或实机飞行放行。
