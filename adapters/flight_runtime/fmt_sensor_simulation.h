@@ -27,6 +27,7 @@ typedef struct {
     uint64_t sample_us;
     uint64_t capture_us;
     uint64_t arrival_us;
+    uint64_t release_us;
     uint32_t sequence;
     double values[6];
     uint8_t valid;
