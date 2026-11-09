@@ -130,11 +130,13 @@ results{end+1}=passed('P-08','Static specific force and fixed-N0 Earth-rate gyro
 % reference while keeping command, environment and initial state identical.
 stepInitial=initial;
 stepInitial(7:10)=[cos(pi/6);0;0;sin(pi/6)];
-stepInitial(11:13)=[0.3;0.2;0.1];
-coarse=run('FMT_QuadPlant',{zeros(1,4),environment},5.0, ...
+stepInitial(11:13)=[0;0;0.3];
+hoverCommand=cfg.vehicle_model.mass_kg*g/4;
+stepInitial(14:17)=sqrt(hoverCommand/cfg.derived.MotorKf);
+coarse=run('FMT_QuadPlant',{hoverCommand*ones(1,4),environment},5.0, ...
     struct('PlantState0',stepInitial),0.0005);
 coarseState=coarse.yout{1}.Values.Data;
-referenceState=reference_integrate(stepInitial,zeros(1,4),environment, ...
+referenceState=reference_integrate(stepInitial,hoverCommand*ones(1,4),environment, ...
     cfg.derived,0.00025,5.0);
 assert(size(coarseState,1)==size(referenceState,1), ...
     'Flight:P12','Simulink/reference Plant outputs do not share the same sample times.');
