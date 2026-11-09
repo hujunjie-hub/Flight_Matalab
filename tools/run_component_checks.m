@@ -10,7 +10,8 @@ try
     build_native_kernels;
     generate_parameters;
     sensorModel=fullfile(root,'models','plant','FMT_PlantSensors.slx');
-    if ~isfile(sensorModel), build_plant_models(8); end
+    if ~isfile(sensorModel), build_plant_models(8); else, build_plant_models(8); end
+    refresh_sensor_binding(fullfile(root,'simulation','FMT_MILSIM.slx'),'FMT_MILSIM/sensor');
     build_actuation_components;
     build_pid_allocation_probe;
     report.source_fingerprint=fingerprint(root);
@@ -34,6 +35,18 @@ catch exception
 end
 write(file,report);
 fprintf('Component checks completed; Plant acceptance coverage remains partial.\n');
+end
+
+function refresh_sensor_binding(modelFile,blockPath)
+assert(isfile(modelFile),'Flight:SensorModel','Missing model file: %s',modelFile);
+[~,model]=fileparts(modelFile);
+if bdIsLoaded(model), close_system(model,0); end
+load_system(modelFile);
+assert(getSimulinkBlockHandle(blockPath)>0,'Flight:SensorModelBlock', ...
+    'Missing sensor S-Function block: %s',blockPath);
+set_param(blockPath,'Parameters','SensorParameters,SensorModelParameters');
+save_system(model);
+close_system(model,0);
 end
 
 function value=fingerprint(root)
