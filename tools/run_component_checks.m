@@ -9,8 +9,7 @@ try
     % Rebuild Plant/native gateways so checks cannot silently use stale MEX binaries.
     build_native_kernels;
     generate_parameters;
-    sensorModel=fullfile(root,'models','plant','FMT_PlantSensors.slx');
-    if ~isfile(sensorModel), build_plant_models(8); else, build_plant_models(8); end
+    build_plant_models(8);
     refresh_sensor_binding(fullfile(root,'simulation','FMT_MILSIM.slx'),'FMT_MILSIM/sensor');
     build_actuation_components;
     build_pid_allocation_probe;
