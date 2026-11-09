@@ -1,6 +1,6 @@
 {
   "schema": "flight-matlab-implementation/2",
-  "status": "PASS_HOST_SIL",
+  "status": "BASELINE_EVIDENCE_STALE_REQUIRES_REFRESH",
   "implementation": "FLIGHT_FIRMWARE_HOST_SIL",
   "three_final_entries_complete": true,
   "firmware_equivalent": false,
@@ -19,21 +19,13 @@
   "evidence": {
     "input_preflight": {
       "scope": "LOCKED_INPUT_PREFLIGHT",
-      "status": "PASS",
+      "status": "STALE_REQUIRES_RERUN",
       "headers_verified": 10,
       "osqp_files_verified": 47,
-      "kf_files_verified": 54,
-      "config_hashes": {
-        "config/SIM_ONLY/QUAD_X4/controller_tuning.yaml": "5d034e59b492e99daac181d9ecf095fbe8ba45f4a0ccbd452840a78fce338c42",
-        "config/SIM_ONLY/QUAD_X4/estimator_tuning.yaml": "7233cd3779296a8ac8a4467a1eb3ee628b2351f9388868038984e806d1fc61f5",
-        "config/SIM_ONLY/QUAD_X4/profile_manifest.json": "ce86f3371b54dc583dbbdbfb03b6959703307bc6591b6c8462db785ab2448e74",
-        "config/SIM_ONLY/QUAD_X4/sensor_alignment.yaml": "f872fc0b00b20242e56bd1075572dc5f8a9e4ca028e35668bf9eaa5948507574",
-        "config/SIM_ONLY/QUAD_X4/vehicle_model.yaml": "e4eb7fabfe11313f0ef7aa0b3266e53b4a36897c38170dfaedad2011c387a8c5"
-      },
-      "config_content_sha256": "89f022e32f708c3ab86ccb8e842b867d423b6ac8133d9ee4d4f70210525c4a93"
+      "kf_files_verified": 54
     },
     "flight_entries": {
-      "status": "PASS",
+      "status": "STALE_REQUIRES_RERUN",
       "duration_s": 26,
       "maximum_altitude_m": 1.9859695926096619,
       "final_height_m": -0.0029419949999999924,
@@ -46,7 +38,7 @@
     },
     "cold_start_report": {
       "scope": "NEW_MATLAB_PROCESS_FLIGHT_HOST_SIL",
-      "status": "PASS",
+      "status": "STALE_REQUIRES_RERUN",
       "entries": {
         "status": "PASS",
         "duration_s": 26,
@@ -63,54 +55,54 @@
       "project_checks": [
         {
           "id": "Project:Checks:ProjectFilesExist",
-          "description": "\u6240\u6709\u5de5\u7a0b\u6587\u4ef6\u548c\u6587\u4ef6\u5939\u90fd\u5b58\u5728\u4e8e\u6587\u4ef6\u7cfb\u7edf\u4e2d",
+          "description": "所有工程文件和文件夹都存在于文件系统中",
           "passed": true
         },
         {
           "id": "Project:Checks:ReferencedSubprojects",
-          "description": "\u6b64\u5de5\u7a0b\u5f15\u7528\u4e86\u5b50\u6587\u4ef6\u5939\u4e2d\u7684\u6240\u6709\u5de5\u7a0b",
+          "description": "此工程引用了子文件夹中的所有工程",
           "passed": true
         },
         {
           "id": "Project:Checks:MDLToSLX",
-          "description": "\u5de5\u7a0b\u4e2d\u7684\u6a21\u578b\u90fd\u6ca1\u6709\u4e0d\u5339\u914d\u7684\u6587\u4ef6\u683c\u5f0f",
+          "description": "工程中的模型都没有不匹配的文件格式",
           "passed": true
         },
         {
           "id": "Project:Checks:SLPRJ",
-          "description": "\u5de5\u7a0b\u4e2d\u6ca1\u6709 slprj \u6216 sfprj \u6587\u4ef6\u5939",
+          "description": "工程中没有 slprj 或 sfprj 文件夹",
           "passed": true
         },
         {
           "id": "Project:Checks:PathCaseSensitive",
-          "description": "\u5728\u5de5\u7a0b\u6587\u4ef6\u3001\u8def\u5f84\u548c\u5f15\u7528\u4e2d\u6ca1\u6709\u68c0\u6d4b\u5230\u5927\u5c0f\u5199\u4e0d\u5339\u914d",
+          "description": "在工程文件、路径和引用中没有检测到大小写不匹配",
           "passed": true
         },
         {
           "id": "Project:Checks:ProjectPath",
-          "description": "MATLAB \u641c\u7d22\u8def\u5f84\u4e0a\u7684\u6240\u6709\u5de5\u7a0b\u6587\u4ef6\u5939\u90fd\u5728\u5de5\u7a0b\u8def\u5f84\u4e0a",
+          "description": "MATLAB 搜索路径上的所有工程文件夹都在工程路径上",
           "passed": true
         },
         {
           "id": "Project:Checks:MissingOrDuplicateLabelsInProject",
-          "description": "\u5de5\u7a0b\u6ca1\u6709\u91cd\u590d\u6216\u7f3a\u5931\u7684\u5185\u7f6e\u6807\u7b7e",
+          "description": "工程没有重复或缺失的内置标签",
           "passed": true
         },
         {
           "id": "Project:Checks:OutdatedPcodedFiles",
-          "description": "\u4e0d\u5b58\u5728\u8fc7\u671f\u7684 P \u4ee3\u7801\u6587\u4ef6",
+          "description": "不存在过期的 P 代码文件",
           "passed": true
         },
         {
           "id": "Project:Checks:UnsavedProjectFiles",
-          "description": "\u6ca1\u6709\u5de5\u7a0b\u6587\u4ef6\u5b58\u5728\u672a\u4fdd\u5b58\u7684\u66f4\u6539",
+          "description": "没有工程文件存在未保存的更改",
           "passed": true
         }
       ]
     },
     "plant_open_loop_report": {
       "scope": "PLANT_COMPONENT_OPEN_LOOP",
-      "status": "PASS",
+      "status": "STALE_REQUIRES_RERUN",
       "tests": [
         {
           "id": "P-02",
@@ -398,6 +390,13 @@
         }
       },
       "source_fingerprint": "2f1e49374f5ce87ce24f1d587698a70a9730fbce838a86003d02ba8781b602a2"
+    },
+    "current_source_refresh": {
+      "status": "NOT_RUN_AFTER_P10_EVENT_QUEUE_HARDENING",
+      "reason": "Sensor timing queue, validity-window preflight, runtime acceptance accounting and verification scripts changed after the recorded evidence.",
+      "required_command": "run_component_checks",
+      "matlab_execution": "REQUIRED",
+      "p10_status": "P10A_EVENT_QUEUE_IMPLEMENTED_P10B_PPS_UTC_EPOCH_PENDING"
     }
   },
   "artifacts_sha256": {
