@@ -1,6 +1,7 @@
 #define S_FUNCTION_NAME fmt_plant_sensors_sfun
 #define S_FUNCTION_LEVEL 2
 #include "simstruc.h"
+#include <math.h>
 #include "fmt_flight_runtime.h"
 #include "../../models/plant/fmt_rotation.h"
 
@@ -33,9 +34,38 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     const double *x = ssGetInputPortRealSignal(S, 0);
     const double *previous_velocity = ssGetRealDiscStates(S);
     const double gap = *ssGetInputPortRealSignal(S, 1);
-    const double field[] = {20, 5, 42};
+    const mxArray *parameter = ssGetSFcnParam(S, 0);
+    const double *parameters = mxGetPr(parameter);
+    const double *field_ned_ut;
     double rotation[9], specific_force[3];
     double *sensor = ssGetOutputPortRealSignal(S, 0);
+    mwSize parameter_count = mxGetNumberOfElements(parameter);
+    double gravity;
+
+    /* A scalar is accepted only for compatibility with pre-v2 saved models.
+       New models pass [gravity; magnetic_field_ned_ut] from the data dictionary. */
+    if (!mxIsDouble(parameter) || mxIsComplex(parameter) || mxIsSparse(parameter) ||
+        !parameters || (parameter_count != 1 && parameter_count != 4)) {
+        ssSetErrorStatus(S, "Sensor parameters must be [gravity; NED magnetic field(3)].");
+        return;
+    }
+    gravity = parameters[0];
+    if (!isfinite(gravity)) {
+        ssSetErrorStatus(S, "Plant gravity is nonfinite.");
+        return;
+    }
+    if (parameter_count == 4) {
+        field_ned_ut = parameters + 1;
+    } else {
+        static const double legacy_field_ned_ut[3] = {25.0, 0.0, 40.0};
+        field_ned_ut = legacy_field_ned_ut;
+    }
+    for (int i = 0; i < 3; ++i) {
+        if (!isfinite(field_ned_ut[i])) {
+            ssSetErrorStatus(S, "NED magnetic field contains a nonfinite value.");
+            return;
+        }
+    }
     if (!fmt_rotation(x + 6, rotation)) {
         ssSetErrorStatus(S, "Plant attitude is invalid.");
         return;
@@ -46,13 +76,13 @@ static void mdlOutputs(SimStruct *S, int_T tid)
         sensor[FMT_SENSOR_VELOCITY + i] = x[i + 3];
         sensor[FMT_SENSOR_GYRO + i] = x[i + 10];
     }
-    specific_force[2] -= mxGetScalar(ssGetSFcnParam(S, 0));
+    specific_force[2] -= gravity;
     for (int axis = 0; axis < 3; ++axis) {
         sensor[FMT_SENSOR_ACCEL + axis] = 0;
         sensor[FMT_SENSOR_MAG + axis] = 0;
         for (int i = 0; i < 3; ++i) {
-            sensor[FMT_SENSOR_ACCEL + axis] += rotation[3*i + axis] * specific_force[i];
-            sensor[FMT_SENSOR_MAG + axis] += rotation[3*i + axis] * field[i];
+            sensor[FMT_SENSOR_ACCEL + axis] += rotation[3 * i + axis] * specific_force[i];
+            sensor[FMT_SENSOR_MAG + axis] += rotation[3 * i + axis] * field_ned_ut[i];
         }
     }
     sensor[FMT_SENSOR_BARO] = -x[2];
