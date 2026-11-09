@@ -17,7 +17,7 @@
 | P-07 | 非零 IMU/天线杆臂旋转 | IMU 向心/切向加速度及 GNSS 天线位置/速度符合刚体解析式，误差≤1e-6（double理想层） |
 | P-08 | 静止水平IMU | specific force=[0,0,-g]，gyro含固定 N0 Earth-rate 项；不把固定 N0 相对 rate=0 当 gyro 全0 |
 | P-09 | 噪声 seed 重复/独立源 | 同 seed 序列相同；统计 STD 在长样本95%置信检查范围 |
-| P-10 | 多速率事件时序与 GNSS 时间基准 | 已实现子项：IMU/GNSS/MAG/Baro sample/capture/arrival/release，物理 arrival 与 500 μs 队列 release 分离，生成/抑制/释放/接受计数守恒、缺测序号缺口、队列和 freshness fail-closed；待实现子项：PPS raw capture、UTC observation、GNSS↔FCU epoch mapping |
+| P-10 | 多速率事件时序与 GNSS 时间基准 | P-10a 已实现 IMU/GNSS/MAG/Baro sample/capture/arrival/release 队列；P-10b 的 Flight TimeService 核心由真实 `systime.c` 与上游 host tests 回归验证 PPS 频率驯服、UTC/PPS 配对、UTC mapping、holdover 和 epoch 拒绝；Host MIL 的 TIM2 capture/UM982 RECTIME 注入链仍未接入 |
 | P-11 | 地面落体/起飞 | 非负 Fn、无 NaN/Inf，最大穿透<2cm（基准场景），离地后不保持接触力 |
 | P-12 | 积分步长收敛 | 5s悬停/偏航无接触场景，相同初始状态和四路推力保持下，500us Simulink RK4 与独立250us RK4参考比较：位置差<1e-3m、姿态差<1e-4rad；只验证Plant积分精度，不代表系统级时序验收 |
 | P-13 | loss-of-effectiveness/外力 | 真值改变经测量反映，不能直接给 M4“传感器坏”的标签 |
@@ -32,7 +32,7 @@
 
 P-12 不满足须整体重选积分细化/接触参数并更新方案，不能放宽阈值；改变物理步长时保持外层时序，避免把延迟变化当收敛。P-09统计窗口可用10s以上，StopTime必须有限。
 
-P-10 的事件队列子项由 `verify_sensor_event_timing` 检查固定 GNSS PVT、IMU/MAG/Baro 多速率 sample/capture/arrival；500 μs 队列释放时刻不能替代物理 capture 时间。generated/suppressed/released/accepted 计数必须满足 opportunities=generated+suppressed、generated=released+pending、released=accepted；抑制单个样本后，下一有效事件必须出现序号缺口。PPS raw capture、UTC observation、time_epoch 和 GNSS↔FCU monotonic mapping 尚未接入 Host SIL，P-10 整体不能标为 PASS。
+P-10a 事件队列由 `verify_sensor_event_timing` 检查固定 GNSS PVT、IMU/MAG/Baro 多速率 sample/capture/arrival；500 μs 队列 release 不能替代物理 capture。generated/suppressed/released/accepted 计数满足 opportunities=generated+suppressed、generated=released+pending、released=accepted；抑制样本后下一有效事件必须出现序号缺口。P-10b 的 `verify_time_service_sync` 编译同级 Flight 的真实 `sensor_device/time_base/systime.c`，并运行上游 `tests/time/test_time_service.c`，覆盖 PPS period gate/频率锁定/holdover、UTC observation 必须与 PPS 配对、UTC mapping 不确定度、外部时钟映射和 time_epoch 变化拒绝。该测试的 PPS 输入是合成 `PpsCaptureEvent`，不等同真实 TIM2 ISR；当前 Host SIL `sil_flight.c` 仍将 time service API stub 为 `STATUS_NOT_READY`，UM982 UART RECTIME 未进入 MIL。因此 P-10b 核心算法有独立回归，端到端 Host MIL PPS/RECTIME 链仍未实现，P-10 整体不能标为 PASS。
 
 P-04/05/07/08 理想层关闭噪声、地面或电机动态的具体旁路必须在 fixture 记录；生产闭环不得继承这些测试旁路。P-11 基准为地面上方0.1m、零初速、无推力落体；另设高落差场景，不能把2cm门限外推到任意撞击。P-09采用10000个独立白噪声样本，按卡方双侧95%区间检验各轴方差；固定 seed 用于回归，未通过不得反复挑 seed。q差使用 atan2 度量。
 
