@@ -19,7 +19,7 @@
 
 Command→motor→force/torque→rigid body→measurement 的全链必须闭合。PlantTruth 不直接进入 Estimator/FMS/Controller；已配置初态允许同时初始化仿真与估计器，并记录各自先验不确定度。
 
-GNSS 接收机和 PPS 固定启用；天空遮挡/卫星信号不可用是场景质量故障，不能删除 GNSS 模型或关闭源配置。PVT 从天线运动合成，PPS/UTC 从独立时钟场景生成；三者分别注入失效并接受 T-GNSS-01..06 验证，不从机体 truth 直接修改导航能力或源健康。
+GNSS 接收机和 PPS 是目标系统固定启用的硬件能力；天空遮挡/卫星信号不可用是场景质量故障，不能删除 GNSS 模型或关闭源配置。目标仿真应由天线运动合成 PVT、由独立时钟场景生成 PPS/UTC，并分别注入失效接受 T-GNSS-01..06 验证，不从机体 truth 直接修改导航能力或源健康。当前 Host SIL 仅实现本地 monotonic PVT 事件，PPS raw capture/UTC mapping 属于 P10b 待实现范围。
 
 ## 3. 范围和初始工作点
 
