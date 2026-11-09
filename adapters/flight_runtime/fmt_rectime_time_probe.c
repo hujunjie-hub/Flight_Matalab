@@ -79,7 +79,8 @@ static int run_rectime_tests(uint32_t *mapping_epoch, uint8_t *utc_valid)
     char bad_crc_frame[384];
     char bad_epoch_frame[384];
     UnicoreAsciiParser parser = {0};
-    UnicoreAsciiMessage message;
+    UnicoreAsciiMessage message = {0};
+    UnicoreAsciiMessage valid_message = {0};
     int decoded;
     TimeConfig config = {0};
     PpsCaptureEvent edge;
@@ -103,6 +104,7 @@ static int run_rectime_tests(uint32_t *mapping_epoch, uint8_t *utc_valid)
     CHECK(message.output_delay_ms == 12u);
     CHECK(parser.valid_frames == 1u && parser.crc_errors == 0u &&
           parser.malformed_frames == 0u);
+    valid_message = message;
 
     CHECK(build_rectime_frame(bad_crc_frame, sizeof(bad_crc_frame), -18));
     {
@@ -146,11 +148,11 @@ static int run_rectime_tests(uint32_t *mapping_epoch, uint8_t *utc_valid)
     CHECK(latest.edge_sequence == 9u);
 
     memset(&observation, 0, sizeof(observation));
-    observation.utc_time_ns = message.utc_time_ns;
+    observation.utc_time_ns = valid_message.utc_time_ns;
     observation.paired_pps_tick64 = latest.capture_tick64;
     observation.pps_edge_sequence = latest.edge_sequence;
     observation.time_epoch = latest.time_epoch;
-    observation.receiver_accuracy_ns = message.receiver_accuracy_ns;
+    observation.receiver_accuracy_ns = valid_message.receiver_accuracy_ns;
     observation.time_scale = TIME_SCALE_UTC;
     observation.validity_flags = GNSS_TIME_UTC_VALID | GNSS_TIME_PPS_PAIRED;
     CHECK(time_submit_gnss_time(&observation) == STATUS_OK);
@@ -161,7 +163,7 @@ static int run_rectime_tests(uint32_t *mapping_epoch, uint8_t *utc_valid)
     CHECK(status.utc_valid != 0u);
     CHECK(status.state == TIME_QUALITY_LOCKED);
     CHECK(status.utc_estimate_ns == EXPECTED_UTC_NS);
-    CHECK(status.utc_uncertainty_ns <= message.receiver_accuracy_ns);
+    CHECK(status.utc_uncertainty_ns <= valid_message.receiver_accuracy_ns);
 
     memset(&mapping, 0, sizeof(mapping));
     CHECK(time_get_mapping_status(CLOCK_DOMAIN_UTC_POSIX, &mapping) == STATUS_OK);
