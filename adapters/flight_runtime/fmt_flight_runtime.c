@@ -326,14 +326,26 @@ static int feed_simulated_sensor_events(const double *sensor_frame,
         ++failures;
         return -1;
     }
-    if (due[FMT_SENSOR_SIM_IMU].valid &&
-        inject_simulated_imu(&due[FMT_SENSOR_SIM_IMU]) != 0) return -1;
-    if (due[FMT_SENSOR_SIM_GNSS].valid &&
-        inject_simulated_gnss(&due[FMT_SENSOR_SIM_GNSS], model_parameters) != 0) return -1;
-    if (due[FMT_SENSOR_SIM_MAG].valid &&
-        inject_simulated_mag(&due[FMT_SENSOR_SIM_MAG], model_parameters) != 0) return -1;
-    if (due[FMT_SENSOR_SIM_BARO].valid &&
-        inject_simulated_baro(&due[FMT_SENSOR_SIM_BARO], model_parameters) != 0) return -1;
+    if (due[FMT_SENSOR_SIM_IMU].valid) {
+        if (inject_simulated_imu(&due[FMT_SENSOR_SIM_IMU]) != 0 ||
+            fmt_sensor_sim_mark_accepted(&sensor_simulation, FMT_SENSOR_SIM_IMU) != 0)
+            return -1;
+    }
+    if (due[FMT_SENSOR_SIM_GNSS].valid) {
+        if (inject_simulated_gnss(&due[FMT_SENSOR_SIM_GNSS], model_parameters) != 0 ||
+            fmt_sensor_sim_mark_accepted(&sensor_simulation, FMT_SENSOR_SIM_GNSS) != 0)
+            return -1;
+    }
+    if (due[FMT_SENSOR_SIM_MAG].valid) {
+        if (inject_simulated_mag(&due[FMT_SENSOR_SIM_MAG], model_parameters) != 0 ||
+            fmt_sensor_sim_mark_accepted(&sensor_simulation, FMT_SENSOR_SIM_MAG) != 0)
+            return -1;
+    }
+    if (due[FMT_SENSOR_SIM_BARO].valid) {
+        if (inject_simulated_baro(&due[FMT_SENSOR_SIM_BARO], model_parameters) != 0 ||
+            fmt_sensor_sim_mark_accepted(&sensor_simulation, FMT_SENSOR_SIM_BARO) != 0)
+            return -1;
+    }
     return 0;
 }
 
