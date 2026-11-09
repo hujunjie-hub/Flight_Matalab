@@ -295,6 +295,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     double imu_interval_s;
     uint64_t seed, imu_index, slow_index, gnss_index, baro_index;
     int imu_derivative_valid;
+    uint32_t validity_mask;
 
     if (!mxIsDouble(parameterArray) || mxIsComplex(parameterArray) ||
         mxIsSparse(parameterArray) ||
@@ -417,8 +418,9 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 
     sensor[FMT_SENSOR_BARO] = -x[2] + modelParameter[MODEL_BARO_BIAS] +
         modelParameter[MODEL_BARO_NOISE] * fmt_gaussian(seed, NOISE_BARO, baro_index, 0);
-    sensor[FMT_SENSOR_VALID] = FMT_GNSS_VALID | FMT_MAG_VALID | FMT_BARO_VALID;
-    if (imu_derivative_valid) sensor[FMT_SENSOR_VALID] |= FMT_IMU_VALID;
+    validity_mask = FMT_GNSS_VALID | FMT_MAG_VALID | FMT_BARO_VALID;
+    if (imu_derivative_valid) validity_mask |= FMT_IMU_VALID;
+    sensor[FMT_SENSOR_VALID] = (double)validity_mask;
     /* GroundContact: signed gap <= 1 mm and penetration <= 20 mm. */
     sensor[FMT_SENSOR_CONTACT] = (gap <= 0.001 && gap >= -0.02) ? 1.0 : 0.0;
     if (!fmt_finite_vector(sensor, FMT_SENSOR_WIDTH)) {

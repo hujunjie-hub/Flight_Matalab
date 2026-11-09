@@ -37,7 +37,7 @@ assert(all(isfinite(flight.motor_time_constant_s)) && ...
 v.motor_time_constant_s=flight.motor_time_constant_s(1);
 
 position=flight.motor_position_frd_m';
-assert(isequal(size(position),[3 4]) && all(isfinite(position),'all'), ...
+assert(isequal(size(position),[3 4]) && all(isfinite(position),[],'all'), ...
     'Flight:MotorGeometry','Expected four finite FRD motor positions.');
 assert(max(abs(mean(position(1:2,:),2)))<1e-10 && ...
        max(abs(position(3,:)))<1e-10, ...
@@ -208,7 +208,7 @@ values.FrameQuantizerParameters=[profile.dshot_force_curve_n(2);profile.frame_sl
 
 dictionaryChanged=false;
 if exist(section,'AllocationGeometry')
-    removeEntry(section,'AllocationGeometry');
+    deleteEntry(section,'AllocationGeometry');
     dictionaryChanged=true;
 end
 fields=fieldnames(values);

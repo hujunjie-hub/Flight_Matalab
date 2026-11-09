@@ -64,6 +64,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     for (mwSize row = 0; row < rows; ++row) {
         double input[18], frame[18] = {0};
+        uint32_t validity_mask = 0u;
         FmtSensorSimEvent due[4];
         const double time_value = times[row];
         if (!isfinite(time_value) || time_value < 0.0 ||
@@ -89,20 +90,20 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             case FMT_SENSOR_SIM_IMU:
                 memcpy(frame + FMT_SENSOR_GYRO, event->values, 3u * sizeof(double));
                 memcpy(frame + FMT_SENSOR_ACCEL, event->values + 3, 3u * sizeof(double));
-                frame[FMT_SENSOR_VALID] |= FMT_IMU_VALID;
+                validity_mask |= FMT_IMU_VALID;
                 break;
             case FMT_SENSOR_SIM_GNSS:
                 memcpy(frame + FMT_SENSOR_POSITION, event->values, 3u * sizeof(double));
                 memcpy(frame + FMT_SENSOR_VELOCITY, event->values + 3, 3u * sizeof(double));
-                frame[FMT_SENSOR_VALID] |= FMT_GNSS_VALID;
+                validity_mask |= FMT_GNSS_VALID;
                 break;
             case FMT_SENSOR_SIM_MAG:
                 memcpy(frame + FMT_SENSOR_MAG, event->values, 3u * sizeof(double));
-                frame[FMT_SENSOR_VALID] |= FMT_MAG_VALID;
+                validity_mask |= FMT_MAG_VALID;
                 break;
             case FMT_SENSOR_SIM_BARO:
                 frame[FMT_SENSOR_BARO] = event->values[0];
-                frame[FMT_SENSOR_VALID] |= FMT_BARO_VALID;
+                validity_mask |= FMT_BARO_VALID;
                 break;
             default:
                 mexErrMsgIdAndTxt("Flight:SensorProbeChannel","Unknown sensor channel.");
@@ -110,6 +111,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             if (fmt_sensor_sim_mark_accepted(&state, channel) != 0)
                 mexErrMsgIdAndTxt("Flight:SensorProbeAccounting","Released event could not be marked accepted.");
         }
+        frame[FMT_SENSOR_VALID] = (double)validity_mask;
         for (unsigned column = 0; column < 18; ++column)
             frames[row + rows * column] = frame[column];
     }
