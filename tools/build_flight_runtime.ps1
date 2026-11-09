@@ -14,7 +14,7 @@ $buildDir = Join-Path $objectsDir ([Guid]::NewGuid().ToString('N'))
 & (Join-Path $flight 'tests/simulation/run_sil.ps1') -GccDir $GccDir -OutDir $buildDir
 $includes = @(
     'tests/simulation', 'tests/runtime/stubs', 'applications/tasks', 'applications/runtime',
-    'middleware/contracts', 'middleware/communication', 'middleware/protocol',
+    'middleware/contracts', 'middleware/communication', 'middleware/protocol', 'middleware/param',
     'middleware/sensor', 'middleware/model/ins', 'middleware/model/fms', 'middleware/model/fms/quad_x4',
     'middleware/guidance', 'middleware/model/control', 'middleware/model/control/inner_loop/quad_x4',
     'middleware/actuator', 'sensor_device', 'sensor_device/time_base', 'sensor_device/actuator',

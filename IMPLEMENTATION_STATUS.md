@@ -74,3 +74,14 @@
 
 - 阻断链：FMAT-0002 → FMAT-0003 → FMAT-0010 → FMAT-0004 → FMAT-0005 → FMAT-0006；解除后才可能复现 FMAT-0008、FMAT-0009。
 - 本轮未修改代码；此前一轮的本地修补仅保存在 `git stash` 与 `work/local_r2026b_fixes_backup.patch` 中，未提交、未推送。
+
+
+## 2026-11-09 23:41 MATLAB 验收运行记录（Host SIL 构建通过，预检阻断）
+
+- 仓库/分支：`hujunjie-hub/Flight_Matalab` · `optimize/sil-physical-parameter-alignment` · HEAD `3f885a9`（运行时的两项修补见下，本轮随代码提交）。
+- 入口与结果：`run_component_checks`，**FAIL**。第 1 步 Host SIL 构建已通过：产出 `work/mex/fmt_flight_runtime.dll`（1,813,260 字节），上游 SIL 自测 `4147 checks, 0 failures`。运行停在 `build_native_kernels` 的输入预检（`tools/verify_inputs.py:82`，`Production header changed: middleware/contracts/contract_checks/algorithm_checks.h`），即 FMAT-0003。
+- 证据归档：`work/validation/archives/20261109T154213789Z_3f885a9.zip`，SHA-256 `3bf083944271a32de3c0f922ba344f594bd863d3eb9a473fa43c4ef381a19454`。
+- 本轮修复两项：
+  - FMAT-0002：`tools/build_flight_runtime.ps1` 的 include 集增加 `middleware/param`，与 `Flight/tests/simulation/run_sil.ps1` 一致。
+  - FMAT-0010：`config/flight_baseline.json` 不再手工维护，改由 `build_flight_runtime.ps1` 每次构建调用 `record_flight_baseline.py` 全量重生成；本次为 482 项 `sources_sha256`（含 `applications/tasks/` 下 13 项新子目录路径），`product_contract_revision=0x00010906`、`navigation_frame_bytes=360`。
+- 仍未闭合：FMAT-0003（当前唯一阻断）、FMAT-0005（3 处 `max(...,'all')` 未改）、FMAT-0007（块名已改但比较串仍为 `/modelparams`、`/timingparams`）、FMAT-0008/0009（需构建阻断解除后复现）。
