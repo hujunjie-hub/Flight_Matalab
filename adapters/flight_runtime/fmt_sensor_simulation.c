@@ -45,14 +45,23 @@ static int validate_parameters(const double *p)
         uncertainty > UINT32_MAX)
         return 0;
 
-    if (pipeline + transports[FMT_SENSOR_SIM_IMU] >=
-        (FMT_SENSOR_SIM_QUEUE_CAPACITY - 2u) * periods[FMT_SENSOR_SIM_IMU])
+    /* Firmware contracts expire from physical sample time, not queue release time. */
+    if (pipeline + transports[FMT_SENSOR_SIM_IMU] >= 5000u ||
+        pipeline + transports[FMT_SENSOR_SIM_IMU] >=
+            (FMT_SENSOR_SIM_QUEUE_CAPACITY - 2u) * periods[FMT_SENSOR_SIM_IMU])
         return 0;
-    for (unsigned channel = FMT_SENSOR_SIM_GNSS; channel <= FMT_SENSOR_SIM_BARO; ++channel) {
-        if (transports[channel] >=
-            (FMT_SENSOR_SIM_QUEUE_CAPACITY - 2u) * periods[channel])
-            return 0;
-    }
+    if (transports[FMT_SENSOR_SIM_GNSS] >= 20000u ||
+        transports[FMT_SENSOR_SIM_GNSS] >=
+            (FMT_SENSOR_SIM_QUEUE_CAPACITY - 2u) * periods[FMT_SENSOR_SIM_GNSS])
+        return 0;
+    if (transports[FMT_SENSOR_SIM_MAG] >= 100000u ||
+        transports[FMT_SENSOR_SIM_MAG] >=
+            (FMT_SENSOR_SIM_QUEUE_CAPACITY - 2u) * periods[FMT_SENSOR_SIM_MAG])
+        return 0;
+    if (transports[FMT_SENSOR_SIM_BARO] >= 20000u ||
+        transports[FMT_SENSOR_SIM_BARO] >=
+            (FMT_SENSOR_SIM_QUEUE_CAPACITY - 2u) * periods[FMT_SENSOR_SIM_BARO])
+        return 0;
     return 1;
 }
 
