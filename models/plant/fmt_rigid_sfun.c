@@ -1,23 +1,28 @@
 #define S_FUNCTION_NAME fmt_rigid_sfun
 #define S_FUNCTION_LEVEL 2
+
 #include "simstruc.h"
 #include <math.h>
 #include "fmt_rotation.h"
+#include "fmt_plant_validation.h"
 
 static void mdlInitializeSizes(SimStruct *S)
 {
+    int i;
     ssSetNumSFcnParams(S, 1);
     if (ssGetNumSFcnParams(S) != ssGetSFcnParamsCount(S)) return;
     ssSetSFcnParamTunable(S, 0, 0);
+
     if (!ssSetNumInputPorts(S, 4)) return;
     ssSetInputPortWidth(S, 0, 17);
     ssSetInputPortWidth(S, 1, 6);
     ssSetInputPortWidth(S, 2, 6);
     ssSetInputPortWidth(S, 3, 15);
-    for (int i = 0; i < 4; ++i) {
+    for (i = 0; i < 4; ++i) {
         ssSetInputPortDirectFeedThrough(S, i, 1);
         ssSetInputPortRequiredContiguous(S, i, 1);
     }
+
     if (!ssSetNumOutputPorts(S, 1)) return;
     ssSetOutputPortWidth(S, 0, 13);
     ssSetNumSampleTimes(S, 1);
@@ -46,61 +51,76 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     const double *ground = ssGetInputPortRealSignal(S, 2);
     const double *env = ssGetInputPortRealSignal(S, 3);
     double *dx = ssGetOutputPortRealSignal(S, 0);
-    double rotation[9], angular_momentum[3], gyroscopic[3];
+    double rotation[9], inertia[9], inverse_inertia[9];
+    double angular_momentum[3], gyroscopic[3], torque_rhs[3], determinant;
+    int i, j;
+
     (void)tid;
 
     if (!mxIsDouble(parameter) || mxIsComplex(parameter) || mxIsSparse(parameter) ||
-        mxGetNumberOfElements(parameter) != 19 || !p) {
-        ssSetErrorStatus(S, "PlantParameters must contain exactly 19 values.");
+        !p || !fmt_plant_parameters_valid(p, (int)mxGetNumberOfElements(parameter))) {
+        ssSetErrorStatus(S, "Invalid PlantParameters: expected 25 finite values and a symmetric positive-definite 3x3 inertia matrix.");
         return;
     }
-    for (int i = 0; i < 19; ++i) {
-        if (!isfinite(p[i])) {
-            ssSetErrorStatus(S, "PlantParameters contains a nonfinite value.");
-            return;
-        }
-    }
-    if (!(p[0] > 0) || !(p[1] > 0) || !(p[2] > 0) || !(p[3] > 0) ||
-        !(p[4] > 0) || !(p[5] > 0) ||
-        p[6] < 0 || p[7] < 0 || p[8] < 0 || p[9] < 0 ||
-        !(p[10] > 0) || p[11] < 0 || !(p[16] > 0) ||
-        p[17] < 0 || p[18] < 0) {
-        ssSetErrorStatus(S, "Invalid mass, inertia, motor, drag, damping, ground or gravity parameters.");
+    if (!fmt_plant_state_valid(x)) {
+        ssSetErrorStatus(S, "Invalid PlantState: values must be finite, quaternion nonzero and motor speeds nonnegative.");
         return;
     }
-    for (int i = 0; i < 17; ++i) {
-        if (!isfinite(x[i])) {
-            ssSetErrorStatus(S, "Plant state contains a nonfinite value.");
-            return;
-        }
+    if (!fmt_plant_wrench_valid(rotor) || !fmt_plant_wrench_valid(ground)) {
+        ssSetErrorStatus(S, "Invalid Rotor/Ground wrench: all six force and torque values must be finite.");
+        return;
     }
-    for (int i = 0; i < 6; ++i) {
-        if (!isfinite(rotor[i]) || !isfinite(ground[i])) {
-            ssSetErrorStatus(S, "Rotor or ground wrench contains a nonfinite value.");
-            return;
-        }
-    }
-    for (int i = 0; i < 15; ++i) {
-        if (!isfinite(env[i])) {
-            ssSetErrorStatus(S, "Environment contains a nonfinite value.");
-            return;
-        }
+    if (!fmt_plant_environment_valid(env)) {
+        ssSetErrorStatus(S, "Invalid Plant Environment: flags must be 0/1 and rotor effectiveness must be within [0,1].");
+        return;
     }
     if (!fmt_rotation(x + 6, rotation)) {
         ssSetErrorStatus(S, "Invalid Plant quaternion.");
         return;
     }
 
-    for (int i = 0; i < 3; ++i) {
+    /* Reconstruct MATLAB column-major J(:) into a row-major matrix. */
+    for (i = 0; i < 3; ++i) {
+        for (j = 0; j < 3; ++j) {
+            inertia[3 * i + j] = p[1 + i + 3 * j];
+        }
+    }
+
+    {
+        const double a = inertia[0], b = inertia[1], c = inertia[2];
+        const double d = inertia[3], e = inertia[4], f = inertia[5];
+        const double g = inertia[6], h = inertia[7], k = inertia[8];
+
+        determinant = a * (e * k - f * h) -
+                      b * (d * k - f * g) +
+                      c * (d * h - e * g);
+
+        inverse_inertia[0] =  (e * k - f * h) / determinant;
+        inverse_inertia[1] =  (c * h - b * k) / determinant;
+        inverse_inertia[2] =  (b * f - c * e) / determinant;
+        inverse_inertia[3] =  (f * g - d * k) / determinant;
+        inverse_inertia[4] =  (a * k - c * g) / determinant;
+        inverse_inertia[5] =  (c * d - a * f) / determinant;
+        inverse_inertia[6] =  (d * h - e * g) / determinant;
+        inverse_inertia[7] =  (b * g - a * h) / determinant;
+        inverse_inertia[8] =  (a * e - b * d) / determinant;
+    }
+
+    for (i = 0; i < 3; ++i) {
         double force_ned = env[3 + i];
-        for (int j = 0; j < 3; ++j)
+        for (j = 0; j < 3; ++j) {
             force_ned += rotation[3 * i + j] * (rotor[j] + ground[j]);
-        if (env[10] > 0.5)
-            force_ned -= p[6 + i] * (x[3 + i] - env[i]);
+        }
+        if (env[10] == 1.0) {
+            force_ned -= p[12 + i] * (x[3 + i] - env[i]);
+        }
 
         dx[i] = x[3 + i];
-        dx[3 + i] = force_ned / p[0] + (i == 2 ? p[16] : 0);
-        angular_momentum[i] = p[1 + i] * x[10 + i];
+        dx[3 + i] = force_ned / p[0] + (i == 2 ? p[22] : 0.0);
+
+        angular_momentum[i] = inertia[3 * i] * x[10] +
+                              inertia[3 * i + 1] * x[11] +
+                              inertia[3 * i + 2] * x[12];
     }
 
     dx[6] = -0.5 * (x[7] * x[10] + x[8] * x[11] + x[9] * x[12]);
@@ -109,15 +129,18 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     dx[9] =  0.5 * (x[6] * x[12] + x[7] * x[11] - x[8] * x[10]);
 
     fmt_cross(x + 10, angular_momentum, gyroscopic);
-    for (int i = 0; i < 3; ++i)
-        dx[10 + i] = (rotor[3 + i] + ground[3 + i] + env[6 + i] -
-                      p[9] * x[10 + i] - gyroscopic[i]) / p[1 + i];
+    for (i = 0; i < 3; ++i) {
+        torque_rhs[i] = rotor[3 + i] + ground[3 + i] + env[6 + i] -
+                        p[15] * x[10 + i] - gyroscopic[i];
+    }
+    for (i = 0; i < 3; ++i) {
+        dx[10 + i] = inverse_inertia[3 * i] * torque_rhs[0] +
+                     inverse_inertia[3 * i + 1] * torque_rhs[1] +
+                     inverse_inertia[3 * i + 2] * torque_rhs[2];
+    }
 
-    for (int i = 0; i < 13; ++i) {
-        if (!isfinite(dx[i])) {
-            ssSetErrorStatus(S, "Rigid-body derivative became nonfinite.");
-            return;
-        }
+    if (!fmt_finite_vector(dx, 13)) {
+        ssSetErrorStatus(S, "Rigid-body derivative became nonfinite.");
     }
 }
 
