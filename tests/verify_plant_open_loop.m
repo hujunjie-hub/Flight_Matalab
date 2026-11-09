@@ -158,8 +158,10 @@ torqueEnvironment(7)=0.01;
 out=run('FMT_RigidBodyRHS',{initial,zeros(1,6),zeros(1,6),torqueEnvironment}, ...
     0.001,struct,0.0005);
 derivative=out.yout{1}.Values.Data(end,:);
-assert(abs(derivative(11)-0.01/cfg.vehicle_model.inertia_frd_kgm2(1))<1e-10, ...
-    'Flight:P18','FRD external torque was not applied about the body X axis.');
+Jflight=reshape(cfg.vehicle_model.inertia_frd_kgm2,3,3);
+expectedTorqueAcceleration=Jflight\[0.01;0;0];
+assert(norm(derivative(11:13)-expectedTorqueAcceleration',inf)<1e-10, ...
+    'Flight:P18','FRD external torque was not applied using the full inertia matrix.');
 results{end+1}=passed('P-18','Body/NED force transform and FRD torque contract');
 
 % P-19: aerodynamic drag uses velocity relative to NED wind.
