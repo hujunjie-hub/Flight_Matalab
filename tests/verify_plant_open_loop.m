@@ -204,27 +204,27 @@ out=run('FMT_GroundRHS',{staticContact,contactEnvironment},0.001,struct,0.0005);
 wrench=out.yout{1}.Values.Data(end,:);
 expectedNormal=cfg.vehicle_model.mass_kg*g;
 assert(norm(wrench-[0 0 -expectedNormal 0 0 0],inf)<1e-8, ...
-    'Flight:P21','First-version Plant unexpectedly applied horizontal ground friction.');
+    'Flight:P17','First-version Plant unexpectedly applied horizontal ground friction.');
 results{end+1}=passed('P-17','No horizontal ground friction in first-version Plant');
 
 % P-21: invalid environment flags/effectiveness, states and inertia fail closed.
 badEnvironment=environment;
 badEnvironment(12)=1.01;
 expect_error(@()run('FMT_RigidBodyRHS',{initial,zeros(1,6),zeros(1,6),badEnvironment}, ...
-    0.001,struct,0.0005),'Invalid Plant Environment','Flight:P17');
+    0.001,struct,0.0005),'Invalid Plant Environment','Flight:P21');
 badFlagEnvironment=environment;
 badFlagEnvironment(10)=0.5;
 expect_error(@()run('FMT_RigidBodyRHS',{initial,zeros(1,6),zeros(1,6),badFlagEnvironment}, ...
-    0.001,struct,0.0005),'Invalid Plant Environment','Flight:P17');
+    0.001,struct,0.0005),'Invalid Plant Environment','Flight:P21');
 badState=initial;
 badState(1)=NaN;
 expect_error(@()run('FMT_RigidBodyRHS',{badState,zeros(1,6),zeros(1,6),environment}, ...
-    0.001,struct,0.0005),'Invalid PlantState','Flight:P17');
+    0.001,struct,0.0005),'Invalid PlantState','Flight:P21');
 badParameters=cfg.derived.PlantParameters;
 badParameters(3)=badParameters(3)+0.01; % Break J21/J12 symmetry.
 expect_error(@()run('FMT_RigidBodyRHS',{initial,zeros(1,6),zeros(1,6),environment}, ...
     0.001,struct('PlantParameters',badParameters),0.0005), ...
-    'Invalid PlantParameters','Flight:P17');
+    'Invalid PlantParameters','Flight:P21');
 results{end+1}=passed('P-21','Invalid environment, state and inertia rejected');
 
 remaining={'P-07','P-08','P-09','P-10','P-14'};
