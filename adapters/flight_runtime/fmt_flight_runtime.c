@@ -185,10 +185,10 @@ static int inject_simulated_imu(const FmtSensorSimEvent *event)
     reading.sequence = event->sequence;
     reading.diagnostic_clear = true;
     if (sensor_imu_build_sample(&simulated_imu_config, &simulated_imu_context,
-                                &reading, event->capture_us, event->arrival_us,
+                                &reading, event->capture_us, event->release_us,
                                 &sample) != SENSOR_OK ||
         sample.header.timestamp_sample_us != event->sample_us ||
-        sensor_imu_inject(&sample, event->arrival_us) != STATUS_OK) {
+        sensor_imu_inject(&sample, event->release_us) != STATUS_OK) {
         ++failures;
         return -1;
     }
@@ -200,7 +200,7 @@ static int inject_simulated_mag(const FmtSensorSimEvent *event, const double *mo
     SensorMeasurement measurement = {0};
     measurement.header = h(SOURCE_MAG, event->sample_us + 100000u);
     measurement.header.timestamp_sample_us = event->sample_us;
-    measurement.header.timestamp_publish_us = event->arrival_us;
+    measurement.header.timestamp_publish_us = event->release_us;
     measurement.header.valid_until_us = event->sample_us + 100000u;
     measurement.header.timestamp_quality = TIMESTAMP_QUALITY_SENSOR_MODEL_CORRECTED;
     measurement.header.sequence = event->sequence;
@@ -229,7 +229,7 @@ static int inject_simulated_baro(const FmtSensorSimEvent *event, const double *m
     SensorMeasurement measurement = {0};
     measurement.header = h(SOURCE_BARO, event->sample_us + 20000u);
     measurement.header.timestamp_sample_us = event->sample_us;
-    measurement.header.timestamp_publish_us = event->arrival_us;
+    measurement.header.timestamp_publish_us = event->release_us;
     measurement.header.valid_until_us = event->sample_us + 20000u;
     measurement.header.timestamp_quality = TIMESTAMP_QUALITY_SENSOR_MODEL_CORRECTED;
     measurement.header.sequence = event->sequence;
@@ -257,7 +257,7 @@ static int inject_simulated_gnss(const FmtSensorSimEvent *event, const double *m
     SensorMeasurement measurement = {0};
     measurement.header = h(SOURCE_GNSS, event->sample_us + 20000u);
     measurement.header.timestamp_sample_us = event->sample_us;
-    measurement.header.timestamp_publish_us = event->arrival_us;
+    measurement.header.timestamp_publish_us = event->release_us;
     measurement.header.valid_until_us = event->sample_us + 20000u;
     measurement.header.timestamp_quality = TIMESTAMP_QUALITY_SENSOR_MODEL_CORRECTED;
     measurement.header.sequence = event->sequence;
