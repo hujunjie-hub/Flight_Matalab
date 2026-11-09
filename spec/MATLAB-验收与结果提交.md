@@ -94,6 +94,8 @@ P-14 不在上述 Plant 开环脚本中执行，由 `tests/verify_truth_isolatio
 
 `tests/verify_sensor_event_timing.m` 生成 500 μs 固定步、1,000,000 μs 起始 epoch、1.2 s 测试窗口，构造 IMU/GNSS/MAG/Baro 四通道事件。测试覆盖 sample/capture/arrival/release 时间顺序、各自采样周期、队列迟到、计数守恒、每通道抑制一个样本后的 sequence gap、消费者速率、延迟边界、过期拒绝、非单调时间和非法 validity mask。
 
+Host SIL 的确定性调度器必须显式模拟 RTOS 信号量唤醒：Sensor 任务产生有效 GNSS origin candidate 后，Mission 必须在候选头有效期内立即执行 FMS origin-reset 授权；Mission 写入 `EstimatorResetRequest` 后，Sensor 必须立即消费该请求。不能只依赖 20 ms Mission 周期轮询，因为当前 SIM_ONLY GNSS 为 100 ms 采样、10 ms 传输、20 ms measurement TTL，固定周期调度会在某些相位下错过候选有效期。MIL gate 必须证明 `NAV_VALID_HORIZONTAL_POSITION` 和 `PREARM_READY` 实际出现；不得通过延长 TTL、跳过 FMS 授权或伪造导航有效位规避。
+
 ### 3.5 Flight 时间与 GNSS 测试数据
 
 - `verify_time_service_sync`：编译同级 Flight 的真实 `systime.c`，调用上游 `tests/time/test_time_service.c`；PPS 输入是确定性合成 `PpsCaptureEvent`。

@@ -25,6 +25,9 @@ static double sensor_model_parameters[FMT_SENSOR_MODEL_PARAMETER_COUNT];
 static double sensor_timing_parameters[FMT_SENSOR_SIM_PARAMETER_COUNT];
 static sensor_imu_config_t simulated_imu_config;
 static sensor_context_t simulated_imu_context;
+/* Host SIL must emulate RTOS semaphore wakeups for the GNSS-origin handshake. */
+static uint32_t last_origin_candidate_sequence;
+static uint64_t last_origin_candidate_sample_us;
 
 Status __real_estimator_push_imu(const ImuSample *);
 Status __real_estimator_update(uint64_t);
@@ -373,6 +376,8 @@ __declspec(dllexport) int fmt_flight_start(int mode)
     test_tx_complete = NULL;
     elapsed_ticks = sil_requests = last_request = 0;
     sensor_simulation_ready = 0;
+    last_origin_candidate_sequence = 0u;
+    last_origin_candidate_sample_us = 0u;
     memset(&sensor_simulation, 0, sizeof(sensor_simulation));
     memset(sensor_model_parameters, 0, sizeof(sensor_model_parameters));
     memset(sensor_timing_parameters, 0, sizeof(sensor_timing_parameters));
@@ -415,6 +420,7 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
     ++elapsed_ticks;
     test_clock.monotonic_us += 500u;
     unsigned ms = elapsed_ticks / 2u;
+    int mission_turned = 0;
     if (external_mode())
         memcpy(&external_frame, nav_in, sizeof(external_frame));
     if (mode_active == FMT_MIL_SIM &&
@@ -429,14 +435,47 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
             feed_sensors(s, ms);
         feed_contact(s[FMT_SENSOR_CONTACT]);
         turn(task_sensor_entry);
+        /*
+         * The real RTOS wakes Mission immediately when task_sensor publishes a
+         * validated GNSS origin candidate. Host SIL's rt_sem_release is a
+         * deterministic no-op, so the periodic 20-ms Mission turn can arrive
+         * exactly at (or after) the 20-ms GNSS validity deadline (100-ms sample
+         * + 10-ms transport + 20-ms Mission phase). Emulate that event wake
+         * explicitly; after authorization, emulate the IMU semaphore wake so
+         * task_sensor consumes the queued EstimatorResetRequest immediately.
+         */
+        {
+            ContractHeader candidate = {0};
+            uint32_t next_origin = 0u;
+            if (runtime_data_lock(0)) {
+                candidate = runtime_data.origin_candidate;
+                next_origin = runtime_data.next_origin_id;
+                runtime_data_unlock();
+            }
+            if (next_origin == 0u) {
+                last_origin_candidate_sequence = 0u;
+                last_origin_candidate_sample_us = 0u;
+            } else if (candidate.sequence != 0u &&
+                       (candidate.sequence != last_origin_candidate_sequence ||
+                        candidate.timestamp_sample_us != last_origin_candidate_sample_us)) {
+                last_origin_candidate_sequence = candidate.sequence;
+                last_origin_candidate_sample_us = candidate.timestamp_sample_us;
+                turn(task_mission_entry);
+                mission_turned = 1;
+                turn(task_sensor_entry);
+            }
+        }
         if (ms % TASK_COMMUNICATION_PERIOD_MS == 0u)
             turn(task_communication_entry);
         turn(task_actuator_entry);
     }
     if (elapsed_ticks % 5u == 0u)
         (void)actuator_guard_frame_boundary(test_clock.monotonic_us);
-    if (elapsed_ticks % (2u * TASK_MISSION_PERIOD_MS) == 0u) {
+    if (elapsed_ticks % (2u * TASK_MISSION_PERIOD_MS) == 0u && !mission_turned) {
         turn(task_mission_entry);
+        mission_turned = 1;
+    }
+    if (mission_turned) {
         for (unsigned i = 0; i < fms_output.command_result_count; ++i) {
             const CommandAck *ack = &fms_output.command_results[i];
             if (ack->request_id == last_request) {
