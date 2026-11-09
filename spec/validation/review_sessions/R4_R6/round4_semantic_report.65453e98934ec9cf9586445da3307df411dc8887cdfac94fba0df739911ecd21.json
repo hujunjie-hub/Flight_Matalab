@@ -1,0 +1,106 @@
+{
+  "scope": "EXECUTABLE_SPEC_REFERENCE",
+  "date": "2026-11-05",
+  "status": "PASS",
+  "round": 4,
+  "cases": [
+    {
+      "id": "D4-01",
+      "status": "PASS",
+      "evidence": {
+        "old_duration_s": 0.4,
+        "old_peak_accel": 6.70837336785189,
+        "old_peak_jerk": 159.37499999999994,
+        "retimed": {
+          "ticks": 5,
+          "duration_s": 1.0,
+          "coefficients": [
+            0,
+            0.0,
+            0.0,
+            0.5,
+            -0.25,
+            0.0
+          ],
+          "bounds": [
+            0.5,
+            0.75,
+            3.0
+          ],
+          "attempts": 4
+        }
+      }
+    },
+    {
+      "id": "D4-02",
+      "status": "PASS",
+      "evidence": {
+        "nearest_3d_grid_error_m": 0.4330127018922193,
+        "acceptance_radius_m": 0.2,
+        "connector": {
+          "ticks": 15,
+          "duration_s": 3.0,
+          "coefficients": [
+            0.25,
+            1.5,
+            0.0,
+            8.5,
+            -14.25,
+            6.0
+          ],
+          "bounds": [
+            0.9041748046875,
+            0.8194444444444444,
+            2.5555555555555554
+          ],
+          "attempts": 8
+        }
+      }
+    },
+    {
+      "id": "D4-03",
+      "status": "PASS",
+      "evidence": {
+        "request_uses_I_k": 0.16,
+        "I_k_plus_1": -0.00021999999999999998,
+        "wrong_preintegrated_request": 0.16008
+      }
+    },
+    {
+      "id": "D4-04",
+      "status": "PASS",
+      "evidence": {
+        "global_reboot": 12000000,
+        "global_release": 12012000,
+        "FCU_sample": 2000,
+        "FCU_arrival": 12000,
+        "old_boot_rejected_before_age_subtraction": true
+      }
+    }
+  ],
+  "independent_polynomial_extrema_checks": 192,
+  "matlab_model_execution": "NOT_RUN",
+  "production_algorithm_execution": "NOT_RUN",
+  "limitation": "Mathematical and finite protocol references only; not Simulink integration or firmware proof.",
+  "script_sha256": "b59699f34d225cdefa4cace98017dd12c1bd8c041933c5800f368729baffbd2d",
+  "document_sha256": {
+    "FlightSIM-architecture.md": "c148e1f55103323cfd088c4dd92725d15bb758fb145747b7b97f23a822e84493",
+    "FlightSIM-control.md": "1bca311fcd10d1b17625cf26eec342835f1a208c853b05ac498e18db1a24bef3",
+    "FlightSIM-data-replay.md": "28a4e2455cfe61e0fa33a917379db2d982dd94f5039869ff2a15bd1522eb3333",
+    "FlightSIM-estimator.md": "2b08c12aa5be915ee448167085923f38dc3c812577244720ba69cc5285f018bf",
+    "FlightSIM-execution-protocol.md": "a3e9a0067367385a8043923fb2ced81aa0f23c02946b3a4c70386c9a523bdb58",
+    "FlightSIM-guidance.md": "059c442593b673dd9299fe4030a9fbead2560839ce4e0750ffef3dfe1250da07",
+    "FlightSIM-implementation-plan.md": "d1b66f484be68fd2cf879d95a3a51ea17385ab17130b8d830cee95b7c6347278",
+    "FlightSIM-interface-contract.md": "41b85b704a7713f09c06db5a6f4052b3626fbccdda13c4c923d3b5381edb4d85",
+    "FlightSIM-research-and-decisions.md": "a41071a598f3fb256bef9820bea6a30961157af11dc96a568c714cf31b002f29",
+    "FlightSIM-review-log.md": "89fe08b2d97114cb6c885e50b025016dba789fbba25b9a48cba333c890c25316",
+    "FlightSIM-stateflow.md": "5007e64c939bf76661276d360337b5fc1d87d7e142eacae6b9c77e65c1b67685",
+    "FlightSIM-system.md": "725c28e1fbb5392c1c39306d12ad4e87bb2fa0bf432db28f9fe2df97f44c3346",
+    "FlightSIM-test-plan.md": "1ebf54bab6e396a840ea6c5336416fca401b3cb368e5a103629e63c4bcd971bf",
+    "QuadPlant-architecture.md": "012c28ea53ffa4745caea3243bf31e70afcc14d79ff9a521c27499a3b717a096",
+    "QuadPlant-implementation-plan.md": "bd2e3646ffb326ba0a4763e59c17d74bf5b782ad10f158b1fac5240127bb6e0a",
+    "QuadPlant-system.md": "277d640bb861b598a76d4c3db584322bdb766de933ecb2f4468a617e9d50a449",
+    "QuadPlant-test-plan.md": "feddcc328757afa05f8e75e425e7c50513c2dcdad1f48496482554cf7f1ee1a3",
+    "README.md": "11375969fd1865697f18b330e6c358d649b49f3931460920b3de05b1b08ec24a"
+  }
+}

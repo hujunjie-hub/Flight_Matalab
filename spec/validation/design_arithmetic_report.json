@@ -1,0 +1,100 @@
+{
+  "status": "PASS",
+  "scope": "ANALYTIC_DESIGN",
+  "model_execution": "NOT_RUN",
+  "checks": [
+    {
+      "id": "RATE_GRID",
+      "status": "PASS",
+      "details": {
+        "base_us": 500,
+        "periods_us": [
+          1000,
+          2500,
+          10000,
+          20000,
+          100000
+        ]
+      }
+    },
+    {
+      "id": "HALF_OPEN_COUNTS",
+      "status": "PASS",
+      "details": {
+        "500": 120000,
+        "1000": 60000,
+        "2500": 24000,
+        "10000": 6000,
+        "20000": 3000,
+        "100000": 600
+      }
+    },
+    {
+      "id": "MPC_CAUSAL_COVERAGE",
+      "status": "PASS",
+      "details": {
+        "1000": 0.95,
+        "2000": 0.9
+      }
+    },
+    {
+      "id": "QP_PREVIEW",
+      "status": "PASS",
+      "details": {
+        "variables": 15,
+        "rows": 190,
+        "preview_us": 480000
+      }
+    },
+    {
+      "id": "SYNTH_HOVER_BOUND",
+      "status": "PASS",
+      "details": {
+        "design_check_g_approx": 9.81,
+        "hover_N": 14.715,
+        "inner_box_limit_N": 23.094010767585033
+      }
+    },
+    {
+      "id": "CONTACT_LOCAL_STABILITY",
+      "status": "PASS",
+      "details": {
+        "static_compression_m": 0.002943,
+        "linearized_RK4_gain": 0.9834714538355689,
+        "not_impact_test": true
+      }
+    },
+    {
+      "id": "INTEGER_CODE_SLEW",
+      "status": "PASS",
+      "details": {
+        "force_quantum_N": 0.0050025012506253125,
+        "max_delta_N": 0.2451225612806418,
+        "frame_s": 0.0025
+      }
+    },
+    {
+      "id": "ORIGIN_BARO",
+      "status": "PASS",
+      "details": {
+        "CG_D0": 0,
+        "ground_D": 0.15,
+        "contact_offset_D": 0.15,
+        "baro_relative0": 0
+      }
+    },
+    {
+      "id": "STARTUP_DEPENDENCY",
+      "status": "PASS",
+      "details": {
+        "configured_nav_latest_s": 0.1,
+        "ground_dwell_s": 2,
+        "home_s": 2.6,
+        "arm_s": 3,
+        "static_align_arm_s": 5
+      }
+    }
+  ],
+  "limitation": "Design arithmetic only; no MATLAB model, physical impact or solver performance execution.",
+  "observed_at_utc": "2026-11-05T04:03:50.935486+00:00"
+}

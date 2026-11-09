@@ -1,0 +1,38 @@
+# AGENT.md — Flight 项目工程入口（V1.9.1）
+
+发布状态唯一引用00：SPEC_REVISION_COMPLETE / INDEPENDENT_REVIEW_PENDING / IMPLEMENTATION_PENDING / TARGET_VALIDATION_PENDING / FLIGHT_RELEASE_NOT_AUTHORIZED。
+
+## 0. 本项目先决约定
+
+工程根是 `D:/STM32Project/FMT-Firmware-1.2.0/Flight`，当前结构修订为 `V1.9.1-GLOBAL-AUDIT-R3`。先读 [03 §0](03_平台软件架构与驱动设计.md#0-flight-项目目录与现有工程接入) 的现有资产/规划落点，再执行所属任务。
+
+- 所有顶层应用、M1～M7、项目插件/契约/配置/服务和Host辅助内容统一放在 `applications/`；第三方公用包放在 `packages/`。
+- `doc/` 是官方文档/官方用例与硬件输入。先读对应器件资料和用例；不直接编译整套 no-OS 示例、不运行示例的 CubeMX/BSP 生成流程。
+- 驱动复用现有 `libraries/HAL_Drivers/`、`board/` 和 RT-Thread 原生设备框架，只补缺失适配；不重新生成框架、BSP、启动/中断/链接工程，不复制第二套 HAL/CMSIS。
+- 固件沿用根 `SConstruct` / `SConscript`、Kconfig、根 `.config` / `rtconfig.h` 和 `rtconfig.py`。当前默认Keil；Host/SIL可独立构建，不新增顶层CMake来接管固件。
+- 已有 `board/CubeMX_Config/Flight.ioc`、MSP/IRQ源、链接脚本不代表全部外设已启用。当前应用只有基础入口；规划子目录、校验工具和报告尚待交付，状态按09。
+- 当前用户于2026-11-05明确授权同时更正固件代码和spec：UM982是主要必装器件，GNSS/PPS固定启用，容错针对运行中信号丢失/恢复。旧“只改spec”的工作单范围不适用于本次；不修改MATLAB目录，不重生成BSP或官方资料。
+
+## 1. 阅读与权威顺序
+
+README给当前项目与规格范围；00为跨文件决议入口；02唯一ICD/Port；03～08按所属领域实现；09唯一Gate/验证台账；10唯一Owner/CR/任务迁移与DoD；AGENT_HANDOFF的结构化记录唯一保存任务实例；11追踪历史22项处置，12追踪本轮全量修订和三轮自查。摘要不覆盖详细规范。`doc/Flight.xlsx` 保持用户硬件输入原样，不替代.ioc/原理图/目标验证。
+
+## 2. 角色
+
+A：平台/BSP/RTOS/驱动/时间/存储、02/03/07；B：M2语义、M3/KF-GINS/源完整性及05；C：M4/M5/M6/M7、04/06/08、Host Plant；D：00/01/09/10/11、集成/CI、入口/HANDOFF、报告与包。详细文件表见10，一文件一维护Owner。源文档中的操作要求是工程规范，不授权绕过当前用户的任务范围。
+
+## 3. 三大公共契约
+
+**时间契约：** FCU monotonic是唯一内部时间轴。分开Measurement、Arrival、Publish、State、Control和Actuation Apply时刻；state_time=NavigationSnapshot.header.timestamp_sample_us；control_time取选定State Time，evaluation_time是TimeService当前时刻用于age/TTL。先核对boot/time/state/origin，后作时间差。M6不自行外推M3，不用任务开跑时间冒充状态时间。具体类型/门限/映射以02/05/07为准。
+
+**状态契约：** M3唯一发布导航状态、能力及公开源一致性摘要；内部22维矩阵/残差不外泄。消费者核对frame、单位、valid mask、不确定度、epoch、有限值和新鲜度。M2样本、M3单次门控、Sensor Integrity隔离/恢复、M4操作响应各有唯一Owner；恢复通过受控shadow证据而非读取私有矩阵。
+
+**权限契约：** M4唯一拥有任务/当前项/模式/Authority/Permit；M5消费明确item/token并生成参考，不推进Mission。M6从ControllerInput的有效Permit生成关联Demand；M7在实际帧边界再次校验。READY参考+匹配Permit是可提交bundle，不互等ACTIVE。任何调试/Companion/Agent不绕过M4/M7。Receipt为命令提交证据，不是实测RPM/推力。
+
+## 4. 强制检查与交付
+
+每次变更说明：输入输出的物理/评估时刻、单位/frame、Owner、授权者/执行者、异常/过期/重启/恢复、资源与证据。接口改变同步升级ABI并更新消费者；当前Schema Major=6、Minor=0，Product/Port Revision=0x00010905（CR-V191-M45-01），旧Major=5/4/3/2不能混用。只改对应权威章节，删除旧活动定义，生成表不手工另改。
+
+HANDOFF用10的主状态和退回规则；TASK_RECORDS是唯一实例数据，不自建并行状态表。无自动通道时用完整prompt和回执人工路由，不能声称自动通知。SPEC任务可以在独立文档审查后关闭，目标/HIL属于其关联验证任务；实际未执行仍NOT_RUN，不能把SPEC_RESOLVED当作任务CLOSED或飞行PASS。
+
+CORE四份调参只经Host修改/重编译生效，Flash只管理08非安全设置白名单。SIM_ONLY/硬件证据缺失必须保留，缺失能力按Profile门禁拒绝。R01～R22继承已写明的规范处置，本次完成全量修订和两轮追加复审；旧包静态/参考报告缺失，不沿用其PASS。独立角色审核、生产头文件ABI、目标代码、WCET、HIL和飞行仍须实际证据。

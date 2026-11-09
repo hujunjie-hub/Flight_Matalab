@@ -1,0 +1,67 @@
+{
+  "scope": "REVIEWED_SOURCE_RELOCATION",
+  "status": "PASS",
+  "old_lock_sha256": "d45c9253ad099c48eebe57a7731ed79c4fafce37731fec3720c44f384d7ad8ef",
+  "public_buses_compared": 106,
+  "public_bus_field_type_dimension_changes": [],
+  "port_revision": "0x00010905",
+  "osqp_runtime_unchanged": true,
+  "mapping": {
+    "applications\\contracts\\fc_common_base.h": {
+      "new_path": "middle\\contracts\\fc_common_base.h",
+      "previous_sha256": "5ea5eec31af37237abfe4332def04c09da5399cb8439d64e8a50f13c25803596",
+      "new_sha256": "042f3706b64f73b0252e20174132dfd23b94e883d83392f375ab970da9ffdbd0",
+      "byte_identical": false
+    },
+    "applications\\contracts\\fc_common_messages.h": {
+      "new_path": "middle\\contracts\\fc_common_messages.h",
+      "previous_sha256": "b020c878d9b06e040ac0194255bceb18307b769b63af1f3905b6e4da6e7ae284",
+      "new_sha256": "b020c878d9b06e040ac0194255bceb18307b769b63af1f3905b6e4da6e7ae284",
+      "byte_identical": true
+    },
+    "applications\\contracts\\fc_contract_version.h": {
+      "new_path": "middle\\contracts\\fc_contract_version.h",
+      "previous_sha256": "5cde764913e3fb9b45ee041742969e5485392019997519e7daf859c9b8b1a97c",
+      "new_sha256": "cc8c3991e94befe616b888dd474d98253c8931300b2603025563bbb2ffcae789",
+      "byte_identical": false
+    },
+    "applications\\contracts\\fc_control_model_types.h": {
+      "new_path": "middle\\contracts\\fc_control_model_types.h",
+      "previous_sha256": "c13ef97db0bcac89e084ae0e7911e84554234bd4415ba53446178cb3ac634d0a",
+      "new_sha256": "c13ef97db0bcac89e084ae0e7911e84554234bd4415ba53446178cb3ac634d0a",
+      "byte_identical": true
+    },
+    "applications\\contracts\\fc_message_ids.h": {
+      "new_path": "middle\\contracts\\fc_message_ids.h",
+      "previous_sha256": "2bfaa967c239184566f085f869d69b9a5f502131633ac50beaa67ce69941207c",
+      "new_sha256": "f48b00f7fff70d9e39cb56699f6a9de61abe4e05f623347f5ada852529cb164e",
+      "byte_identical": false
+    },
+    "applications\\contracts\\fc_port_api.h": {
+      "new_path": "middle\\contracts\\fc_port_api.h",
+      "previous_sha256": "b1395d2d20a899e2dc22918c9d8dd0eb5a9a7fadd162aa3e7eb074acbed97fbc",
+      "new_sha256": "b1395d2d20a899e2dc22918c9d8dd0eb5a9a7fadd162aa3e7eb074acbed97fbc",
+      "byte_identical": true
+    },
+    "applications\\contracts\\fc_port_types.h": {
+      "new_path": "middle\\contracts\\fc_port_types.h",
+      "previous_sha256": "361aae78677916eaa7192c4c15e97edcfe2ef889a6d5dc95d074d35ee34fef03",
+      "new_sha256": "361aae78677916eaa7192c4c15e97edcfe2ef889a6d5dc95d074d35ee34fef03",
+      "byte_identical": true
+    },
+    "applications\\contracts\\fc_product_contract.h": {
+      "new_path": "middle\\contracts\\fc_product_contract.h",
+      "previous_sha256": "fc62dc2adb60d21fe667268dd5228e6720b694646efc4c423b4bf5049ea51fbe",
+      "new_sha256": "4e51de3bdfe9507b94af465351f6995e7102b983151929e3a9ec8a04238e71cf",
+      "byte_identical": false
+    },
+    "applications\\products\\QUAD_X4_H723\\product_contract.h": {
+      "new_path": "middle\\products\\quad_x4_h723\\product_contract.h",
+      "previous_sha256": "aebd4801f79f2e766fc4760d09efc05d652606a546df83fc99f0a40f0323f607",
+      "new_sha256": "aebd4801f79f2e766fc4760d09efc05d652606a546df83fc99f0a40f0323f607",
+      "byte_identical": true
+    }
+  },
+  "firmware_equivalence": "NOT_RUN",
+  "parent_normative_changes": "SEPARATE_REVIEW_REQUIRED; source relocation does not approve new firmware semantics"
+}

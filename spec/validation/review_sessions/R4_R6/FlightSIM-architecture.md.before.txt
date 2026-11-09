@@ -1,0 +1,122 @@
+# FlightSIM 架构规格
+
+状态：设计草案；2026-11-05。[系统范围](FlightSIM-system.md)和[接口契约](FlightSIM-interface-contract.md)共同约束本架构。
+
+## 1. 共享核心
+
+```mermaid
+flowchart LR
+  In[Replay或Scenario] --> M1[M1 IO与命令适配]
+  Sens[测量源] --> M2[M2样本处理]
+  M2 --> M3[M3内部估计或外部导航适配]
+  M1 --> M4[M4 Stateflow FMS]
+  M3 --> M4
+  M3 --> M5[M5 Guidance/规划]
+  M4 --> M5
+  Map[外生地图观测] --> M2
+  M2 --> M5
+  M5 -->|状态及候选| M4
+  M5 --> M6[M6 Simulink Control]
+  M3 --> M6
+  M4 --> M6
+  M6 --> M7[M7输出校验和虚拟帧]
+  M4 --> M7
+  M7 --> P[仅MIL的Plant]
+  P --> S[Sensor Simulation]
+  S --> M2
+  P --> Eval[只读评价]
+```
+
+规划公共组合根`models/core/FMT_FlightCore.slx`，三个顶层各引用一次。M3是编译期Variant：INTERNAL_KF22或EXTERNAL_NAV_ADAPTER，恰好激活一个。顶层只组织源、核心、Plant和记录；控制器不得藏在入口脚本里。
+
+| 组件/规划模型 | 实现 | 主要输入→输出 | 执行节拍 | DFT |
+|---|---|---|---|---|
+| FMT_M1_IO | Simulink适配+Stateflow LinkMonitor | 命令/RC/链路→请求与输入 | 1ms/事件 | 部分；链路状态有记忆 |
+| FMT_M2_Sensors | Simulink/有限数学内核 | 原始样本→标准样本/gap | 每条样本 | 部分；校准DFT，滤波/历史非DFT |
+| FMT_M3_KFGINS_QUAD | 有状态估计Model Reference | 测量/策略→Nav/能力/Origin | 有效IMU事件 | 非DFT活动状态，发布读缓存 |
+| FMT_M4_FMS | Stateflow五正交域+提交外壳 | 事实/请求→状态/任务/许可 | 10ms及合并事件 | 部分；Precheck DFT、域状态非DFT |
+| FMT_M5_Guidance | 七层规划/验证+Stateflow生命周期 | 完整GuidanceInput→参考/Feasibility | 发布20ms；Worker0.5ms | 部分；轨迹计算DFT，活动参考有缓存 |
+| FMT_M6_Control | Simulink StateAdvance/OutputEvaluate | Nav/参考/Permit→N单位Demand | 名义1ms；上下文事件；QP20ms | 部分；积分/滤波/求解快照有状态 |
+| FMT_M7_Actuator | Simulink检查+Stateflow生命周期 | Demand/Permit→虚拟帧/Receipt | 0.5ms守卫、2.5ms帧 | 非DFT帧保持，校验DFT |
+| FMT_SensorIntegrity | Stateflow | M2/M3证据→UsePolicy | 100ms及硬故障锁存 | 非DFT |
+| FMT_TimeService | Simulink uint64计数/映射 | Run/boot/reset→ClockInstant | 0.5ms | 非DFT |
+
+M5完整方案见[制导与规划](FlightSIM-guidance.md)，地图/围栏/人工输入/任务token必须经显式端口接入。LifecycleCoordinator/EpochStore位于组合外壳，局部算法重建不清epoch高水位。
+
+公用第三方优先只读复用Flight/packages，未就绪依赖放显式专用缓存并校验；新工程不再建另一套third_party公用源。
+
+组件不得读取另一组件Data Store私有状态。M4唯一写任务/Authority/Permit；M5不推进航点；M6做分配；M7不重复做控制分配。
+
+## 2. 唯一仿真执行方案
+
+三个入口统一固定步长discrete（无连续状态），基步500us、单任务。Plant采用显式RK4有限步映射与Unit Delay，替代连续ode4混合调度；四个RHS阶段是可见Simulink数值子系统。SimTickCoordinator为离散Stateflow调度Chart，显式依序发function-call；不用块位置或Priority数值暗示顺序。组件使用继承触发节拍的有界调用入口，完整Model Reference/function-call拓扑在G1先用最小集成验证，再扩展模型。
+
+在t_k=k*500us，Plant状态x_k已由上一间隔得到。唯一执行顺序如下：
+
+| 相位 | 本tick动作 | 发布/生效规则 |
+|---|---|---|
+| A Time/Apply | 锁存整数Clock；应用此前已提交且到apply_us的帧 | 不读取本tick将生成的帧 |
+| B Sample | 从x_k及已应用命令形成同刻物理测量，按各sensor采样周期入延迟队列 | 所有随机数/故障每个measurement ID只生成一次 |
+| C Release/Guard | 按全局事件键释放Replay或Sensor事件，M1/M2硬门控，M7撤销水位更新 | sample/arrival/release保持区分 |
+| D M3 | 顺序处理有界IMU/观测并发布最多4份Nav推进快照，随后推进有界ShadowReplay Worker | 每条有效IMU传播；融合仍按sample/journal规则 |
+| E FMS | 合并到期/安全/普通事件，执行最多一个M4事务 | 新授权整体提交，撤销先行 |
+| F Guidance | Worker有界推进；20ms发布槽验证候选/滚动活动曲线 | READY等下个合法M4事务，不穿越授权 |
+| G MPC Job | 先释放已完成job，再按20ms预算槽启动至多一个新job | 新求解结果存pending，到available_us才可读 |
+| H Control | 对新Nav按State Time推进数值状态，再以最新新鲜Nav和当前bundle评价输出 | 一tick最多一份最终Demand；同Nav的上下文复核不重复积分 |
+| I M7 | 快守卫；仅帧边界取最新有效Demand并做量化/校验 | 生成future apply事件和Receipt，不排队发送全部Demand |
+| J Log/Stop | 记录同一t_k的状态/输出/事件，评估预期结束 | SimStop或数据结束后禁止下一物理步 |
+| K PlantStep | 仅MIL且run_enable时计算RK4(x_k,u_applied,w,500us) | x_next经Unit Delay在t_k+1可见；运动帧或正常地面stop管理事件均本tick不能穿透 |
+
+运行区间采用[0,T_stop)，t=T_stop只记录终态，不生成新命令/积分。基步计数从k=0开始，不用浮点mod判定速率。Period换算：IMU/名义快控2 ticks、Frame5、FMS20、Guidance/MPC40、GNSS/Integrity200、Baro/Mag20。GroundContact每tick采样。默认Frame相位0；传感器sample、arrival和MPC available可不同相，必须测试相位边界。
+
+每tick最多4 IMU/8辅助；事件键、溢出行为及队列容量见接口文档。M6拆成StateAdvance和OutputEvaluate：前者仅消费严格递增Nav并更新I/D/期望姿态历史，后者在新Nav、授权语义变化或新MPC结果时用当前已锁存状态重算并重新盖上下文。相同State Time不产生积分/微分或额外jerk额度；续租不改变语义时无需重算。若本tick授权改变却没有新Nav，可对仍新鲜的现有Nav执行OutputEvaluate，不能把旧token Demand送到恰好同刻的Frame。没有新鲜Nav则拒绝而非外推。
+
+## 3. 迟延、状态与反馈断点
+
+MPC为显式Job生命周期IDLE/RUNNING/READY/REJECTED：Host可同步计算数值解，但模型只在可见pending缓存中保存，默认虚拟cost=1000us、deadline=2000us，available=ceil((start+cost)/500)*500；消费者此前只读旧有效解/PD。虚拟cost由manifest设置，Host求解墙钟另记，不当MCU量测。超deadline/revision过旧的结果不能提交。MPC输出仍服从父04的起始+20ms等最早expires，不因cost顺延。
+
+| 反馈边 | 状态断点/初值 | 延迟语义 |
+|---|---|---|
+| Plant→Sensor→M3→Control→Plant | PlantState Unit Delay，17维Scenario初态 | x_k与x_k+1分离 |
+| 新Frame→Plant输入 | pending/apply寄存器，初始code0/N0 | SIM固定500us提交到应用延迟 |
+| Allocator→PID | 完整旧残差r=τ_alloc-τ_req的Unit Delay，初始0 | 不把旧alloc和本次req相减 |
+| M7 Receipt→M6 | 未来事件/8项命令历史，初始invalid | 本次首次提交不作本次已知反馈；首版附加AW关闭 |
+| M5 Status→M4→Permit | 候选/活动双缓存，初始INACTIVE | READY可授权；旧候选不复活 |
+| Integrity→M3诊断→Integrity | 策略/证据缓存 | 冷启动受控Alignment、恢复probation分别执行 |
+| MPC Job→快控 | pending/active快照，初始invalid | 延迟结果可见，不同刻假完成 |
+
+上述Unit Delay都继承500us外壳调用节拍；PID残差寄存器仅在StateAdvance事件更新，不能被每个基步无条件移位。完整typed快照跨域时必要的Rate Transition开启数据完整性；实际附加延迟入报告。默认单任务function-call前向链不额外插慢周期延迟。所有状态缓存写入都有唯一Owner，不能用Memory或base变量消除数据依赖。
+
+## 4. 工程规划目录
+
+```text
+Flight_Matalab/
+  Flight_Matalab.prj                 # 新项目，规划
+  spec/                             # 本轮唯一写入范围
+  simulation/FMT_DataSIM.slx
+  simulation/FMT_MILSIM.slx
+  simulation/FMT_ExtINS_DataSIM.slx
+  models/core/                      # 唯一公共M1～M7组合根与组件
+  models/plant/                     # QuadPlant及SensorSimulation
+  models/lib/                       # 经审核的几何/数学库
+  interfaces/                       # bus生成定义和转换约束
+  dictionaries/                     # 生成的共享.sldd、配置集
+  config/SIM_ONLY/QUAD_X4/           # 四CORE+readonly profile_manifest
+  config/firmware_sources.json       # 指向固件四份源，不复制实机数值
+  scenarios/                        # 可版本化的输入脚本/manifest
+  adapters/legacy/                   # 唯一旧bus转换边界
+  adapters/kf_gins_matlab/           # 离线外部参考适配
+  external_dependencies.lock.json   # 公用包/外部缓存准确锁
+  third_party_notices/              # 许可证/修改与来源声明，非公用代码副本
+  tools/                            # 配置/数据转换、运行入口
+  tests/                            # 组件和系统验收
+  work/                             # cache/codegen/运行输出，排除版本管理
+```
+
+只将被选择的QUAD实现加入项目path，禁止genpath把多个同名Controller/FMS/INS/Plant全部激活。新模型名统一FMT前缀；旧来源另放归档/证据，不加入活动路径。新project的startup/shutdown应具备幂等/路径恢复，不执行旧FMT_Model_Init的全局初始化。
+
+## 5. 建模规则
+
+Stateflow按状态机文档实现；M6和Plant用原生Simulink子系统，有限矩阵/Log/求解器内核可以MATLAB Function或C接口，不得把整个控制律封入解释执行函数。模型结构改造使用model_edit分scope执行，随后model_read/model_check；本轮不进行这些编辑。
+
+共享Bus保存在数据字典或base workspace的受控生成流程，不能放Model Workspace；模型只按字典文件名解析，项目path显式注册各目录。原工程配置集/ExportedGlobal警告先解决，再谈编译通过。API依据见研究文档。

@@ -1,0 +1,25 @@
+{
+  "date": "2026-11-04",
+  "scope": "SPEC_ONLY",
+  "requested_additional_reviews": 3,
+  "prior_self_reviews": 2,
+  "documents_before": {
+    "FlightSIM-architecture.md": "09f7275a976fbdb6475cc6832830b032cecb17046d96961e19aec87e8cded6a1",
+    "FlightSIM-control.md": "184e0ad74bf0d08895658595e141146a6fd2c0a1ddddb2eade6c56eb7714e866",
+    "FlightSIM-data-replay.md": "f15bcc999fe320e2dbb259c9289c8439143a6875278d8e39e7f81da12e3c1ca5",
+    "FlightSIM-estimator.md": "de8ecec2b2c9c156925a7f73f650657bf970018599a49eaaba968d9de4bdc910",
+    "FlightSIM-implementation-plan.md": "85d29986fb47528fedd74fb84e484feb0a731372f815a65144ad194a66281c1b",
+    "FlightSIM-interface-contract.md": "124b7bb8c8b92c591f7c53ca96279d8a5109bcf060cd2c56388be675ce70568e",
+    "FlightSIM-research-and-decisions.md": "8bdf24608dea9f94a588da4193f455c8d3f6e3ecbc3ebce36251354288aa2b5a",
+    "FlightSIM-stateflow.md": "c27255fe83272226e4b44bce60b22879b19e0131b77b501ea57a4c15d0bd63db",
+    "FlightSIM-system.md": "177a27de7fb58d5c08ffc7eb1af96573b039e3515ac77e6bab799441d21f1847",
+    "FlightSIM-test-plan.md": "2aadedb0d724f994d3e36f28c2fec7e2f9729a0546d12834f5fcf73eac4d36d3",
+    "QuadPlant-architecture.md": "9031fb1042b919bba04928885f8424b74101cd25b97041352bb919076b5b47a6",
+    "QuadPlant-implementation-plan.md": "94ada5fb4a26f04201d3d840dab57fd40790ec8a340d5f617648cf98bc58dcd8",
+    "QuadPlant-system.md": "ba809a46c5032ef56e1623d31116ca3b954cd2eef810976c537448068280966e",
+    "QuadPlant-test-plan.md": "8375c0a815cb88998f1586099de0552c009dc211b93a092355287a4bb3ee24d5",
+    "README.md": "c1d937074ba204beadea7e299ebab7c1e43320035468832761e381247a0ac899"
+  },
+  "parent_11_observed_sha256": "712d874f9f43fc29ae79e9dc3e476ceec8e080fe9417a0a6086755f53b6b5ae9",
+  "parent_11_review": "Read CR-V191-C01/C02 PROPOSED, not implemented/approved; compile-time geofence choice agrees with Host design; mission field remains blocked"
+}

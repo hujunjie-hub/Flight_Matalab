@@ -1,0 +1,80 @@
+{
+  "scope": "SPEC_USER_CONFIGURATION_CORRECTION",
+  "date": "2026-11-05",
+  "baseline": "FLIGHT-MATLAB-SPEC-1.3-DRAFT",
+  "user_clarification": "UM982/PPS are primary fixed devices; the intended case is GNSS signal lost during operation, not optional installation.",
+  "spec_disposition": "FIXED_REQUIRED_ENABLED; PVT/PPS/UTC_RUNTIME_QUALITY_SEPARATE",
+  "model_verification": "NOT_RUN",
+  "firmware_configuration_changes_by_this_task": false,
+  "parent_spec_changes_by_this_task": false,
+  "firmware_gaps": [
+    "Native UM982 UART PVT/UTC parser is not implemented/accepted",
+    "sensor_alignment native_backend remains DISABLED and protocol/time/installation calibration acceptance is pending",
+    "Target/hardware validation not executed by this task"
+  ],
+  "planned_model_test_ids": [
+    "T-GNSS-01",
+    "T-GNSS-02",
+    "T-GNSS-03",
+    "T-GNSS-04",
+    "T-GNSS-05",
+    "T-GNSS-06"
+  ],
+  "changed_documents": [
+    "FlightSIM-architecture.md",
+    "FlightSIM-data-replay.md",
+    "FlightSIM-estimator.md",
+    "FlightSIM-execution-protocol.md",
+    "FlightSIM-implementation-plan.md",
+    "FlightSIM-interface-contract.md",
+    "FlightSIM-research-and-decisions.md",
+    "FlightSIM-review-log.md",
+    "FlightSIM-stateflow.md",
+    "FlightSIM-system.md",
+    "FlightSIM-test-plan.md",
+    "QuadPlant-architecture.md",
+    "QuadPlant-system.md",
+    "QuadPlant-test-plan.md",
+    "README.md"
+  ],
+  "configuration_observation_sha256": "e7b37c3ebbc96e26233c673f4b3ae204df29152573d2795d9be936af0cd57a6b",
+  "latest_transport_observation": "Required UART4 RX DMA/PPS source configuration matches target; legacy optional flag removed by concurrent work",
+  "final_document_sha256": {
+    "FlightSIM-architecture.md": "18c8b00515326e8974495a9054c87b94ffa9910800449d8b01b92b24d676510c",
+    "FlightSIM-control.md": "78c3173344570731c9e2c8bb9a14623b7ffdbc2a9ea6b77ca85d7bbd80ffa92f",
+    "FlightSIM-data-replay.md": "b2ab46b1fe9d04337a5b6386862cfa803e4aa0c2a32d2f0539ae7e93f198f3aa",
+    "FlightSIM-estimator.md": "a584747e1c348315b57c9f0ebaafa1b983950a7e63d3cf60fbf804460c35079f",
+    "FlightSIM-execution-protocol.md": "fb5df693a5c852b18600e12d949be0c792a42eb827193a5368afdf53b92245e3",
+    "FlightSIM-guidance.md": "062257312683e8c2f925655fcb6e7f7e99ce199ed46506c84d9354c54effa3b7",
+    "FlightSIM-implementation-plan.md": "9735d968b3050ea99fac05391ec757596fd6af386c848405f91fa5a0485cff4b",
+    "FlightSIM-interface-contract.md": "7f319270aafcbe7f8a3b28bc5368d8c835f047223ca3456c2c3266b8e528cf21",
+    "FlightSIM-research-and-decisions.md": "9378940222d96e0448e10abc7808f3cb382ea6dc5a737d66a7a3ed4a70920ef1",
+    "FlightSIM-review-log.md": "5cdbf7ba92d13ebe54e29493e02c1c4d1251a199a9c6f02ece603c555ecc5f2a",
+    "FlightSIM-stateflow.md": "860e25de87eb6f89210ae22ffbe6ce50b454572415fe8301172c06838d24f160",
+    "FlightSIM-system.md": "4216d792d8bcaea23dbe5de8141ce71511582818f159e598363cecb5bcc6c2d2",
+    "FlightSIM-test-plan.md": "86cd6ed5548b857dc7bdc3265ef1ce2888e35473f40c25d3557521a907fcb23b",
+    "QuadPlant-architecture.md": "0762f4b9f478a1b2cc014adaea9e8ae7af55522f4c74efb3e78c59f54fbc436c",
+    "QuadPlant-implementation-plan.md": "b08356a2f710aa2c24ffd5f6efd3c3afa5e945d3c20f8c2c33427244ebfd0818",
+    "QuadPlant-system.md": "983681179419261b73c4e2d74093ae32458f1eb94452e321c683bf4c81459b00",
+    "QuadPlant-test-plan.md": "3d68f84665a7f0607a07a8befe9679624c3f159bcbcb0216b46d25bd9162d343",
+    "README.md": "ddac9c8885f0cb286d92a29c89632690ccdca8e64c63a0556ffbf6e975da7e60"
+  },
+  "final_checked_at_utc": "2026-11-04T22:29:57.071112+00:00",
+  "final_configuration_observation_unchanged": true,
+  "target_policy": {
+    "receiver": "UM982",
+    "gnss_required": true,
+    "gnss_enabled": true,
+    "pps_required": true,
+    "pps_enabled": true,
+    "loss_kind": "RUNTIME_SIGNAL_QUALITY; never optional installation",
+    "independent_quality": [
+      "GNSS_PVT",
+      "PPS_EDGE",
+      "UTC_EPOCH"
+    ]
+  },
+  "document_static_validation": "PASS",
+  "new_gnss_model_tests": "NOT_RUN",
+  "check_limit": "Document consistency and read-only source configuration only; no GNSS model/firmware/hardware execution by this task."
+}

@@ -1,0 +1,538 @@
+{
+  "date": "2026-11-05",
+  "scope": "SPEC_ONLY",
+  "prior_self_reviews": 2,
+  "additional_rounds": [
+    {
+      "round": 1,
+      "perspective": "接口、职责与生命周期",
+      "status": "AUTHOR_SPEC_REVIEW_COMPLETE",
+      "issue_ids": [
+        "R1-01",
+        "R1-02",
+        "R1-03",
+        "R1-04",
+        "R1-05",
+        "R1-06"
+      ]
+    },
+    {
+      "round": 2,
+      "perspective": "数值模型、因果时序与可实现性",
+      "status": "AUTHOR_SPEC_REVIEW_COMPLETE",
+      "issue_ids": [
+        "R2-01",
+        "R2-02",
+        "R2-03",
+        "R2-04",
+        "R2-05",
+        "R2-06",
+        "R2-07",
+        "R2-08"
+      ]
+    },
+    {
+      "round": 3,
+      "perspective": "验收、证据与可重复交付",
+      "status": "AUTHOR_SPEC_REVIEW_COMPLETE",
+      "issue_ids": [
+        "R3-01",
+        "R3-02",
+        "R3-03",
+        "R3-04",
+        "R3-05",
+        "R3-06",
+        "R3-07",
+        "R3-08"
+      ]
+    },
+    {
+      "round": 4,
+      "perspective": "数学与状态量反例",
+      "status": "AUTHOR_SPEC_REVIEW_COMPLETE",
+      "issue_ids": [
+        "R4-01",
+        "R4-02",
+        "R4-03",
+        "R4-04"
+      ]
+    },
+    {
+      "round": 5,
+      "perspective": "跨模块切换和副作用",
+      "status": "AUTHOR_SPEC_REVIEW_COMPLETE",
+      "issue_ids": [
+        "R5-01",
+        "R5-02",
+        "R5-03",
+        "R5-04",
+        "R5-05"
+      ]
+    },
+    {
+      "round": 6,
+      "perspective": "证据、参数与可重复交付",
+      "status": "AUTHOR_SPEC_REVIEW_COMPLETE",
+      "issue_ids": [
+        "R6-01",
+        "R6-02",
+        "R6-03",
+        "R6-04"
+      ]
+    }
+  ],
+  "independent_review": false,
+  "issues": [
+    {
+      "id": "R1-01",
+      "round": 1,
+      "problem": "M5输入与规划职责未闭合",
+      "replacement": "完整七层制导、地图/围栏/任务/人工输入和有界Worker替换概略轨迹块",
+      "files": [
+        "FlightSIM-guidance.md",
+        "FlightSIM-interface-contract.md",
+        "FlightSIM-architecture.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN"
+    },
+    {
+      "id": "R1-02",
+      "round": 1,
+      "problem": "初始REJECT与Nav一致性证据形成启动互等",
+      "replacement": "冷启动Alignment/受控策略与故障probation拆为明确协议",
+      "files": [
+        "FlightSIM-stateflow.md",
+        "FlightSIM-estimator.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN"
+    },
+    {
+      "id": "R1-03",
+      "round": 1,
+      "problem": "局部init可能复用epoch/token，source reset影响范围含糊",
+      "replacement": "LifecycleCoordinator+Owner外壳EpochStore及分域reset协议",
+      "files": [
+        "FlightSIM-interface-contract.md",
+        "FlightSIM-stateflow.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN"
+    },
+    {
+      "id": "R1-04",
+      "round": 1,
+      "problem": "五正交域独立决策可能提交非法组合",
+      "replacement": "单DecisionIntent、五域协同迁移、一次Commit/副作用及稳定仲裁",
+      "files": [
+        "FlightSIM-stateflow.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN"
+    },
+    {
+      "id": "R1-05",
+      "round": 1,
+      "problem": "原生文本PVA/对角STD无法支撑完整外部控制接口",
+      "replacement": "未修改核心+独立逐步Launcher捕获full state/P/同刻rate，文本仅参考",
+      "files": [
+        "FlightSIM-estimator.md",
+        "FlightSIM-test-plan.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN"
+    },
+    {
+      "id": "R1-06",
+      "round": 1,
+      "problem": "事件排序在文档间不一致，传输容量/边界类型不全",
+      "replacement": "唯一事件键、准确C typedef、typed batch与显式队列/拒绝策略",
+      "files": [
+        "FlightSIM-interface-contract.md",
+        "FlightSIM-data-replay.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN"
+    },
+    {
+      "id": "R2-01",
+      "round": 2,
+      "problem": "连续ode4/事件顺序不能由画图排列保证",
+      "replacement": "统一fixed-step discrete、Stateflow相位协调和17维显式RK4有限步Plant",
+      "files": [
+        "FlightSIM-architecture.md",
+        "QuadPlant-architecture.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "historical_baseline": "1.1; active behavior superseded where referenced by R4..R6"
+    },
+    {
+      "id": "R2-02",
+      "round": 2,
+      "problem": "同刻求解会掩盖MPC计算/可见性延迟",
+      "replacement": "pending/active Job、固定虚拟cost/deadline和因果结果释放",
+      "files": [
+        "FlightSIM-control.md",
+        "FlightSIM-architecture.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN"
+    },
+    {
+      "id": "R2-03",
+      "round": 2,
+      "problem": "同Nav发生授权变化时可能在Frame提交旧上下文",
+      "replacement": "StateAdvance/OutputEvaluate分层，不重复积分并复核新token",
+      "files": [
+        "FlightSIM-control.md",
+        "FlightSIM-test-plan.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "historical_baseline": "1.1; active behavior superseded where referenced by R4..R6"
+    },
+    {
+      "id": "R2-04",
+      "round": 2,
+      "problem": "Origin固定NED与当前LLH-NED/transport项混用",
+      "replacement": "完整GeodesyAdapter和固定N0 rate约定，正式对齐留G0，不冒ABI已冻结",
+      "files": [
+        "QuadPlant-architecture.md",
+        "FlightSIM-interface-contract.md",
+        "FlightSIM-estimator.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN"
+    },
+    {
+      "id": "R2-05",
+      "round": 2,
+      "problem": "初始CG/地面/Baro零基准不一致",
+      "replacement": "Origin设初始CG为0、地面D=.15、同点锁存Baro及Home相对高度转换",
+      "files": [
+        "QuadPlant-architecture.md",
+        "FlightSIM-guidance.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN"
+    },
+    {
+      "id": "R2-06",
+      "round": 2,
+      "problem": "接地阻尼在尚未接触时也可能产生支撑力",
+      "replacement": "先几何门控再计算非负弹簧阻尼，禁止空中阻尼悬浮",
+      "files": [
+        "QuadPlant-architecture.md",
+        "QuadPlant-test-plan.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN"
+    },
+    {
+      "id": "R2-07",
+      "round": 2,
+      "problem": "验code但Plant用未量化N会旁路M7",
+      "replacement": "code可行整数集合、逆映射N、Receipt/Plant同源、固定应用延迟及明确地面管理stop/空中失效区分",
+      "files": [
+        "FlightSIM-control.md",
+        "FlightSIM-interface-contract.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN"
+    },
+    {
+      "id": "R2-08",
+      "round": 2,
+      "problem": "抗饱和可能混用旧alloc/新req并重复Receipt反馈",
+      "replacement": "寄存完整同请求残差，首版Receipt附加AW关闭、保留匹配证据",
+      "files": [
+        "FlightSIM-control.md",
+        "FlightSIM-architecture.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "historical_baseline": "1.1; active behavior superseded where referenced by R4..R6"
+    },
+    {
+      "id": "R3-01",
+      "round": 3,
+      "problem": "20ms过期/20ms周期与非零cost下99%覆盖率冲突",
+      "replacement": "job成功率99%与时间覆盖90%独立，PD衔接照常计闭环指标",
+      "files": [
+        "FlightSIM-test-plan.md",
+        "FlightSIM-control.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN"
+    },
+    {
+      "id": "R3-02",
+      "round": 3,
+      "problem": "三入口/制导/故障测试只有概念缺独立可判定结果",
+      "replacement": "完整运行矩阵、独立测试ID、转移目录和预置负向reason/deadline",
+      "files": [
+        "FlightSIM-test-plan.md",
+        "QuadPlant-test-plan.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN"
+    },
+    {
+      "id": "R3-03",
+      "round": 3,
+      "problem": "检查失败可能残留旧PASS且漏锚点/范围引用",
+      "replacement": "报告先失效、失败覆盖FAIL、精确锚点/区间引用/需求映射及负向自测",
+      "files": [
+        "tools/check_specs.py",
+        "tools/test_check_specs.py"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "historical_baseline": "1.1; active behavior superseded where referenced by R4..R6"
+    },
+    {
+      "id": "R3-04",
+      "round": 3,
+      "problem": "并行上位契约已更新仍沿用缺字段/旧revision",
+      "replacement": "只读影响审查和准确Hash快照，整体采用Mission bit8/GeofenceConfig/0x10904，新增漂移失败",
+      "files": [
+        "FlightSIM-interface-contract.md",
+        "FlightSIM-research-and-decisions.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "historical_baseline": "1.1; active behavior superseded where referenced by R4..R6"
+    },
+    {
+      "id": "R3-05",
+      "round": 3,
+      "problem": "q近零acos、RMS时刻、噪声细化和新boot重复比较口径含糊",
+      "replacement": "atan2相对q、同物理t指标、随机流独立积分调用、保留身份的语义投影",
+      "files": [
+        "FlightSIM-test-plan.md",
+        "QuadPlant-test-plan.md",
+        "QuadPlant-architecture.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN"
+    },
+    {
+      "id": "R3-06",
+      "round": 3,
+      "problem": "安全种子/CORE派生值/第三方包和MEX来源存在双真值风险",
+      "replacement": "四CORE+只读Profile统一生成、复用Flight/packages/显式缓存、完整依赖与构建缓存键",
+      "files": [
+        "FlightSIM-data-replay.md",
+        "FlightSIM-implementation-plan.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN"
+    },
+    {
+      "id": "R3-07",
+      "round": 3,
+      "problem": "初始化/地面dwell、takeoff jerk及着陆dwell与名义时间表缺少可行余量",
+      "replacement": "CONFIGURED_PRIOR30s与STATIC_ALIGN35s分别排完整时序；显式Home/任务事务、4s起飞、23s降落并预留接地/Disarm时间",
+      "files": [
+        "FlightSIM-data-replay.md",
+        "FlightSIM-stateflow.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "historical_baseline": "1.1; active behavior superseded where referenced by R4..R6"
+    },
+    {
+      "id": "R3-08",
+      "round": 3,
+      "problem": "G0要求G3输出golden、G6依赖G7数据会造成阶段循环",
+      "replacement": "G0固定可用输入/接口，G2解析fixture，G3生成参考，G8再做MIL记录重放",
+      "files": [
+        "FlightSIM-implementation-plan.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN"
+    },
+    {
+      "id": "R4-01",
+      "round": 4,
+      "problem": "固定短时长原语在a2/jerk5下无法启动，整段Bernstein界又使时长过度保守",
+      "replacement": "固定端点、0.2s整数retiming和深度4导数界细分，真实T计入key/g",
+      "files": [
+        "FlightSIM-guidance.md",
+        "FlightSIM-test-plan.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "reference_case": "D4-01"
+    },
+    {
+      "id": "R4-02",
+      "round": 4,
+      "problem": "非格点任务终点可能永远落不到接受半径",
+      "replacement": "精确GoalConnector及固定GoalRecord；连接器计入新路径段数/时间容量",
+      "files": [
+        "FlightSIM-guidance.md",
+        "FlightSIM-test-plan.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "reference_case": "D4-02"
+    },
+    {
+      "id": "R4-03",
+      "round": 4,
+      "problem": "先更新I再输出以及额外残差一拍延迟改变父PID离散律",
+      "replacement": "Read I[k]→Evaluate/Allocate→Validate→Commit I[k+1]，首次seed、失败不污染历史",
+      "files": [
+        "FlightSIM-control.md",
+        "FlightSIM-execution-protocol.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "reference_case": "D4-03"
+    },
+    {
+      "id": "R4-04",
+      "round": 4,
+      "problem": "物理仿真时间与FCU重启时钟混用，旧记录重绑定不完整",
+      "replacement": "Simulation/FCU双时间轴、完整RunBinding、物理数据重发布与历史授权隔离",
+      "files": [
+        "FlightSIM-execution-protocol.md",
+        "FlightSIM-interface-contract.md",
+        "FlightSIM-data-replay.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "reference_case": "D4-04"
+    },
+    {
+      "id": "R5-01",
+      "round": 5,
+      "problem": "先改Directive后等参考会在飞行热切换中产生授权空窗",
+      "replacement": "准备/活动双通道；保留身份、候选验证后一次ActiveContext提交，硬撤销独立立即执行",
+      "files": [
+        "FlightSIM-stateflow.md",
+        "FlightSIM-execution-protocol.md",
+        "FlightSIM-architecture.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "reference_case": "D5-01"
+    },
+    {
+      "id": "R5-02",
+      "round": 5,
+      "problem": "异步旧根/抖动anchor/延迟授权会破坏参考切换连续性",
+      "replacement": "原子有界Host规划、不可变家族grid、60ms相同前缀与未来交接，迟到丢弃重算",
+      "files": [
+        "FlightSIM-guidance.md",
+        "FlightSIM-execution-protocol.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "reference_case": "D5-02"
+    },
+    {
+      "id": "R5-03",
+      "round": 5,
+      "problem": "准备/重复调用可能多次积分人工yaw和高度",
+      "replacement": "预览工作副本与活动状态分开，唯一输入事务只提交一次",
+      "files": [
+        "FlightSIM-execution-protocol.md",
+        "FlightSIM-test-plan.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "reference_case": "D5-03"
+    },
+    {
+      "id": "R5-04",
+      "round": 5,
+      "problem": "失败后保留旧状态但刷新Header会把失效导航伪装新鲜",
+      "replacement": "失败原子发布，Nav原时间/TTL保持，Health诊断独立更新",
+      "files": [
+        "FlightSIM-estimator.md",
+        "FlightSIM-execution-protocol.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "reference_case": "D5-04"
+    },
+    {
+      "id": "R5-05",
+      "round": 5,
+      "problem": "地面stop瞬间跳零违反slew，DISARMED后仍发油门语义冲突",
+      "replacement": "DISARMING签发150ms证书，整数码有界降至零目标已应用后才DISARMED",
+      "files": [
+        "FlightSIM-control.md",
+        "FlightSIM-stateflow.md",
+        "FlightSIM-execution-protocol.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "reference_case": "D5-05"
+    },
+    {
+      "id": "R6-01",
+      "round": 6,
+      "problem": "有限对象观测不能表达4096cell自由空间证据",
+      "replacement": "完整调查快照/覆盖mask与最多8动态对象分路，Host来源不伪装公共传感器",
+      "files": [
+        "FlightSIM-guidance.md",
+        "FlightSIM-architecture.md",
+        "FlightSIM-interface-contract.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "reference_case": "D6-01"
+    },
+    {
+      "id": "R6-02",
+      "round": 6,
+      "problem": "P0/过程平稳STD/PSD及rate到delta统计假设未完整区分",
+      "replacement": "分别定义P0、白噪声PSD、GM驱动及Baro RW，并固定右矩形增量适配和其误差/统计适用范围",
+      "files": [
+        "FlightSIM-estimator.md",
+        "FlightSIM-test-plan.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "reference_case": "D6-02"
+    },
+    {
+      "id": "R6-03",
+      "round": 6,
+      "problem": "低频最后记录/延迟尾部被误当EOF，采样与消费计数混用",
+      "replacement": "逐stream coverage/计划/Hash/gap/end_reason及边界计数守恒",
+      "files": [
+        "FlightSIM-data-replay.md",
+        "FlightSIM-test-plan.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "reference_case": "D6-03"
+    },
+    {
+      "id": "R6-04",
+      "round": 6,
+      "problem": "保守时长与名义任务时间未实算，30s能源fixture不能覆盖35s/重启",
+      "replacement": "细分界下显式时序检查；能源用global seconds并覆盖RunInterval，不随FCU重启归零",
+      "files": [
+        "FlightSIM-data-replay.md",
+        "FlightSIM-stateflow.md",
+        "FlightSIM-test-plan.md"
+      ],
+      "disposition": "SPEC_REPLACED",
+      "implementation_verification": "NOT_RUN",
+      "reference_case": "D6-04"
+    }
+  ],
+  "current_session_rounds": [
+    4,
+    5,
+    6
+  ],
+  "reviewed_baseline": "FLIGHT-MATLAB-SPEC-1.2-DRAFT"
+}

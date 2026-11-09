@@ -1,0 +1,133 @@
+# 全量审查问题清单与落地边界
+
+基线 `V1.9.1-GLOBAL-AUDIT-R3`；change_set_id=`USER-20261104-GLOBAL-AUDIT`；日期2026-11-04。用户授权逐项审查spec并修复，然后追加两轮复审。仅修改spec；应用、第三方包、官方资料及现有驱动保持原位。Schema6.0/Product-Port0x00010903是不兼容升级，旧Major5消费者必须重建。
+
+## 1. 逐项问题与正文修复
+
+本表列设计缺陷及明确处置；SPECIFIED表示规范已写明。验证结果只登记09，既不等于生产实现完成，也不充当独立审核签名。
+
+| ID | 级别 | 涉及文件编号 | 问题与修复 | 文档处置 |
+|---|---|---|---|---|
+| A01 | P1 | 02 | 五个Product*ConfigPayload完全未定义，公共头无法编译；补齐QUAD强类型只读配置和参数映射。 | SPECIFIED |
+| A02 | P1 | 02/04/06 | GuidanceFeasibility缺reference_id/epoch，PilotReference缺reference_id，许可可绑定错误参考；补关联并要求一致bundle。 | SPECIFIED |
+| A03 | P1 | 02/03/04/06 | M7只有actuator_apply无独立许可撤销/周期guardAPI，旧Permit可重新安装；补update_permit/poll/epoch单调watermark和frame边界守卫。 | SPECIFIED |
+| A04 | P1 | 02/07 | NavigationCapability缺state_epoch/origin_id不能与Nav绑定；补字段与同一发布世代。 | SPECIFIED |
+| A05 | P1 | 02/06 | 命令request_id缺source/session命名空间，ACK/任务上传不能可靠路由去重；补session与来源回显。 | SPECIFIED |
+| A06 | P1 | 02/07 | Header/frame/message/validmask/单位/enum大批未注册；冻结QUAD编码、保留位、未知拒绝和传感器ID映射。 | SPECIFIED |
+| A07 | P1 | 02/05 | 慢测量无sample_sequence但要求保留，嵌套Header外内可能不一致；冻结header.sequence为唯一采样序号/外内一致。 | SPECIFIED |
+| A08 | P1 | 02/05 | ImuSample accel_frd未定义specific force，gyro/acc各轴delay不一致却共一时刻；补物理语义和因果轴对齐。 | SPECIFIED |
+| A09 | P1 | 05/07 | ADIS 1kHz DEC_RATE=1应使用32bit34B burst，现22B/220us及1.8ms管线预算不成立；Rev.C pp19-21核对，freeze32bit/对齐和重算时限。 | SPECIFIED |
+| A10 | P1 | 02/03/07 | 普通双缓冲+seqlock可能C数据竞争和高优先级spin；定义pin/refcount有界快照与发布失败策略，不在关中断复制大包。 | SPECIFIED |
+| A11 | P1 | 00/04 | A*键无time导致wait/dynamic障碍状态合并，连续状态到voxel/yaw量化会跳变；冻结带time的canonical lattice与root bridge。 | SPECIFIED |
+| A12 | P1 | 00/04 | A*原语缺完整ID映射/heuristic/cost，profiles/quad_x4路径错误；精确定义60项、时间步和端点。 | SPECIFIED |
+| A13 | P1 | 04/07 | 动态预测300ms短于固定480ms预览使动态参考必拒；冻结所需预测覆盖和feature门禁/Host范围。 | SPECIFIED |
+| A14 | P1 | 04/02 | GuidanceInput缺SafetyEnvelope/Landed，Ground/idle/input时间不清；补必要输入和校验。 | SPECIFIED |
+| A15 | P1 | 04 | RatePID/PD备用只有名称无离散律/过滤/饱和/切换条件；冻结方程、单位、dt和积分恢复。 | SPECIFIED |
+| A16 | P1 | 00/04 | SO3期望角速度差分/nearpi阈值未定，eOmega定义与RatePID含义冲突；冻结实现数学。 | SPECIFIED |
+| A17 | P1 | 04/07 | MPC Snapshot跨阶段TTL/父上下文/jerk参考未闭合；冻结private类型和原输入截止上界，重置warmstart规则。 | SPECIFIED |
+| A18 | P1 | 07 | 1kHz内部IMU±3%与990us最小间隔/精确55%预算不一致；按最短950us接纳上界并修正M7预算及RTA。 | SPECIFIED |
+| A19 | P1 | 07 | M6 200us/M7 100us独立RTAdeadline无法满足高优先级干扰；区分链路/事件deadline，M7安全唤醒response≤1ms并frame ISR复核。 | SPECIFIED |
+| A20 | P1 | 00/03/04/08 | output_policy_id无任何可实现策略；冻结BENCH_INHIBIT/SIM策略，Flight不可使能前置证据，不能假设空中归零安全。 | SPECIFIED |
+| A21 | P1 | 02 | 生命周期start/reset与函数原型矛盾，配置validate与get_health边界不清；固定实际API集合/stop幂等/错误输出失效。 | SPECIFIED |
+| A22 | P2 | 02/05 | 时间读取不含epoch原子关联、UTC尺度/闰秒配对和映射历史容量不闭合；固定ClockInstant与mapping规则。 | SPECIFIED |
+| A23 | P2 | 02/04 | FaultSummary正文声称含事件详情但结构仅聚合；纠正summary边界/引用FaultEvidenceEvent。 | SPECIFIED |
+| A24 | P2 | 02/08 | UGV/USV类型和ControlModel方法都是示例却被要求ABI已冻结；首版QUAD规范化，其他草案禁生产绑定。 | SPECIFIED |
+| A25 | P1 | 03/00 | 默认Keil/armcc与C++14/Eigen要求冲突；完整QUAD选择既有GCC入口并锁实际14.3.1，BSP默认不被覆盖。 | SPECIFIED |
+| A26 | P1 | 04/07 | OSQP mode1不能更新倾角A系数；固定mode2、15变量/190行/32KiB接纳上限，生成器RAM仍待实测。 | SPECIFIED |
+| A27 | P1 | 04/07 | 完整地图、MPC和障碍ring超H723保留余量；默认NONE分配232KiB，293KiB地图组合禁用。 | SPECIFIED |
+| A28 | P1 | 05 | replay追到当前尚未发布样本导致追赶死循环；P4在N传播前提交N-1候选，checkpoint必须在δx=0边界。 | SPECIFIED |
+| A29 | P1 | 05 | 过程噪声维度写成22与上游18+1不符；明确Qc19、G22×19和第18噪声驱动第21状态。 | SPECIFIED |
+| A30 | P1 | 05 | Baro H普通有限差分会得相反符号；固定error retraction差分和b_h正向反馈，Home更新不重置Origin。 | SPECIFIED |
+| A31 | P1 | 05 | Mag残差与Baro/GNSS正负约定相反且H未定；改为水平磁方位残差，显式Phi-angle H和R投影。 | SPECIFIED |
+| A32 | P1 | 05 | GNSS速度只有模型没有解析H；明确Ω位置/速度偏导及bias/scale/姿态的H块。 | SPECIFIED |
+| A33 | P1 | 05/08 | UM982原生协议/方差/arrival延迟未固定；默认DISABLED，启用必须提供固定官方协议和golden frame映射，不猜字段。 | SPECIFIED |
+| A34 | P1 | 05/08 | Baro/Mag转换配置、样本延迟/噪声未定；固定压力高度公式/方差传播和readback接纳，缺证据辅助禁用。 | SPECIFIED |
+| A35 | P1 | 05 | FDIR失效和恢复阈值留自由选择；固定过期策略、300ms TTL、Host恢复窗口及4倍协方差档。 | SPECIFIED |
+| A36 | P1 | 01/05 | 物理测量值重复被误当stuck；只有计数/时标/设备状态停滞才给直接冻结证据。 | SPECIFIED |
+| A37 | P1 | 02/06 | PreArm正文声称完整逐项detail而结构只有mask；明确聚合与单项遥测分工，固定15个check ID。 | SPECIFIED |
+| A38 | P1 | 06 | 首次25ms许可期限小于M5/M4异步交接窗口；首参考绝对100ms，25ms短lease只凭新鲜地面证据续租。 | SPECIFIED |
+| A39 | P1 | 06 | 位置保持不必要地强制Home；只要求Origin，RETURN或相对Home高度才要求Home。 | SPECIFIED |
+| A40 | P1 | 02/06 | 全球遥测不能从公开接口得到LLH锚点；新增NavigationOriginSnapshot和AMSL/geoid有效门控。 | SPECIFIED |
+| A41 | P1 | 06/08 | 接地判定与空中失效动作没有实物依据；固定UNKNOWN/BENCH_INHIBIT，Host fixture与实机verified policy隔离。 | SPECIFIED |
+| A42 | P1 | 06 | ACK ACCEPTED概括错误、长操作超时和幂等未定义；冻结普通/长命令映射、4 tracker/32 cache/完成守卫。 | SPECIFIED |
+| A43 | P1 | 00/06 | 13条自定义MAVLink只有名称无字段/ID；交付spec/contracts/FCU.xml为唯一输入，生产合并生成仍需验证。 | SPECIFIED |
+| A44 | P1 | 06 | 签名重启后所谓重新建立可信会话没有机制；默认关闭远程变更，固定本地换新key或可信高水位恢复门禁。 | SPECIFIED |
+| A45 | P1 | 08 | 设置槽先commit后健康确认，但启动会选未确认坏槽；明确commit/confirmed两阶段及64B LE wire格式/CRC32C。 | SPECIFIED |
+| A46 | P1 | 08 | 只禁止ARMED写设置仍允许ARMING竞态；固定仅DISARMED及maintenance_epoch租约，Arm与写入互斥。 | SPECIFIED |
+| A47 | P1 | 08/00 | 32位诊断hash被当完整追溯/认证；区分完整SHA256、规范化序列化、CRC及有无Git来源。 | SPECIFIED |
+| A48 | P1 | 03/07 | 承诺Bootloader升级回滚但无分区或实现；首版DIRECT_BSP/升级UNSUPPORTED，安全升级功能显式关闭。 | SPECIFIED |
+| A49 | P1 | 07 | DShot启动非零active会拉长bit0，UIF合并会提早停表；改active零/preload bit0、68word、绝对raw截止。 | SPECIFIED |
+| A50 | P1 | 07 | TIM1固定275MHz及波形值误当板级事实；从受控RCC读回计算N/ARR/CCR并限制误差。 | SPECIFIED |
+| A51 | P1 | 03/07 | UART循环DMA仅凭NDTR/IDLE可能漏完整回绕；HT/TC绝对生产计数，overrun清帧重同步。 | SPECIFIED |
+| A52 | P1 | 07 | DMA descriptor引用完整捕获事件却未分配池；新增8项带generation捕获池并纳入12KiB。 | SPECIFIED |
+| A53 | P1 | 07 | 新增session让MissionUploadCandidate从1144变1152B；ARM编译已发现并修正slot，检查器逐类型核对。 | SPECIFIED |
+| A54 | P1 | 10 | 未派发任务取消要求伪造接单/开工；允许有审核取消记录的READY直接CLOSED，保留实际15任务未派发。 | SPECIFIED |
+| A55 | P1 | 00/09/11 | 旧R2 PASS和版本摘要被继续当当前结果；隔离历史，提供新基线报告及三轮自查，不填独立会签。 | SPECIFIED |
+| A56 | P1 | 00/03/05 | 只写候选latest/短SHA不可复现；锁定实际KF-GINS commit和来源文件SHA256，不导入固件。 | SPECIFIED |
+| A57 | P1 | 05/09 | 擅自假设用户只个人自用并据此处理许可证；删除用途推断，记录真实用途/来源与分发范围后检查。 | SPECIFIED |
+| A58 | P1 | 00/02/README | 重复段落和过时摘要形成第二权威；同步接口/预算，显式分离历史11与当前唯一正文。 | SPECIFIED |
+
+## 2. 落地顺序与明确关闭的能力
+
+1. 先生成02的QUAD生产头/强类型只读配置，对照spec ARM布局，再接入现有SCons应用构建。驱动在board/HAL_Drivers原生框架上补适配，算法/协议通用代码在packages，不重生成BSP。
+2. H723默认BENCH_INHIBIT、DIRECT_BSP、NONE、ESC反馈NONE；只进行无电机输出的软件/传感器集成。Host/SIL可使用显式SIM_ONLY数据跑闭环，地图A*仅在Host接纳。
+3. 2026-11-05更正：UM982为主要必装器件，GNSS/PPS接入固定启用；旧GNSS_BACKEND=DISABLED→关闭GNSS硬件的处置废止。实际UM982协议适配未完成须明确NOT_READY/未验收，并继续完成golden frame/配置读回/时间标定，不能裁剪主要器件。BARO/MAG观测按各自证据接纳；运行中GNSS失效时INS继续传播。
+4. 控制/任务软件实现后依09进行数值、目标资源、HIL及物理安全验收。自动模式、实物输出、升级和远程变更只在对应verified policy/证据存在时开启；未提供输入返回明确UNSUPPORTED/NOT_READY，不给实现者留隐式默认。
+
+## 3. 需要真实输入的项目（不得编造数值）
+
+| 输入 | 交付内容 | 缺失时的固定行为 |
+|---|---|---|
+| 板卡与时钟/引脚 | 原理图、实际MCU/revision、RCC/MPU/linker/IRQ/DMA对照及测量 | 保持SOURCE_EVIDENCE_PENDING，物理输出抑制；不改工作簿/生成代码消差异 |
+| RC | 准确接收机型号/协议、帧样例、通道/开关、failsafe和时延 | RC_INPUT不可用，拒绝依赖人工接管的真实运动 |
+| IMU/辅助源 | 已知初始地理锚点、IMU→CG/天线几何、安装/Allan/六轴delay、golden frame、ODR与group-delay上界 | 样本时间/能力invalid，辅助源禁用；不把手册典型值当实测 |
+| 机体与动力 | 质量、SPD惯量、旋翼位置/旋向、推力曲线、ESC时延/上下限 | 真实控制Profile validate失败，Host另用标明SIM_ONLY的fixture |
+| 电池/能源 | 电压电流硬件模型、容量及返航/降落能量估计误差 | energy_state=UNKNOWN，拒绝依赖能源保证的自动动作 |
+| 接地与安全动作 | 可靠接地证据、各阶段输出policy及失联/终止/超期处置验证 | LandDetector UNKNOWN，BENCH_INHIBIT，不以“空中归零”冒充安全 |
+| 密钥/签名 | 保护方案、流高水位跨掉电保证/本地维护换key证据 | REMOTE_MUTATION=DISABLED，旧key普通重连不解封 |
+| 实际性能 | 生产头ABI、固件ELF/MAP、WCET/RTA/栈/时序/掉电/SIL/HIL | 对应测试NOT_RUN，不能用本轮算式/规范C编译代替 |
+
+这些是受控产品输入，缺失时行为已固定；不是继续悬置的接口/算法选项。未来数值接纳须更新同一Profile/hash与适用测试。
+
+## 4. 三轮审查与可复核证据
+
+- 首轮：对照现有源树、Flight.xlsx、三份本地PDF与锁定KF-GINS源码，逐文件修订；提供ARM C11/C++14类型/offset、slot/arena、命令/状态和资源算式检查。
+- 追加复审1：重新从调用链、时序和数据所有权检查首轮结果，新增问题直接回填权威正文并保留round2报告。
+- 追加复审2：再从边界/错误路径、可执行检查和发布证据检查，修复后保留round3报告。
+
+执行命令/结果与范围只见09本轮台账；报告包含本轮输入SHA256。spec/tools/audit_spec.py只编译规范C片段并做文档参考检查；尚不存在生产头/算法实现时不宣称ARM_TARGET_BUILD或SIL通过。三轮均是同一执行上下文自查，不虚构非作者独立复核。
+
+复核时可从spec/validation/upstream_sources.json校验本地资料/上游输入；message_registry.json固定Schema6消息编号，FCU.xml固定网络消息字段，abi_layout.json是最新规范ARM布局。回滚须恢复完整spec快照，不能单独回滚02而保留不兼容消费者设计。
+
+
+## 5. 追加复审1新增问题
+
+| ID | 涉及文件 | 问题与修复 | 文档处置 |
+|---|---|---|---|
+| B01 | 02/04 | 定高模式需要人工姿态+垂向参考，原两种参考都不完整；新增ALTITUDE_ATTITUDE typed payload和kind，M6只求垂向PD。 | SPECIFIED |
+| B02 | 05 | 无PPS长期运行时映射delta会越uint32；100ms..1s周期连续重锚，补短临界区H/SR/CNT快照及CCR读清标志规则。 | SPECIFIED |
+| B03 | 02/工具 | 只注册直接Header会漏EstimatorHealth/ControlHealth；显式追加54/55，ModuleHealth别名按component区分。 | SPECIFIED |
+| B04 | 07/工具 | 新增类型让ICD实占41376B超过40KiB，且命令cache/TCB未完整入账；改48KiB ICD、独立8KiB M1及16KiB平台，默认232KiB、地图293KiB。 | SPECIFIED |
+| B05 | 04 | Node16B无parent primitive，无法复现路径；补512B独立表及hash/heap/tie规则，固定MapCell/track布局。 | SPECIFIED |
+| B06 | 05 | checkpoint只给容量没给可序列化记录；锁定2304B的元数据、23名义double、253上三角double和保留区。 | SPECIFIED |
+| B07 | 04 | 人工姿态/推力映射和hover字段未被使用；固定旋转向量姿态、yaw积分及Tmin/hover/Tmax三点映射。 | SPECIFIED |
+| B08 | 05 | 最近IMU端点在未来未可见时不可直接量化；最多等待1100us、半间隔取早端点，checkpoint journal边界去重。 | SPECIFIED |
+
+## 6. 追加复审2新增问题
+
+| ID | 涉及文件 | 问题与修复 | 文档处置 |
+|---|---|---|---|
+| C01 | 02 | SensorMeasurement要求内外Header全等却需要不同message_type；固定外层13、内层样本ID，其余头字段一致。 | SPECIFIED |
+| C02 | 02/05 | 通用/IMU quality位、ALT_HOLD有效位和源健康字典编码冲突；拆开命名空间，补全8个源状态及稳定字段注册。 | SPECIFIED |
+| C03 | 02/05/08 | 标定配置与磁偏角/初始地理锚点没有强类型传递字段；补QuadSensorProcessingConfig和Estimator字段、唯一CORE映射及缺失NOT_READY。 | SPECIFIED |
+| C04 | 02 | Nav与Capability仅同epoch仍能拼出不同样本；要求相同sequence/sample time和同一发布世代。 | SPECIFIED |
+| C05 | 04/02 | 把5ms种子Nav TTL当20ms MPC输出TTL会频繁失效；区分入口新鲜度、25ms种子界与授权截止，快环按新Nav检查模型误差。 | SPECIFIED |
+| C06 | 02/05/08 | 历史GNSS可选/默认PPS关闭结论已由CR-V191-GNSS-REQUIRED-01废止：当前主要GNSS/PPS固定启用，运行中丢失分别降级；外部reset不误改time_epoch。 | SPECIFIED |
+| C07 | 00/04/06 | 摘要仍保留旧三元A*键、profiles根路径、S-Curve和候选消息ID；同步为time键、applications路径、唯一quintic与已验证Dialect。 | SPECIFIED |
+| C08 | 工具/04 | 原布局工具只编译公共类型，未检查MPC私有交接和C链接规则；纳入私有结构及extern C，交付可重跑Dialect检查工具。 | SPECIFIED |
+| C09 | 03/07 | 两槽pin/generation加索引实际20B，原16B低估；修正每通道尺寸和2048B元数据/view保留，ICD引用占用42400B<48KiB。 | SPECIFIED |
+| C10 | 09/工具 | R2结构报告仍被当最新PASS，新增验证没有可重复入口；重建当前结构报告、保存每轮输入Hash并复核外部10059文件。 | SPECIFIED |
+| C11 | 02/05 | SPI16 DMA内存字节序、采集完成位和计数回绕没锁定；明确17个LE word、34B解码、acquisition/capture位与DATA_CNTR扩展。 | SPECIFIED |
+| C12 | 02/04/05/08 | KF-GINS以IMU点、Plant以CG描述同名位置且缺杆臂/方差变换；统一公共CG参考点，补生成杆臂、J*P*Jᵀ变换与加速度有效门控。 | SPECIFIED |
+
+本轮共78项：首轮58、追加复审1为8、追加复审2为12。三轮检查均已执行，唯一结果见09；所列修复均已回填正文，真实输入缺口仍按本文件第3节的固定行为接纳，未转成虚假实物PASS。

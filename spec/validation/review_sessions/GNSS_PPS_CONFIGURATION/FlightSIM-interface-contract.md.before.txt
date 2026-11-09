@@ -1,0 +1,110 @@
+# FlightSIM 接口契约
+
+状态：设计草案；2026-11-05；本版以完整边界表和生命周期协议替换此前的简写接口。
+公共字段唯一来源为[固件ICD](../../spec/02_接口契约与公共数据规范.md)。本目录定义Host组合，不维护第二份公共C结构。
+
+## 1. 类型生成与表示
+
+C float→single、double→double，uint8/16/32/64_t按宽度映射；公共布尔/枚举仍服从C声明。固定数组尺寸、字段顺序、位掩码和所有Header字段由同一schema生成到规划字典Flight_Contracts.sldd。公共bus使用准确C typedef名；简写Nav/Permit只允许作说明，不能生成同名替代类型。Header参考布局88B与Simulink bus内存布局无等价保证；后续C导出单独检查sizeof/offsetof/padding。
+
+C指针view/lease不作为bus内存镜像。Host的FmsInputBundle/GuidanceInputBundle/ControllerInputBundle按值持有消息、presence/count；C适配器只在同步调用中组装Port view。SensorMeasurement union改为Host私有typed batch，分开存GnssSample/BaroSample/MagSample，每种有count；未使用槽清零且有效位为0，只访问count内元素。该容器不导出成固件union，不占用[公共message_type](../../spec/contracts/message_registry.json)。数学内核显式把公共一维数组转为列向量。
+
+## 2. 完整跨组件边界
+
+| 边界/准确公共类型 | 唯一发布者→消费者 | 必须一并核对 |
+|---|---|---|
+| ImuSample、GnssSample、BaroSample、MagSample | M2→M3/Health | 时间、校准、质量、样本ID；RAW与STANDARD路径互斥 |
+| NavigationSnapshot、NavigationCapability、NavigationOriginSnapshot | 活动M3源→M4/M5/M6 | Nav/Capability同sequence/sample/state/origin；Origin仍有效 |
+| OperationRequest、OperatorInput、CommunicationLinkStatus | M1→M4 | 身份/session、幂等键、payload、队列TTL |
+| PreArmCheckResult、LandedStateSnapshot、ProductHomeTargetSnapshot、AuthorityStatus | M4→只读消费者 | 证据时间、Owner、所需能力；Home和Origin分开 |
+| VehicleDirective、ActuationPermit、SafetyEnvelope | M4→M5/M6/M7 | 完整授权bundle，所有适用epochs及领域期限 |
+| AuthorizedOperatorInput、AuthorizedMissionSnapshot | M4→M5 | 人工kind或任务当前项/execution_token；不再仲裁 |
+| ProductGeofenceSnapshot、EnvironmentConstraint | M4持有/接受→M5 | Profile、Origin、state、几何、期限；围栏count有界 |
+| ProductObstacleObservation | Host源适配/M2验证→M5 | 每次最多8条；与导航同世界上下文，不反压IMU |
+| MotionReference、PilotControlReference、GuidanceStatus、GuidanceFeasibility | M5→M4/M6 | 恰好一种参考kind，匹配reference/任务token |
+| ActuatorDemand、ControlCapability、ControlHealth | M6→M7/M4 | 四路N，许可和control_sequence，约束版本 |
+| ActuatorCommitReceipt、ActuatorStatus、ActuatorCapability、ActuatorHealth | M7→M6/M4 | 命令提交证据；不是RPM/实测推力 |
+| SensorUsePolicy、SensorConsistencyEvidence | Integrity→M3、M3→Integrity | source/policy/state/calibration/窗口；不读私有P |
+
+Home为VehicleDirective产品payload内的ProductHomeTargetSnapshot，不另发一份同名公共bus。所有可选输入须用presence声明；缺少一个必需成员即整组拒绝，不能拼接跨世代消息。任务、围栏和障碍的具体Host组合见[制导设计](FlightSIM-guidance.md)。
+
+## 3. Host专用类型和有界传输
+
+| 类型 | 内容 | 规则 |
+|---|---|---|
+| SimRunContext | run_id、boot_id:uint64、schema/revision、Profile/CORE/data/model SHA256 | 新run生成新boot；标识与可重复随机seed分离 |
+| SimTimeline / FcuClock | global tick/us；FCU boot/time/local_us及映射锚点 | 双时间轴，物理队列/Stop用global，公共TTL用FCU local |
+| SimPreparedFmsContext / SimCommittedControlContext | transition/context ID、完整pending/active值消息及句柄 | Host私有双槽；只有COMMIT的活动槽可组ControllerInput |
+| GroundStopCertificate | boot/time、管理命令ID、地面证据、150ms期限 | 只用于普通地面停止，不当运动Permit |
+| SensorReleaseBatch | typed消息、原始arrival_us、count、gap | IMU≤4、辅助合计≤8/tick；按全局事件键释放 |
+| ExternalNavigationBundle | Nav/Capability/Origin、provenance、available_at_us | 必需字段来自完整离线捕获，不能用零方差补缺 |
+| SimActuatorFrame | frame_kind:uint8（CONTROL/IDLE/GROUND_STOP）、4路packet:uint16、还原N、start/end/apply_us、token或管理命令ID | 一帧/2.5ms；N由实际量化code反解 |
+| SimPlantTruth | CG p/v/q/rate、角加速度、电机ω/推力及WGS锚点 | double；仅传感器合成/只读评价可动态读取 |
+| SimEnvironment | 风NED、带frame外力/力矩、密度、地面 | 外生场景，不向控制泄露Plant状态 |
+| SimGroundContact | 接触枚举、sample/expiry、质量 | 显式SIM测量，经M4 LandDetector使用 |
+| SimSurveyedMapSnapshot / SimDynamicObjectBatch | 完整调查cell/覆盖mask；最多8动态对象 | Host世界证据，不伪装公共传感器实例 |
+| SimFaultInjection | 有界事件表、source/字段、起止us、seed | 按事件ID应用一次，不在minor step重复注入 |
+
+全局事件键固定为(arrival_global_us,sample_global_us,source_id,sequence,ingest_ordinal)。ingest_ordinal是导入时原始记录序号，只作稳定平局键，不冒充传感器sequence。队列保留原始arrival；ceil(arrival/500)*500仅为release tick。相同键及相同payload为重复，键同payload不同为完整性错误。M3辅助观测进入其历史后仍按父05的sample-time/journal规则排序，不能把arrival顺序当融合时刻。
+
+运行源队列有固定容量：IMU 16条，辅助32条；离线文件不全量塞入模型队列。每tick释放预算分别4/8；超预算仍已到达的条目按键选择保留预算内前缀，其余明确拒绝并生成gap/overload。到达但未进入预算的消息不能无界推迟到以后假称没丢。M1请求队列4项，M4长操作tracker4项、幂等cache32项/60s；容量满返回原因，运行中请求不逐出。场景请求/故障表和外部导航记录在导入时限制长度并写manifest，不动态扩容实时信号。
+
+## 4. 坐标与参考点
+
+NED为North/East/Down，FRD为Forward/Right/Down；q=[w,x,y,z]，C_nb将FRD转NED。公共p/v为CG，KF内部LLH点为IMU，天线与CG杆臂分别转换。公共std从J*P*J'获得，不能把IMU点对角方差直接复制到CG。
+
+ImuSample.accel为比力，静止水平[0,0,-g]；Nav可选acceleration为CG运动加速度。补偿/时间对齐未经验证即清有效位，LandDetector不能读truth补齐。高度Up、p_D Down：h_above_home=home_D-p_D；压力高度、椭球高、AMSL不互换。物理推力N、力矩Nm，M7才负责设备code。
+
+Host采用Origin固定ECEF切平面N0，公开/控制rate为ω_b/N0；raw gyro为ω_ib，转换减去Earth rate在body中的投影。KF内部当前地理NED用Earth+transport，两种导航框架由GeodesyAdapter完整旋转位置/速度/姿态/covariance，不能把transport重复扣到固定N0 rate。父ICD当前仅写FRD，G0必须确认惯性参考语义；未确认不得宣称固件兼容。此处不修改父字段。
+
+## 5. 时效与一致快照
+
+Control Time=所选Nav的FCU Local State Time，evaluation_time=FcuClock；每次减法前检查boot/time epoch和未来时间。M6 NumericTransaction只对新State Time提交一次下一状态；同Nav可ContextEvaluation，但不积分/微分。详细时序唯一见执行协议。
+
+| 契约 | 值/边界 |
+|---|---|
+| 名义IMU间隔 | 1kHz；950..1100us合格范围，非uniform按父05 |
+| Nav入口age / 帧前反馈age | ≤5000us / ≤7500us，包含规定uncertainty |
+| Permit / Directive / Reference lease上限 | 25000 / 50000 / 40000us；480ms预览不是TTL |
+| Demand / Receipt TTL上限 | 5000 / 10000us |
+| 辅助入队age / replay job | ≤20000 / ≤60000us |
+| MPC种子age | ≤25000us；输出还受原授权/参考/20ms窗口约束 |
+
+Header valid_until与领域expires取较早；expires<=evaluation_time即拒绝。源释放增加的0..499us等待单列为调度延迟，不修改sample/uncertainty。FMS活动/准备通道分开，完整ActiveContext只在COMMIT原子发布；M7按撤销watermark复核，旧Demand不能重新授权。续租只有语义未变且有新事实才保持epoch并更新lease。
+
+时间轴、物理数据RunBinding和控制事务详见[执行协议](FlightSIM-execution-protocol.md)。
+
+## 6. 生命周期协议
+
+Composition Root中的LifecycleCoordinator管理阶段，EpochStore由各Owner外壳持有且位于可重启算法实例之外；算法实例不能拥有自己的第二套可重置epoch。
+
+| 操作 | 前置与状态处理 |
+|---|---|
+| NEW_RUN/全图重启 | 分配新boot，epoch从1开始；清队列/参考/任务/授权；所有输出invalid，Chart DISARMED |
+| 同boot模块stop/init | 仅DISARMED维护；先M4撤销、M7确认抑制，再stop；保留Owner高水位，相关epoch递增；不清零复用token |
+| FCU time连续性失效 | 抑制输出，递增time_epoch，清跨时间历史/候选，进入受控重建；不以时钟倒退续租 |
+| 单外部source mapping reset | 只失效该源映射/排队样本/依赖候选；M3判断是否需要state reset，不能无条件全图重启 |
+| M3 Origin/state reset | 发布StateResetEvent，递增state_epoch；旧Home/围栏/轨迹/Permit失效，按各Owner重建 |
+| epoch/token溢出 | epoch/token拒绝新事务并要求新boot维护重启，不能自然回绕获得旧身份；uint32 sequence按父02半范围比较，诊断计数饱和 |
+
+积分/导数/求解缓存初值0或invalid；缓存的首次有效性显式标记。M6历史、M7撤销水位、M4幂等记录都不能被一次局部init清掉以绕过重放保护。模块接口无reset API时仍遵守父Port生命周期，不新增固件入口。
+
+## 7. 旧数据和当前契约
+
+uint32毫秒先按半范围扩展再×1000；已知rounding界500us，截断/未知1000us，不能满足100us事件质量时仅REFERENCE_ONLY。旧Euler/q必须证明方向；旧lat/lon按真实列单位转换；旧16路uint16 actuator_cmd没有标定只作诊断。rate记录按实际dt积分一次，delta记录不再乘dt。
+
+回放历史操作作为本run的新请求意图，经M1/M4重新认证/校验；历史Permit/Directive/Demand只进评价，绝不重盖新boot后进入活动链。仅完整记录与映射证据可用于严格模式，缺arrival只能显式合成理想传输假设。
+
+当前上位02已增加ProductOperationPayload.mission_epoch（valid_mask bit8）及ProductGeofenceConfig；最新CR-V191-M45-01/实际宏声明Schema6.0、QUAD Product/Port0x00010905。Mission START/PAUSE/RESUME/ABORT/CLEAR必带当前非零epoch；缺位/零值/旧epoch/跨boot拒绝，其他不适用命令清零。不再保留缺字段或运行时围栏写入的旧方案。
+
+围栏由Profile生成只读ProductGeofenceConfig；Composition Root在fms_policy_init前经产品私有quad_x4_fms_configure_product_geofence安装，M4初始化校验并持有，绑定有效Origin/Home后发布ProductGeofenceSnapshot；无SET_GEOFENCE命令。初始Home缺失时不把Home相对高度当Origin高度。正式生成须读取G0锁定的02及生产头/ABI证据，不能把旧0x00010903/0x00010904当当前接口。上位台账可能滞后于正文，快照/差异与后续门槛见研究第7节；Host V2已选定固定N0/rate、参考grid、双通道切换及retimed planner；与固件的语义/Port映射在单独FirmwareConformanceGate核对，不能把Host私有容器或算法变体宣称为现有C Port等价。
+
+## 8. M45-01目标与模型视图
+
+当前字段生成基线由02实际宏和末尾显式增量决定：Product/Port0x00010905，Schema6.0。ProductDirectivePayload.target_valid_mask bit0 POSITION、bit1 YAW；值分别取target_position_ned_m[3]/target_yaw_rad，M4唯一写，变更增加directive_epoch。mask0只允许按已授权当前Mission项、有效Home或明确锁存保持点推导，不得把失效/非有限目标默认为当前位置成功。
+
+ProductGuidanceConfigPayload.mass_kg/gravity_mps2来自同一vehicle_model及共享WGS派生结果，M5/M6/Plant一致，不能沿用上位Host helper的1kg/9.80665默认夹具替代本项目1.5kg/WGS参数。
+
+GuidanceReferenceKind=5（ALTITUDE_AUTOMATIC）是LAND/ALT_HOLD的明确自动垂向分支。它复用PilotControlReference的ALTITUDE_ATTITUDE载荷及ATTITUDE/ALTITUDE_UP/VERTICAL_VELOCITY_UP位，GuidanceStatus标5，MotionReference无效；名称含Pilot不授予Pilot Authority，不要求AuthorizedOperatorInput，execution_token必须0且任务不得保持RUNNING。M4仅在有效垂向位置/速度、姿态/角速度和包线均成立、无待证明围栏时授权；缺水平能力或Home不能伪造XYZ值。M6按Directive/GuidanceStatus/载荷kind三者共同分派，未知kind拒绝。
+
+固件10905的MotionReference明确Header.sample=Nav State Time；本工程HOST_NATIVE_V2的MotionReference选定家族grid anchor，人工/自动垂向typed参考仍按Nav State Time。差异已经显式登记到FirmwareConformanceGate，Host值bus机械字段一致不等于时序兼容。Host implementation_id/Hash登记SimRunContext，不把原固件算法ID当同一实现证明；C-facing Profile/模型适配导出待该门槛通过。

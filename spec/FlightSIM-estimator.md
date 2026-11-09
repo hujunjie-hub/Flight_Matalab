@@ -1,0 +1,99 @@
+# FlightSIM 估计器与KF-GINS MATLAB适配设计
+
+状态：设计草案；2026-11-05。项目内部滤波数学继承[父导航05](../../Flight/spec/05_传感器采集时间基准与GNSS独立运行.md)。
+
+## 1. 三个相互独立的目标
+
+| 目标 | 内容 | 允许用途 |
+|---|---|---|
+| PristineMatlab21 | i2Nav原生21误差/18噪声，核心不修改 | 复现官方数据与原算法参考 |
+| ProjectMatlab22 | 21+Baro bias、19噪声及项目观测/延迟模型 | 项目数值参考、DataSIM/MIL内部M3 |
+| FirmwareReference | 固件规划的固定维数C++/ARM实现 | 后续SIL/PIL对比；本轮未实现 |
+
+不能把21维参考改成22维后仍叫pristine，也不能直接把MATLAB21输出当作22维Baro/Mag/完整速度杆臂算法的黄金结果。
+
+## 2. 原生输入与差异
+
+锁定仓库[官方KF-GINS-Matlab](https://github.com/i2Nav-WHU/KF-GINS-Matlab) commit `021ad5385c6000dae2c70b59c91bd2303f45b55e`。已读实际入口`kf_gins.m`、Initialize、InsMech、InsPropagate、GNSSUpdate、ErrorFeedback、ProcessConfig1。README中的连字符入口不能替代实际文件名。
+
+| 差异 | 处理 |
+|---|---|
+| 原生IMU输入是dtheta/dvel及秒时间 | adapter依据manifest转输入；rate记录积分一次，增量记录不重复积分 |
+| 初始化要求已有p/v/att/bias/scale | 来自显式配置和静止过程，不把未知heading标为已观 |
+| 原生21、过程噪声18 | Project22单独扩展P/F/G/Q；不更改前21顺序 |
+| 原生GNSS velocity模型使用wie项，未完整包含项目ω_in模型 | pristine保持；项目22按父05完整模型实现，差异单独测试 |
+| 原生driver对GNSS文本lat/lon乘D2R，README数据表却标rad | 以固定配置和实际golden数据核实；禁止猜单位或再乘一次D2R |
+| 原生driver含clear/clc、路径与文件输出 | 仅在隔离job执行；不在FCS或Simulink步进中run该脚本 |
+| 原生相关时间/门限/观测处理与项目不同 | 适配清单记录，不直接复制配置/统计门限 |
+
+C++上游锁定与MATLAB锁定是两个来源，分别记录，不能用同一个commit描述。
+
+## 3. 外部参考的完整捕获方案
+
+原生driver默认文本只保存舍入PVA、IMU误差与P对角STD，不能提供完整交叉协方差、同刻rate/acceleration及CG转换证据。它仅适合REFERENCE_ONLY；不能把文本STD补成对角P后宣称非零杆臂/控制等价。
+
+CONTROL_QUALIFIED参考改由隔离Launcher驱动锁定的原生Initialize/InsMech/InsPropagate/GNSSUpdate/ErrorFeedback核心，按原driver同一顺序逐步调用；核心源不修改。每个完成feedback的IMU边界捕获full double名义状态、P21×21、bias/scale、初始化/观测配置与事件索引到MAT，不经过文本舍入。Launcher属于单独审计的适配层，先与未修改driver在匹配工况比较原生PVA/STD，再接公共转换。
+
+完整状态→IMU/CG/天线几何与J*P*J'→Nav/Capability/Origin→ExternalNavigationBundle。控制级1kHz fixture同时保留同sample的原始point-rate/比力和增量来源，可用估计bias/scale校正后转换ω_ib→ω_b/N0及已验证CG加速度。只有增量均值而缺端点rate/时刻误差证明的原生数据，不以delta/dt冒充精确端点rate；缺该必需字段则REFERENCE_ONLY。ACCELERATION位只在运动学/时间对齐通过后设置。
+
+外部导航的available_at_us按因果计算/传输延迟发布，禁止用未来参考结果提前控制。Nav与Capability同sequence/sample/epoch，Origin版本匹配；缺full P或无法给出保守CG STD时拒绝对应控制能力，缺heading不强行Arm。
+
+离线job在独立进程/工作目录运行，保存work/reference_runs；主项目不永久加入上游Param/Initialize等generic名称。原生21数据按原频率复现，Pristine21与Project22分开；三入口完整控制验收用合格1kHz合成/记录数据，不伪造原生200Hz为1kHz。ExtINS活动M3只有EXTERNAL_NAV_ADAPTER，shadow只供评价。
+
+## 4. Project22组件
+
+规划`FMT_M3_KFGINS_QUAD.slx`：InputGuard、ImuDeltaBuilder、NominalPropagation、CovariancePropagation、ObservationUpdate、ErrorFeedback、HistoryReplay、PublicNavPublisher。固定double矩阵；private state/P可在估计器内使用有限MATLAB Function，不能暴露给FMS/Control。
+
+状态误差[p_NED,v_NED,Phi,bg,ba,sg,sa,b_h]共22；Qc19/G22x19。按父05预测减实测innovation与反馈约定；Baro H_D=-1、H_bh=-1，磁场H与完整速度杆臂H均有限差分核对。Joseph/SPD求解、失败不破坏有效状态且不刷新旧Nav的sample/publish/valid_until；Health的新诊断时间与Nav分开；反馈后dx清零，首阶reset按锁定参考。
+
+IMU使用双子样coning/sculling。HOST_SYNTH_POINT与标准rate回放固定右矩形适配：delta_theta[k]=gyro[k]*(t[k]-t[k-1])，delta_v[k]=accel[k]*dt，区间(t[k-1],t[k]]，首条只缓存前样本；这是已选定的离散近似，不在实现中悄换梯形。线性变化率的单步积分误差界为0.5*abs(rate_dot)*dt²，计入算法数值误差而不伪改sample时间质量。控制级Pristine21 fixture使用同一适配生成增量；原生已为delta的数据只在原生参考入口直接使用，不重复乘dt。插值、缺样、重复和校准变更按父规范拒绝/降级，不能复制上个样本。静止可确定roll/pitch，不能凭重力确定yaw。非uniform检查与精度切换单独CR。
+
+## 5. 时间和延迟融合
+
+活动M3为唯一写者。保留256 delta、24×2304B checkpoint、64×320B观测journal，逻辑容量与父07一致；Host实际内存不冒称等于MCU静态map。
+
+辅助入队age≤20ms、job≤60ms；原观测sample保留，最近IMU端点量化≤550us且加时间误差R。重放包含此前所有已处理/已拒绝观测，保存策略版本；dx=0边界checkpoint。候选到N-1后在传播N前提交，revision/epoch/journal闭合不匹配就丢弃，不能让低优先级shadow直接写活动滤波器。
+
+功能MIL采用单ShadowReplay Job及最多8项待接纳延迟观测，容量满明确拒绝；状态为IDLE/REPLAYING/CATCHING_UP/READY/REJECTED。每500us主传播之后推进最多4个工作单元，每单元为一次固定维数IMU传播或观测更新；READY候选仅在下一IMU边界按父规则提交。virtual release/deadline由Clock决定，工作单元计数是Host进度夹具，不是目标CPU预算；Host墙钟单列，不能声称8% RTOS budget server已证明。
+
+## 6. 对外导航
+
+内部名义点IMU，坐标为当前LLH地理NED；先经GeodesyAdapter变到Origin固定N0，再经杆臂转CG；完整Jacobian包含这条转换，公开std由J*P*J'计算。Nav/Capability同sequence/sample/state/origin，Origin版本匹配。h_baro0属于M3 Origin；M4更新Home不重置滤波器、气压bias或state_epoch。
+
+本机GNSS/PPS固定安装、默认启用；要覆盖的是飞行中GNSS观测失锁/停包及PPS/历元异常，不是可选器件。GNSS PVT不可用时停止接纳该观测，继续合格IMU传播及仍有效的其他观测，完整P与水平能力随实际可观测性变化；不能把最后PVT重复融合、置零速度或直接判定接收机硬件FAILED。PPS单独丢失只使相应时间参考降级；已具有合格本地measurement time的GNSS PVT仍可独立接纳，时间不可证明的PVT则拒绝，不因有Fix忽略映射误差。
+
+冷启动可用CONFIGURED_PRIOR建立有限Nav，但首次合格GNSS更新及初始化稳定窗完成前，不仅凭配置先验授予本机自动位置能力；姿态/本地时钟可继续建立。已经取得GNSS资格后短时失锁，按传播P与原能力门限保守桥接，不把“首次从未有Fix”和“飞行中短时失锁”混为同一状态。ExternalNav的同等资格由Launcher记录的真实更新历史/捕获来源证明，不能凭一组很小的初始STD宣称通过。
+
+GNSS/PPS信号丢失均不停止本地Clock/IMU，不自动清Origin/Home/state_epoch，不由估计器发RETURN/LAND建议。磁/气压/GNSS使用策略由独立SensorIntegrity提供，M3只有观测级门控；源安装/启用是固定配置，融合资格/健康是运行事实。恢复先经GNSS probation与观测一致性，PPS另经连续锁定；已暂停任务不自动恢复。完整正交状态见[执行协议](FlightSIM-execution-protocol.md#8-固定gnsspps与运行中失锁)。
+
+## 7. 比较口径
+
+Pristine21重复运行先验证确定性。Project22与21做核心等价时必须关闭新观测、bh解耦，统一初始化/IMU/门控；GNSS严格落在IMU边界；完整速度杆臂等已知不同项关闭或另列。仅在这些前提下比较前21核心，不能把不一致算法强行设同一误差门限。
+
+q误差用归一化相对四元数的2*atan2(norm(vector),abs(scalar))，不直接q相减或用近零acos(dot)；位置统一到同一CG/NED锚点；covariance统一状态排列。官方truth只作为评价，不参与滤波动态反馈。
+
+上游源码保留GPLv3/版权及修改说明；记录实际使用和后续交付范围，不预设个人自用。当前仅在工程外读取，没有导入源或分发模型代码。
+
+
+## 8. SIM_ONLY配置种子与接地可观性
+
+合成名义工况已知IMU与CG重合、IMU/Mag安装为I、静态bias/scale/hard-iron为0、soft-iron为I，antenna lever为0；这些是明确的合成几何，不是缺标定时填零。calibration_version=1并注明SIM_ONLY。非零杆臂测试独立覆盖，不能用名义零杆臂逃过验证。
+
+初始STD只定义P0：p=0.5m、v=0.1m/s、attitude[1,1,5]deg、bg=1e-3rad/s、ba=.02m/s²、sg/sa=1e-4、baro bias=.5m；各轴独立对角平方构造22维。它们不冒充过程噪声的平稳STD。
+
+| 过程源 | 合成种子与明确换算 |
+|---|---|
+| gyro白噪声 | 离散STD.001rad/s、Ts=.001s；连续PSD q_g=STD²*Ts=1e-9rad²/s |
+| accel白噪声 | 离散STD.02m/s²；q_a=4e-7m²/s³ |
+| bg一阶GM | 平稳STD1e-4rad/s、tau3600s；驱动PSD=2*STD²/tau |
+| ba一阶GM | 平稳STD.002m/s²、tau3600s；驱动PSD=2*STD²/tau |
+| sg/sa一阶GM | 各平稳STD2e-5（无量纲）、tau3600s；各驱动PSD=2*STD²/tau |
+| baro bias随机游走 | q_bh=1e-4m²/s，不复用GM公式 |
+
+默认均匀1kHz、独立rate白噪声下，右矩形delta方差=STD_rate²*dt²=q_white*dt；非uniform/真实器件滤波相关性另做统计验证，不能直接宣称相同白噪声统计。
+
+Qc19按锁定Initialize的acc白噪声3、gyro白噪声3、bg3、ba3、sg3、sa3、bh1排列；F/G/Qd仍按父05同一离散阶次。生成器检查19维/单位/非负/相关时间及完整P0，拒绝缺过程参数，不拿P0字段补缺。GNSS pos/vel、Baro、Mag floor分别.2m/.03m/s/.05m/.02rad（均STD）；观测R组合遵守父05，配置不得把STD当variance。
+
+名义Plant bias/scale为已知零常数，滤波器仍保守建模其不确定度；这不构成过程噪声统计一致性证据。NIS统计专项须另用按上述Qc生成的GM/RW真值或明确失配模型，不能把固定零bias名义场景当全噪声一致性PASS。
+
+名义零IMU→CG杆臂允许从时间对齐的比力/重力得到CG运动加速度。该输出通过一致性验证并置ACCELERATION有效位后，LandDetector才可使用|a_D|条件。非零杆臂而缺已验证角加速度补偿时，该位清零，接地状态应UNKNOWN或进入明确不同的已验证接地策略；不得为让Arm成功而读PlantTruth补加速度。

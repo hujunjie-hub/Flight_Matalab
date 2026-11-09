@@ -1,0 +1,48 @@
+# Flight 项目规格入口（V1.9.1）
+
+> **2026-11-05 GNSS需求更正：** 当前Flight的UM982为主要、必装器件，GNSS/PPS固定接入。容错目标是运动中信号丢失/恢复，旧可选硬件、无GNSS生产Profile及默认关闭条款已废止；见00和05。
+
+本目录服务于现有工程 `D:/STM32Project/FMT-Firmware-1.2.0/Flight`。本次全量修订为 **V1.9.1-GLOBAL-AUDIT-R3**：对照现有工程、官方资料及上游实现消除歧义；Schema升为 **6.0**、Product/Port当前为 **0x00010905**（2026-11-05 M4/M5实施增量），旧Major=5不兼容。发布状态唯一见 [00 工程基线](00_工程基线与唯一权威规范.md)。
+
+所有工程路径均相对 `Flight/`，文档链接相对当前 Markdown。目录与构建接入的唯一定义见 [03 平台架构 §0](03_平台软件架构与驱动设计.md#0-flight-项目目录与现有工程接入)。
+
+| 位置 | 本项目用途 |
+|---|---|
+| [`applications/`](../applications/) | 全部顶层应用；M1～M7、业务服务、算法插件、公共契约、产品配置及应用侧 Host 工具按需在其下扩展 |
+| [`packages/`](../packages/) | 第三方公用包；复用现有 CMSIS/HAL 包，后续算法/协议/器件上游源码也在此按包管理 |
+| [`board/`](../board/) | 现有板级初始化、CubeMX 配置、链接脚本和必要的设备挂接 |
+| [`libraries/HAL_Drivers/`](../libraries/HAL_Drivers/) | 本项目现有 STM32 驱动实现；沿用 RT-Thread 原生 Device Framework，按缺口适配 |
+| [`rt-thread/`](../rt-thread/) | 现有 RTOS 内核、设备框架及组件 |
+| [`doc/`](../doc/) | 官方文档、官方用例和硬件输入；不作为固件源码目录 |
+| [`spec/`](./) | 本项目规格、接口约束、验证台账和交接记录 |
+
+官方资料入口：[`doc/Flight.xlsx`](../doc/Flight.xlsx)、[ADIS16505 数据手册](../doc/ADIS16505/adis16505.pdf)、[ADI no-OS 用例](../doc/ADIS16505/no-OS/)、[BMM350 数据手册](../doc/BMM350/BMM350.pdf)、[BMP585 数据手册](../doc/BMP585/bst-bmp585-ds003.pdf)。参考官方寄存器定义、时序和用例，再适配当前总线/设备接口；不把官方示例的 BSP、启动文件、CubeMX 生成器或主循环整体搬入工程，不重新生成驱动框架。
+
+| 文件 | 唯一内容 |
+|---|---|
+| [00](00_工程基线与唯一权威规范.md) | 当前基线、兼容性、发布范围与权威索引 |
+| [01](01_系统总体架构与设计决议.md) | 总体架构与模块边界 |
+| [02](02_接口契约与公共数据规范.md) | 公共 ICD、Product Contract、Port、时间及授权语义 |
+| [03](03_平台软件架构与驱动设计.md) | 项目目录、现有 BSP/驱动复用、平台服务和 SCons 接入 |
+| [04](04_飞控核心模块与控制系统设计.md) | 飞控核心、规划/控制及连续验证 |
+| [05](05_传感器采集时间基准与GNSS独立运行.md) | M2、时间消费、导航/FDIR、replay 和官方器件资料接入 |
+| [06](06_FMS通信与系统安全设计.md) | M4 FMS、任务/Authority/Permit及通信安全 |
+| [07](07_实时调度与板级硬件资源设计.md) | 线程/CPU/内存/IRQ/DMA/时间预算与板级资源 |
+| [08](08_产品配置插件与参数管理.md) | 应用内产品 Profile、四份核心调参和非安全设置 |
+| [09](09_需求验证实施与发布管理.md) | 需求/测试结果台账和 Gate A～F |
+| [10](10_Agent分工与工程执行规范.md) | 文件/代码 Owner、CR、任务迁移和交接 |
+| [11](11_审核问题闭环与变更追踪.md) | R01～R22历史处置及本次项目结构变更追踪 |
+| [12 全量审查](12_全量审查问题清单与落地边界.md) | 逐项问题、修复、三轮审查与未提供的实机输入 |
+| [AGENT.md](AGENT.md) / [AGENT_HANDOFF.md](AGENT_HANDOFF.md) | 工程入口 / 唯一任务实例及可复制 prompt |
+
+固件沿用项目根目录的 `SConstruct` / `SConscript`、Kconfig、`.config`、`rtconfig.h` 和 `rtconfig.py`，在已配置工具链的环境中从 `Flight/` 执行 `scons`。`scons --target=mdk5` / `scons --target=iar` 是同一 SCons 工程的 IDE 导出方式；本次规格修订未执行构建、IDE 导出、`pkgs --update` 或 CubeMX 重新生成。
+
+本地尚无 `applications/tools/contract_layout.py`、`reference_cases.py`、`verify_package.py`、`config_validate.py` 及相应 `build/validation/` 报告。这些是后续工具的规划落点，不提供虚假的可运行命令；旧独立文档包的 PASS/清单/Hash 不能沿用为当前工程证据，具体状态见 09。目录树中的规划子目录也不代表已有实现。
+
+`READY_FOR_ASSIGNMENT`、`NOT_RUN`、`SPEC_RESOLVED` 和 `INDEPENDENT_REVIEW_PENDING` 各有不同含义。当前完成全量规格修订及两轮追加自查，问题/修复和证据见12；独立审查、生产 ABI、目标构建和硬件验证按各自证据推进。
+
+本目录已提供仅服务规格的检查工具：`python spec/tools/audit_spec.py --round 3`，运行点为Flight根；ARM GCC路径可用`--cc`覆盖。它检查规范C/C++布局、容量、消息注册和参考算式，输出spec/validation；生产工具及固件测试仍按各自NOT_RUN记录，不混为一次构建。
+
+三轮共修复78项，逐项清单见[12](12_全量审查问题清单与落地边界.md)，当前自动证据见[09](09_需求验证实施与发布管理.md)。本轮提供的spec/tools只服务规范核对；实际应用工具、生产构建及硬件验证仍按各自门禁执行。
+
+规范网络输入：[FCU.xml](contracts/FCU.xml)；内部消息编号：[message_registry.json](contracts/message_registry.json)。生成报告在validation，规范输入不由报告检查器重新编号。

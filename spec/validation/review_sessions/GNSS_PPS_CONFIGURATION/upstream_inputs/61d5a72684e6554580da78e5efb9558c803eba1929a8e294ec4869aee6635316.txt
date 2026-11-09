@@ -1,0 +1,549 @@
+# V1.9.1 工程基线与唯一权威规范
+
+> **2026-11-05 用户更正 / CR-V191-GNSS-REQUIRED-01：** QUAD_X4_H723 的 UM982 GNSS 是主要、必装器件，UART4/DMA1 Stream2 与 PA2/TIM2_CH3 PPS 支持固定启用（`GNSS_SUPPORT=1`、`GNSS_PPS_CAPTURE=1`）。所需容错是运动过程中定位失锁、数据中断、PPS/UTC丢失和恢复；旧“可不安装/无GNSS Profile/默认关闭硬件”的条款已废止。外部信号可用性在运行期独立门控，本地TIM2/IMU/INS不因此停摆；需要水平定位的模式按真实导航能力准入。协议解析与标定缺口必须标为未完成/NOT_READY，不能通过关闭主要器件代替实现。公共ICD布局、Schema和既有Product/Port版本不因本次配置语义更正而改变。
+
+> **版本：V1.9.1-GLOBAL-AUDIT-R3**
+> **修订基线日期：2026-11-04**
+> **适用对象：QUAD_X4 / STM32H723ZGT6；M1～M7；Host/SIL/HIL**
+> **状态：规范修订完成；独立复核/工程冻结待执行；目标板/HIL/飞行未放行**
+>
+> 本文件是 V1.9.1 的唯一跨文件决议入口。正式交付正文只保留当前有效方案；已被替代的 V1.8.x 冲突章节已从正式正文清除，不得从旧压缩包、旧副本或历史工作记录复制参数。旧版本仅保存在用户原始备份中，不属于本版实施输入。
+
+## 1. 修订状态与适用边界
+
+本版继承历史R01～R22处置，按USER-20261104-GLOBAL-AUDIT完成逐文件技术修订与两轮追加复审；[12号清单](12_全量审查问题清单与落地边界.md)记录逐项问题。官方资料在doc、上层应用在applications、第三方包在packages，复用已有驱动而不重新生成。本轮补齐接口/调用与配置定义，Schema由5.0升6.0，Product/Port由0x00010901升0x00010903；原布局不兼容。
+
+发布状态：SPEC_REVISION_COMPLETE / INDEPENDENT_REVIEW_PENDING / IMPLEMENTATION_PENDING / TARGET_VALIDATION_PENDING / FLIGHT_RELEASE_NOT_AUTHORIZED。三轮为同一执行上下文自查，A/B/C/D是角色而非真实会签。原2026-11-04范围为spec修订；2026-11-05已按用户授权实施M4/M5，范围与真实证据见本文件末尾及09。规格夹具通过不等于实机测试。
+
+| 对象 | 当前工程/规格状态 | 后续门禁 |
+|---|---|---|
+| 22项问题的唯一规范/验收定义及目录落位 | 已回填正文；当前工具/证据是否存在与结果见09 | Gate A独立复核 |
+| ICD/Port | Schema 6.0；Product/Port Revision 0x00010905（CR-V191-M45-01） | M4/M5 Host、ARM ABI/编译及固件链接已验证；其余消费者/实机验证待完成 |
+| KF-GINS/控制/规划算法 | 选定设计与固定资源接纳规则 | 数值实现、数据集、SIL/PIL/HIL仍NOT_RUN |
+| 任务/内存/CPU | 设计表完成算术与模型容量核对 | 目标map/WCET/RTA/stack证据仍NOT_RUN |
+| 板级源文件 | 已有 `board/`、`libraries/HAL_Drivers/`、HAL/CMSIS包和链接脚本；与设计清单的一致性及目标验证待完成 | Gate B/E按适用项执行 |
+| 动力学、安全动作 | 真实模型/实物与安全策略证据待补 | Gate E/F按适用项执行 |
+| Flight release | NOT_AUTHORIZED | 09 Gate F与用户批准 |
+
+硬件清单位于 `doc/Flight.xlsx`，官方器件资料和用例位于 `doc/`；本次保持其内容不变。`spec/` 是现有固件工程中的规格目录，不再描述为独立 ZIP。旧包的检查脚本、生成报告、PACKAGE_MANIFEST.json 和 SHA256SUMS.txt 当前均未随工程提供，旧结果不能作为本修订的证据；未来生成清单/Hash 放在 `build/validation/`，结果唯一登记于09。
+
+## 2. 唯一权威文件及冲突优先级
+
+### 2.1 规范优先级
+
+1. 本文件 `00_工程基线与唯一权威规范.md`：跨文件最终决议、状态和版本。
+2. `02_接口契约与公共数据规范.md`：公共类型、Port、Epoch、TTL、ABI。
+3. `08_产品配置插件与参数管理.md`：产品 Profile、产品扩展、参数来源和 Hash。
+4. `07_实时调度与板级硬件资源设计.md`：芯片资源、任务、DMA、内存、时序和板级证据。
+5. `04_飞控核心模块与控制系统设计.md`：M5～M7算法、参考插值/连续验证、MPC、SO(3)与控制分配；M4状态只由06定义。
+6. `06_FMS通信与系统安全设计.md`：FMS 状态机、权限、Failsafe、MAVLink 安全。
+7. `05_传感器采集时间基准与GNSS独立运行.md`：传感器采样时间、TIM2、GNSS/PPS时间质量及KF-GINS INS实现/适配的唯一详细规范。
+8. `03_平台软件架构与驱动设计.md`：RTOS、驱动、服务和构建入口。
+9. `09_需求验证实施与发布管理.md`：需求追踪、验证层级、发布门禁。
+10. `10_Agent分工与工程执行规范.md`、`AGENT.md`、`AGENT_HANDOFF.md`：Owner、CR、任务状态和协作规则。
+11. `doc/Flight.xlsx`：项目硬件配置清单（“引脚”“接口配置”）；`doc/ADIS16505/`、`doc/BMM350/`、`doc/BMP585/` 为官方资料/用例。器件原始定义由官方资料核对，项目功能/接口/验收由本套规格定义；工作簿和官方示例均不等于目标板验证证据。
+12. 任务实例状态只在AGENT_HANDOFF的结构化记录维护；验证台账只在09维护。闭环表记录本次文档问题处置，不是另一套任务/验证状态。
+13. 依赖接入规则与历史候选版本见本文件 §12.2。现有 `rt-thread/` 和 `packages/` 优先复用；后续在 `packages/deps.lock` 记录实际源码的完整 commit/tag、内容 SHA256、License/SBOM。锁文件尚未建立，不由候选版本表推断现有包已锁定或需要升级。
+
+历史归档、旧审计报告、旧工作簿快照均不得作为当前实施依据。
+
+### 2.2 单一数据源原则
+
+下列数据只允许有一个规范来源，其他文件只引用或由工具生成：
+
+- 公共结构、函数签名、字段单位、Epoch、TTL：02 ICD。
+- 产品参数、Profile、旋翼顺序、传感器开关、能力约束：08 Profile。
+- 工程目录、应用/包/驱动边界和 SCons 接入：03 §0；相对路径均从 `Flight/` 解析。
+- MCU 引脚、时钟、TIM、DMA、NVIC：`doc/Flight.xlsx` 是设计清单；现有 `board/CubeMX_Config/Flight.ioc`、`board/board.c`、MSP/IRQ 源文件及链接脚本是实施输入，须与原理图/实物和07逐项核对。冲突登记差异，不自动改写任何一方。
+- 任务优先级/周期/栈/WCET：07 唯一任务表。
+- MAVLink Message ID/字段/CRC_EXTRA：`applications/mavlink/FCU.xml` 和 ID 注册表；CRC_EXTRA 由 mavgen 生成。
+- 组件版本：先核对本地源码和 `packages/pkgs.json`，再按 §12.2 锁定实际版本/Hash及补丁；历史候选表不覆盖现有依赖。KF-GINS 等新增上游输入须锁完整 commit、归档 SHA256 和许可证/SBOM，不依赖浮动分支。
+- 验收状态：09 的冻结门禁台账；不能用 README 或 Agent 自报状态替代。
+
+## 3. 总体架构与职责边界
+
+### 3.1 固定模块
+
+| 模块 | 唯一职责 | 明确禁止 |
+|---|---|---|
+| M1 IO / Communication | RC、GCS、Companion、MAVLink 接入；协议解析；链路事实；命令去重与入队 | 不做飞行模式决策，不直接授权执行器 |
+| M2 Sensor Management | 消费具体驱动样本接口，完成采样时间修正、校准、滤波、样本质量和源级健康证据 | 不拥有底层驱动/总线/DMA，不发布 RTL/降落决策，不直接修改 FMS 状态 |
+| M3 INS / Estimator | KF-GINS_QUAD惯导传播、GNSS/Baro/Mag观测融合、状态估计、Origin/State Epoch、导航能力与不确定度 | 不做任务规划，不授权执行器；内部状态不外泄 |
+| M4 FMS | 五正交状态、任务生命周期、Authority、Failsafe、SafetyEnvelope、ActuationPermit、PreArm | 不访问 MPC/滤波器私有状态，不做轨迹优化 |
+| M5 Guidance | 消费 M4 已授权的当前任务项，完成局部路径搜索、轨迹生成/验证、MotionReference 和手动参考适配 | 不拥有任务生命周期/任务项推进/Authority，不生成 ActuationPermit，不直接输出电机需求 |
+| M6 Control | MPC、SO(3)、角速度 PID、控制分配、备用控制、ActuatorDemand | 不做任务管理，不绕过 M7，不修改 M4 状态 |
+| M7 Actuator | Permit/Demand/Epoch/TTL 校验、物理限幅、slew、通道标定映射、DShot协议包编码、输出调度和本地故障保护；通过平台执行器驱动提交波形 | 不做控制分配，不代替姿态控制，不自行选择返航/降落模式，不直接访问TIM/DMA寄存器 |
+
+**概念映射与命名边界：** FMS 对应 M4；CONTROL 对应 M6；INS/导航估计插件对应 M3；PLANT 指真实机体、动力系统、ESC、电机、桨叶及其物理动力学。Plant Simulation Model 仅是 Host/SIL/HIL 的仿真实现，不是 H723 固件模块。M7 是执行器适配/输出层，不是 PLANT。PLATFORM 是飞控软件平台服务，与 PLANT 物理对象严格区分。
+
+### 3.2 横向平台服务
+
+PLATFORM 提供 RTOS、时钟、DMA、驱动、Watchdog、Storage、时间服务和系统资源监控。HEALTH 汇总故障证据，不拥有飞行决策权。
+
+Sensor Integrity Manager 由 B 实现：M2/M3 提供源级诊断和估计器证据，Sensor Integrity Manager 维护 SensorUsePolicy；M4 根据能力和安全策略决定模式/任务响应。PLATFORM 不得复制源级传感器隔离逻辑。
+
+### 3.3 唯一控制链
+
+`RC/GCS/Companion → M1 → M4 授权/策略 → M5 参考生成 → M6 控制 → M7 Permit校验/协议编码 → PLATFORM执行器驱动(TIM/DMA) → PLANT`
+
+- RC 原始输入不得绕过 M4 直接进入 M6/M7。
+- Companion 永远是 ADVISORY，不拥有 Authority。
+- GCS/MAVSDK 只能提交允许列表中的高层 OperationRequest/Mission；第一版关闭未经专门安全论证的 Offboard 直接 setpoint。
+- MAVProxy 只在地面/Companion 主机侧路由，不进入飞控实时闭环。
+- M7 是唯一实际执行器输出提交者；输出守卫由新 Demand 事件和独立 1kHz 安全唤醒共同驱动，即使没有新 Demand 也必须检查 Permit/Demand TTL、M6 心跳、序号推进和 Timer/DMA 状态。
+
+## 4. ICD、ABI、Epoch 和 TTL 唯一契约
+
+### 4.1 版本号
+
+- `FC_CONTRACT_SCHEMA_MAJOR = 6`
+- `FC_CONTRACT_SCHEMA_MINOR = 0`
+- `PRODUCT_CONTRACT_REVISION = 0x00010905`（QUAD_X4；其他产品各自编译期声明；CR-V191-M45-01）
+- `PORT_API_REVISION = 0x00010905`
+- Header固定宽度字段维持88B文档模型；MotionReference/任务元数据/ControllerInput等改变，因此本版升Major=6，旧Major=5/4/3/2全部隔离。生产Host/ARM ABI仍须真实编译。
+- Profile Hash、ABI Hash、Firmware Git SHA 必须由构建系统生成，不得手工填写。
+
+本版Schema Major=6是明确的不兼容边界；后续既有消息字段宽度/顺序/对齐或语义编码再变时必须重新评估Major。网络协议独立序列化，不能把文档自然对齐模型作为wire format或复制旧ABI报告。
+
+### 4.2 唯一时间语义
+
+绝对FCU时刻（*_time_us、*_expires_at_us及Header时刻）为uint64_t微秒；年龄/时长/偏移/不确定度可按02显式采用uint32_t，其溢出必须校验，不饱和成“新鲜”。ns映射字段按02类型；signed offset只在明确声明int64_t时使用。字段名不自行决定宽度。
+
+- `ContractHeader.timestamp_sample_us`：事件/样本发生时刻，映射到 FCU monotonic。
+- `ContractHeader.timestamp_publish_us`：FCU 发布时刻。
+- `ContractHeader.valid_until_us`：消息 envelope 的新鲜度截止时刻。
+- `OperationRequest.execution_deadline_us`：命令必须完成/拒绝的业务截止时间，不是消息 TTL。
+- `VehicleDirective.directive_expires_at_us`：指令语义有效期。
+- `ActuationPermit.permit_expires_at_us`：执行器许可有效期。
+- `ActuatorDemand.demand_expires_at_us`：控制需求有效期。
+- `SensorUsePolicy.policy_expires_at_us`：传感器使用策略有效期。
+- `EnvironmentConstraint.constraint_expires_at_us`：环境约束有效期。
+- `ProductHomeTargetSnapshot.home_expires_at_us`：Home 快照有效期。
+- `GuidanceStatus.reference_expires_at_us`：当前参考有效期。
+
+消费者使用 `min(header.valid_until_us, domain_expires_at_us)` 作为最终有效截止时刻。字段不能用重复发布旧数据来延长有效期。过期消息必须拒绝并报告 reason code。
+
+### 4.3 Epoch 唯一所有者
+
+| Epoch | 唯一 Owner | 递增条件 |
+|---|---|---|
+| `boot_id` | PLATFORM | 每次 MCU 启动生成新唯一值 |
+| `time_epoch` | Time Service / PLATFORM | 本地 monotonic 连续性被重建/失效后 |
+| `source_mapping_epoch` | 对应时钟映射管理器 | 外部时钟映射重建/重置 |
+| `state_epoch` | M3 | Estimator reset、Origin discontinuity、状态坐标重置 |
+| `authority_epoch` | M4 | 实际 Authority owner/source/control right 改变；仅链路恢复不递增 |
+| `directive_epoch` | M4 | VehicleDirective 的语义、模式、约束或任务策略改变 |
+| `permit_epoch` | M4 | 新发/撤销/scope/output policy/reference绑定改变；同上下文续租不改变 |
+| `reference_epoch` | M5 | 曲线/任务/约束语义替换、重规划、无效化或参考种类改变；同一已验证曲线滚动采样只增Header.sequence |
+| `control_sequence` | M6 | 每次发布新的 ActuatorDemand 严格递增 |
+
+跨模块快照必须同时匹配适用的 `boot_id/time_epoch/state_epoch/authority_epoch/directive_epoch/permit_epoch/reference_epoch`。32-bit 序号使用半范围比较；任何跨重启数据都不得只靠序号比较。
+
+### 4.4 唯一 Port 结构
+
+- `FmsInputView` / `FmsOutputView` 是唯一规范 FMS 调用视图。
+- `FmsInputSnapshot` / `FmsOutput` 如为旧代码迁移需要，只允许作为 `typedef` 别名，禁止重新定义独立字段。
+- `FmsInputView.pending_requests` + `pending_request_count` 为固定容量数组视图，容量由 Product Profile 定义为 4；超过容量必须由 M1 明确拒绝/计数，不得静默覆盖。
+- `FmsInputView` 必须包含原始 `OperatorInput`、`CommunicationLinkStatus[]`、`NavigationSnapshot`、`MissionUploadCandidate`、`GuidanceFeasibility`、`GuidanceStatus`、`ControlCapability`、`ActuatorCapability/Status`、`FaultSummary`、带 Header 的 `ProductFmsInputExtension` 和 evaluation time。
+- `FmsOutputView` 必须包含 `MissionStatus`（M4唯一发布）、`VehicleDirective`、`SafetyEnvelope`、`ActuationPermit`、`AuthorizedOperatorInput`、`AuthorityStatus`、`FmsStateSnapshot`、`PreArmCheckResult`、有界 `CommandAck[]` 和 `DecisionEvent`。
+- `GuidanceInput` 必须包含 M4 授权后的 `AuthorizedOperatorInput`、`AuthorityStatus`、`VehicleDirective` 和导航/任务输入。
+- `GuidanceOutput` 只包含 `MotionReference`、`PilotControlReference`、`GuidanceStatus`、`GuidanceFeasibility` 和 `GuidanceHealth`；`MissionStatus` 由 M4/FMS 的 MissionManager 唯一拥有和发布，M5 只消费 `AuthorizedMissionSnapshot`。
+- ControllerInput包含NavigationSnapshot、选定参考、GuidanceStatus、Directive/Envelope/Authority、必需ActuationPermit、ActuatorStatus/Capability、可空ActuatorCommitReceipt、ControlModelView，以及明确不同的control_time_us/evaluation_time_us。Demand关联epoch只来自该输入bundle。
+- AuthorizedMissionSnapshot包含当前item ID/index、mission_epoch和execution_token；M5只返回关联token的航段结果，M4检查到达后推进。
+- `ControllerOutput` 发布 `ActuatorDemand`、`ControlCapability`、`ControlHealth`。
+- `ActuatorPort` 唯一输入 `ActuatorDemand + ActuationPermit`，输出 `ActuatorStatus/Capability`。
+
+### 4.5 手动控制参考
+
+`PilotControlReference` 是 M5 从 **已由 M4 授权** 的 OperatorInput 生成的强类型参考，不是原始 RC 包：
+
+- `PILOT_REFERENCE_RATE`：`body_rate_frd_radps[3]` + `collective_throttle_norm`。
+- `PILOT_REFERENCE_ATTITUDE`：`q_nb_desired_wxyz[4]` + `yaw_rate_ff_radps` + `collective_throttle_norm`。
+- `collective_throttle_norm` 范围 `[0,1]`，是操作员意图，不是 DShot/电机命令。
+- `MANUAL_RATE` 映射到 RATE；`MANUAL_ATTITUDE` 映射到 ATTITUDE。
+- `ALT_HOLD/POS_HOLD` 由 M5 将授权摇杆映射为受限 NED 速度/位置/高度参考；不能把原始摇杆传给 M6。
+- `AUTO_MISSION/AUTO_RETURN/AUTO_LAND/EMERGENCY_LAND` 使用经过验证的 MotionReference。
+- `GuidanceStatus.reference_kind` 决定 M6 应消费哪一种参考；不匹配或两者同时有效时拒绝。
+
+### 4.6 M4 Permit 与 M5 GuidanceStatus闭环
+
+唯一握手见02：M5发布完整候选Reference+READY状态；M4核对token/epoch/TTL/feasibility后签发匹配Permit；READY+匹配CONTROL_ACTIVE Permit即能被M6使用，M5随后确认ACTIVE。不得要求先ACTIVE再签Permit导致互等。M6只消费一致不可变bundle，不维护另一个隐含Permit或权限全局变量。
+
+首次确认地面的解锁可用短期IDLE_ONLY Permit、reference_epoch=0，仅M7地面idle策略工作；未建立CONTROL_ACTIVE链路不得Takeoff/运动。撤销、状态或权限变化先使旧输出权限失效；普通重规划可在旧原TTL内用旧bundle，不能续租旧数据。规则、超时和失败输出见06/04；没有已批准产品输出策略时PreArm拒绝。
+
+## 5. FMS 五正交状态和权限
+
+### 5.1 状态域
+
+| 状态域 | 合法值 |
+|---|---|
+| ArmState | DISARMED、ARMING、ARMED、DISARMING |
+| FlightMode | NONE、MANUAL_RATE、MANUAL_ATTITUDE、ALT_HOLD、POS_HOLD、AUTO_MISSION、AUTO_RETURN、AUTO_LAND、EMERGENCY_LAND |
+| Authority | NONE、PILOT、MISSION、GCS_SUPERVISED |
+| FailsafeLevel | NORMAL、DEGRADED、ACTION_REQUIRED、TERMINAL |
+| MissionState | IDLE、LOADED、RUNNING、PAUSED、ABORTED、COMPLETED |
+
+`PreArmCheckResult` 是独立检查结果，不是 FlightMode；TERMINAL 是 FailsafeLevel，不是普通 FlightMode。
+
+### 5.2 状态组合不变量
+
+1. DISARMED ⇒ FlightMode=NONE、Authority=NONE、无活动 ActuationPermit、M7 输出处于已验证的 DISARMED policy。
+2. ARMING ⇒ FlightMode=NONE；只有全部强制 PreArm 检查通过且 M7 ready，才可进入 ARMED。
+3. ARMED ⇒ FlightMode≠NONE；Permit 必须绑定当前 directive/authority/state/reference epoch。
+4. DISARMING 只允许地面确认后的受控停机；空中普通 DisarmRequest 必须拒绝，不能直接将电机输出归零。
+5. MissionState=RUNNING 只允许在 AUTO_MISSION 下；Pilot takeover 默认将 MissionState 置 PAUSED，绝不自动恢复。
+6. Authority=PILOT 只有明确接管动作 + 新鲜 RC 输入才能进入；摇杆回中、RC 恢复、模式开关未变都不能自动释放接管。
+7. GCS_SUPERVISED 仅允许高层任务/监督请求，不允许直接 attitude/rate/throttle/actuator setpoint。
+8. Companion 永远 ADVISORY；不拥有 Authority。
+9. FailsafeLevel=TERMINAL 必须锁存；空中不得自动恢复 NORMAL。清除需要地面、DISARMED、维护授权和完整健康检查。
+10. SAFETY 是覆盖所有普通请求的强制约束，不是 Authority 枚举值。
+
+### 5.3 Authority 优先级
+
+`经验证的硬件紧急保护 > M7 本地输出守卫 > M4 Failsafe/Safety > 明确 Pilot takeover > Onboard Mission > GCS_SUPERVISED task request > Companion advisory`
+
+M7 的本地守卫只允许拒绝/限制不安全输出，不拥有返航/降落决策权。所有普通模式/任务/Authority 变更由 M4 唯一决定。
+
+### 5.4 RC/GCS/Companion 链路语义
+
+- RC 接收机硬件 failsafe 标志：立即视为 LOST，不等待软件计时器。
+- RC DEGRADED：连续漏帧达到 2 个预期帧周期或质量越界；使用实测 `frame_period_us`。
+- RC LOST：接收机 failsafe 或 Profile 中经过目标实测/危险分析批准的 `rc_lost_timeout_us`；300ms 只能作为非飞行初始默认，不能自动成为飞行冻结值。
+- RC 恢复必须连续有效帧稳定 dwell；恢复链路不自动恢复 Pilot Authority。
+- GCS LOST 默认不影响 RC/本地任务；仅当任务显式标记 GCS-supervision-required 时触发任务级策略。
+- Companion LOST：丢弃其 advisory，回到本机能力；不得直接触发失控或改变 Authority。
+- MAVProxy 只路由，不授予权限。
+
+### 5.5 着陆状态与地理围栏
+
+- `LandedState` 由 M4 内部 LandDetector 子模块唯一发布，M4 FMS 消费；该子模块只消费既有 `NavigationSnapshot`、`ActuatorStatus` 和已启用的产品测量接口，不修改 INS/Estimator 内部实现。
+- 合法状态为 `LANDED/IN_AIR/TAKEOFF/LANDING/UNKNOWN`。证据不足必须为 `UNKNOWN`；低油门、短时零速度或单一高度读数不得单独证明着陆。
+- 普通 Disarm 和 AUTO_LAND 完成必须要求 `LANDED` 且达到稳定 dwell；空中普通 Disarm 拒绝。实机证据未提供时LandedState固定UNKNOWN；Host fixture与实机策略边界见06。
+- M4 唯一拥有 Geofence，向 M5 发布带 revision/hash、frame/origin/state_epoch、TTL 和固定顶点数组的 `ProductGeofenceSnapshot`。M5 只读消费并对整条轨迹执行几何验证；Companion 只能提交候选，不得修改围栏。
+- Keep-in/Keep-out、水平多边形、高度上下界和安全缓冲均必须校验；围栏过期、坐标系不匹配或几何无效时，依赖该围栏的任务拒绝启动，不得按无限制空域处理。
+
+### 5.6 Failsafe 响应矩阵
+
+| 故障 | M1/M2/M3/M6/M7 责任 | M4 决策约束 |
+|---|---|---|
+| RC LOST | M1 发布链路事实；保留最后有效帧但 TTL 不延长 | 有有效 Nav+Home 才能 AUTO_RETURN；否则选择已验证的受控降落/产品安全策略 |
+| GCS LOST | M1 更新链路状态 | 默认不改变飞行模式；监督任务按显式策略处理 |
+| Companion LOST | M1 更新链路状态 | 仅撤销 advisory，不改变飞行 Authority |
+| GNSS LOST | M2/M3 更新源健康/导航能力 | 只有同一 Origin 下本地定位有效且误差界满足时，才允许继续局部任务/返航；否则 ACTION_REQUIRED |
+| Baro LOST | M2/M3 更新高度能力 | 禁止依赖气压高度的 ALT_HOLD/AUTO_LAND；替代源必须已验证 |
+| IMU invalid | M2/M3 发布不可用；M6 不得声称可控 | PreArm 拒绝；空中响应必须由产品危险分析/独立安全路径确定，不能编造软件“安全输出” |
+| Magnetometer LOST | M2/M3 降低航向能力 | 仅在产品存在经过验证的独立机体航向源时才可维持航向能力；单天线GNSS course不得单独替代多旋翼机体yaw；静止时不能假定航向仍有效 |
+| 电池/能源不足 | M1/M2 提供可信电量/电流数据 | 返航能源余量不足时不能盲目 RTL；按剩余能力选择已验证策略 |
+| Actuator/DMA fault | M7 锁存输出故障并上报 | M4 根据可控自由度和故障等级决定降级；M7 不做控制分配 |
+| SD/W25Q64 fault | Storage 降级并记录计数 | 不改变实时控制；关键事件 RAM 队列保留 |
+| MCU reset/watchdog | PLATFORM 记录 reset reason；M7/硬件输出策略独立验证 | 重启后不自动解锁/恢复任务 |
+
+## 6. M5 Guidance 冻结
+
+### 6.1 Profile
+
+- `QUAD_REAL_FLIGHT`：`OBSTACLE_SOURCE_MODE=NONE`；没有经验证的真实障碍传感器时禁止启用实时避障。
+- `QUAD_HOST_SIM`：可启用 SIMULATION。
+- `QUAD_STATIC_MAP_SIL`：可启用 STATIC_MAP；16×16×16、0.5m/cell 只属于此测试夹具，不是实机默认地图。
+- `ONBOARD_SENSOR`：后续真实传感器接入后单独做容量/时延/安全验收。
+- 未知、过期、地图外空间永远不能视为 FREE。
+
+### 6.2 Kinodynamic A* 状态和原语
+
+状态唯一表示为 `(voxel_index, velocity_bin_id, yaw_bin_id, time_bin)`，时间0.2s格/5bit，完整26bit key唯一见04：
+- 地图最大 4096 voxel；
+- 速度 bin 表固定：静止 1 个、水平 8 方向 × 3 档（0.5/1.0/2.0m/s）、垂直 UP/DOWN × 2 档（0.5/1.0m/s），共 29 个有效 bin，剩余 ID 保留；
+- yaw 16 等分，`yaw_bin = round(wrap(yaw)*16/(2π)) mod 16`；
+- NED 方向：N 为 +N，E 为 +E，D 为向下正；UP 的 `v_D<0`，DOWN 的 `v_D>0`。
+
+活动原语表固定 60 项，ID/参数/顺序按04生成到 `applications/products/QUAD_X4_H723/kinodynamic_primitives.yaml` 并计入Profile Hash：
+- P00–P31：8 个水平方向 × 2 个速度档（0.5/1.0m/s）× 2 个时长（0.2/0.4s）。
+- P32–P39：4 个基数方向 × 2 个时长，速度 2.0m/s。
+- P40–P47：UP/DOWN × 2 个垂直速度档 × 2 个时长。
+- P48–P55：Yaw 左/右 × 1/2个yaw bin × 0.4/0.8s；端点与16格yaw lattice一致。
+- P56–P57：静止/等待 0.2/0.4s。
+- P58–P59：制动到零速度 0.2/0.4s。
+- P60–P63 保留，不进入首版活动表。
+- 不允许运行时对速度/方向/垂直/yaw/时长做笛卡尔积扩展。
+- 原语采用固定边界条件的 quintic 状态转移，起止加速度为零；每次入队前检查速度、加速度、jerk、倾角、推力和地图约束。不能满足的原语直接剔除。
+
+### 6.3 容量和错误码
+
+- MapCell：8 bytes；地图 4096 cells = 32KiB。
+- A* Node Pool：512 × 16 bytes = 8KiB。
+- Open List：512 × 2 bytes = 1KiB。
+- Closed按Node ID：512/8 = 64B；另有完整状态key→Node ID的1024×uint16索引=2048B。
+- Primitive table：60 × 16 bytes = 960B（保留64项容量1KiB）。
+- Dynamic obstacle tracks：8 × 64 bytes = 512B。
+- Minimum-jerk workspace：8KiB。
+- Planner metadata/scratch：4KiB。
+- M5-06 worklist=256×16B=4KiB，验证实际24个消费Hermite区间；最大深度5，总工作单元（父/子均计）≤256，耗尽拒绝；原始优化器最多8段是另一容量。
+- 合计62,016B，小于64KiB planner workspace；保留3,520B。Closed/哈希与Node完整键规则唯一见04，不能按voxel误剪枝。
+- `MotionReference` 双缓冲单独计入 ICD buffer budget，不得重复计入 M5 workspace。
+- Node Pool/Expansion/Primitive 容量耗尽统一 `PLANNER_CAPACITY_EXCEEDED`；地图配置超限 `MAP_CAPACITY_EXCEEDED`；无路 `NO_PATH`；超时 `PLANNING_DEADLINE_MISSED`；输入过期 `INPUT_STALE`；优化失败 `OPTIMIZATION_FAILED`；独立验证失败 `TRAJECTORY_REJECTED`。禁止再用 `SEARCH_BUDGET_EXHAUSTED` 作为第二套规范码。
+- Planner Worker每slice≤300µs、每100ms累计≤300µs，CPU预算0.3%；实际WCET/RTA未通过前不标PASS。
+
+### 6.4 轨迹生成
+
+首版不实现无边界的通用非线性 MINCO。采用可复现的 fixed-time minimum-jerk quintic spline：
+- 最多 8 段；分段时间由04的有界quintic/Bernstein扩时规则给定。
+- 每段位置是五次多项式；段间位置/速度/加速度连续（C2）。
+- 起点/终点位置、速度、加速度为边界条件；A* 路径节点位置固定；内部 knot velocity/acceleration 通过最小化 `Σ∫||p'''(t)||²dt` 的固定带状 SPD 系统求解。
+- 不做运行时联合时间优化；分段时间由04固定的五次曲线/Bernstein有界扩时规则给出。不得加入固定时间下无作用的 `λ_T ΣT_i` 常数项；走廊/障碍使用 M5-06 硬约束验证，不用未定义软惩罚掩盖碰撞。
+- 不使用运行时动态分配；矩阵维度、带宽、工作区固定。
+- 求解病态/非有限值/不收敛即 `OPTIMIZATION_FAILED`；只允许回退到同一路径上已通过 M5-06 验证的初始 quintic 轨迹。
+- M5-06 对整条轨迹执行连续扫掠体积/保守区间碰撞证明，并检查动态障碍时间对齐、围栏连续边界、高度约束和不确定度膨胀；只检查离散采样点不得判定通过。算法细节唯一见04第7.1节；未知空间不是自由空间。
+- MotionReference包含t0 anchor和24个20ms间隔未来点，覆盖[t0,t0+480ms]；五次p/v/a Hermite与三次yaw插值唯一见02，M5-06必须验证实际消费曲线，MPC仅取前20步。
+
+## 7. M6 Control 数学和时序冻结
+
+### 7.1 MPC 离散模型
+
+状态 `x=[p_N,p_E,p_D,v_N,v_E,v_D]^T`，输入 `u=[a_N,a_E,a_D]^T`，`Ts=0.02s`：
+- `p[k+1]=p[k]+Ts*v[k]+0.5*Ts²*u[k]`
+- `v[k+1]=v[k]+Ts*u[k]`
+- `Np=20`，`Nc=5`；`u[0..4]` 是决策变量，`k>=5` 保持 `u[4]`。
+- `Δu[0]=u[0]-u_prev_applied`；`u_prev_applied` 必须是最近实际接受的 MPC/备用控制加速度，不得取任意旧 solver iterate。
+- `Δu[k]=u[k]-u[k-1]`。
+
+### 7.2 代价函数和归一化
+
+终端误差只计入一次：
+\[
+J=\sum_{k=1}^{N_p-1}\bar e_{x,k}^{T}Q\bar e_{x,k}
++\bar e_{x,N_p}^{T}Q_f\bar e_{x,N_p}
++\sum_{k=0}^{N_c-1}\bar e_{u,k}^{T}R\bar e_{u,k}
++\sum_{k=0}^{N_c-1}\Delta\bar u_k^{T}S\Delta\bar u_k
+\]
+
+归一化尺度固定为：
+- 位置：1m；速度：1m/s；加速度输入：1m/s²；输入增量：1m/s²。
+- `e_x_bar = D_x^-1 (x-x_ref)`；`e_u_bar = D_u^-1(u-u_ref)`；`Δu_bar = D_Δu^-1 Δu`。
+- Q/Qf/R/S 的数值为无量纲；权重表只在 `controller_tuning.yaml` 唯一维护。
+- `Qf` 可以不同于 Q；如果相同，终端项仍只在 k=Np 计一次，不得重复累计。
+
+### 7.3 推力、倾角和加速度约束
+
+NED 重力向量 `g_n=[0,0,g]^T`，`a_D` 向下为正。期望推力加速度向量：
+\[
+v_T=g_n-a_d,\qquad T/m=\|v_T\|
+\]
+
+必须满足：
+- `g-a_D >= T_min/m > 0`；
+- `m*||g_n-a_d|| <= T_max`；嵌入式 QP 可采用经证明保守的线性外包/内包近似，但必须记录保守性；
+- 最大倾角约束按当前垂直推力分量计算，不能固定用 g：
+\[
+n_j^T a_{NE}\le (g-a_D)\tan(\theta_{max})\cos(\pi/8),\quad j=0,\ldots,7
+\]
+- 八边形法向 `n_j=[cos(jπ/4),sin(jπ/4)]`；该约束是位于倾角圆内的保守多边形近似。
+- 同时施加各轴速度、加速度、jerk、姿态角速度、推力和安全包线限制。所有限制取 `min(Profile, SafetyEnvelope, ActuatorCapability, ControlModel domain)`。
+- 如果 `g-a_D` 不为正或推力向量无效，求解必须拒绝，不能用 NaN/Inf 继续。
+
+### 7.4 OSQP 和输出交接
+
+- OSQP 选定基线版本 1.0.0（截至本版日期的稳定发行版）；迁移后必须验证固定维数、静态内存、无 heap、Warm Start、求解状态映射、残差、迭代上限、WCET。
+- `SOLVED_INACCURATE` 只有在归一化 primal/dual residual、约束违反量都低于 Profile 明确门限时才可接受；不能只看 solver status 字符串。
+- MPC 50Hz 独立任务发布 `MpcOutputSnapshot` 双缓冲；字段含 `state_epoch/reference_epoch/authority_epoch/model_epoch/safety_envelope_id/control_sequence/accel_ref/solver_status/publish_time/expires_at`。
+- 1kHz 快环只读最新完整快照，不等待 MPC，不读 solver 内部内存；匹配 Epoch 且 TTL 有效才使用，采用零阶保持。
+- MPC输出从发布起TTL≤20ms，旧解过期的当个快环立即使用已验证PD备用（仅导航能力有效）；不等第二次失败制造空窗。连续两次失败报告退化，五次失败交M4；旧TTL不续命。
+- M6快环最高1kHz；M7 Demand和独立1kHz安全tick最坏可唤醒2000次/s，55%关键链预算已计入双触发；不得按1kHz少算M7开销。
+
+### 7.5 SO(3) 与 X4
+
+QUAD_X4 控制分配饱和优先级固定为横滚/俯仰稳定力矩 > 总推力跟踪 > 偏航力矩；先削减偏航，再调整可行总推力，最后才统一缩放横滚/俯仰。M6 必须发布 achieved wrench/残差及 `ControlCapability.reason_code`；唯一算法与 `ControlReasonCode` 见04/02，测试见09。
+
+- `R_nb` 表示 body-FRD 到 NED 的旋转；四元数顺序 `w,x,y,z`；所有函数明确主动/被动旋转约定。
+- 姿态误差使用 SO(3) Log map；小角度、一般角度、接近 π 和精确 π 分支均需确定性处理。
+- π 邻域从对称部分提取旋转轴；最大对角分量选轴，符号由上一有效轴连续性优先，否则按固定 lexicographic 规则确定。测试必须覆盖 ±179.9°、180°、±180.1°、q 与 -q 等价。
+- `E=R_nb^T R_d`；`e_R=vee(Log(E))`；`ω_d^d=vee(R_d^T dot(R_d))`；`ω_sp^b=R_nb^T R_d ω_d^d + K_R e_R`；`e_Ω=ω^b-ω_sp,ff^b`，其中`ω_sp,ff^b=R_nb^T R_d ω_d^d`。不再使用反对称部分乘0.5作为完整SO(3) Log误差。
+- X4 旋翼编号、位置、旋向、推力系数、反扭矩系数由 `vehicle_model.yaml` 唯一声明；禁止仅凭“X 型”推断旋向。
+- 控制分配在 M6；M7 不做 allocator。实际电机顺序/旋向/推力曲线标定前，`QUAD_MODEL_STATUS=SIM_ONLY`，禁止实机电机输出。
+
+## 8. RTOS、传感器时序和内存
+
+### 8.1 ADIS SPI 物理时序
+
+工作簿当前记录 `SPI1 SCLK=954.861kHz`。按当前 Burst 长度：
+- 16-bit Burst 22 bytes：`22*8/954861 = 184.3µs`；
+- 32-bit Burst 34 bytes：`34*8/954861 = 284.9µs`。
+
+因此旧的 `SPI DMA transfer ≤50µs` 不成立，必须删除。64-byte DMA slot 是缓冲区容量，不是本次实际 DMA 长度。实际 DMA 长度必须等于所选 Burst 配置长度；SPI RX/TX DMA 完成不等于 SPI EOT，CS 只能在 EOT 确认后释放。
+
+`DRDY→M7` 900µs 是端到端目标，不是已验证 WCET。16-bit 模式的理论总线时间已占 184.3µs；32-bit 模式占 284.9µs，本版固定32-bit模式，必须测量并核算 SensorIngest、M3、M6、M7、ISR 和调度抖动。若所选模式不能满足期限，必须调整期限或采样配置，不能伪造 WCET。
+
+### 8.2 任务优先级唯一表
+
+RT-Thread 数值越小优先级越高；所有任务优先级只允许在 07 唯一任务表维护。M5 Guidance=13、Watchdog=18、CriticalFlashTask=19、M5 PlannerWorker=20、Telemetry=21、Logger=22；任何旧章节中的重复值均失效。关键任务周期、栈和 WCET 以 07 的表和目标测量报告为准。
+
+`CriticalFlashTask` 独立拥有 W25Q64 关键事件写入；`LoggerTask` 独立拥有 SD/FatFs 文件写入。控制/估计/ISR 只允许向有界队列非阻塞发布，不得直接写文件或等待 Flash/SD。
+
+### 8.3 H723资源与时间预算唯一引用
+
+芯片资源、消息实例/slot、栈与CPU唯一见07；H723默认NONE AXI232KiB/320KiB、预留88KiB，MPC上限32KiB，M5直接轨迹16KiB，无Obstacle ring。完整地图组合293KiB超过256KiB接纳上限，当前只允许Host/SIL。DTCM94.5KiB（CR-V191-C01/C02后按07:372），D2≤12KiB；所有值仍需生产map/WCET验证。
+
+CPU预算55%关键链+10%MPC+8%replay+7%其他+5%ISR/RTOS=85%，保留15%。任务表/后台明细、预算server与RTA必须一致。上述是模型与设计接纳上限，不是实际map/WCET通过。
+
+物理sample年龄与DRDY链路分别受pipeline≤3000us、DRDY→M7≤900us、不确定度≤100us约束，MAX_NAV_INPUT_AGE=5000us，最坏帧起始反馈年龄7500us。固定ADIS BURST32/DEC_RATE1/FILT0，格式/标定唯一见05，预算唯一见07。
+
+## 9. 板级资源与硬件证据
+
+Flight.xlsx配置清单基线（物理源证据待核验）：
+- MCU：STM32H723ZGT6。
+- IMU：ADIS16505-2。
+- IMU SPI1：`doc/Flight.xlsx` 记录954.861kHz；已有 `board/CubeMX_Config/Flight.ioc`，最终频率须联合当前板级初始化代码、寄存器和目标板实测确认。
+- RC：USART3，115200 baud；Flight.xlsx与05号文档已统一接收机名称为ELRS；当前未取得实物/BOM/协议抓包，准确接收机型号及串口帧协议仍未确认；不得推断为CRSF/SBUS。
+- 数传：USART2，MAVLink2，115200 baud；流控/电台型号目标验证。
+- GNSS：UM982，UART4 460800 baud/10Hz；PA1 MCU_RX 接模块 TXD，PA0 MCU_TX 接模块 RXD；PPS PA2/TIM2_CH3。
+- IMU DRDY：PA3/TIM2_CH4；ADIS外部SYNC/PPS在Flight.xlsx中标为NC/待确认，当前不视为已接入。
+- DShot：引脚和路由按07清单；首版台架DSHOT300。唯一事件时序见07：active零/preload bit0、buffer=bit1..15+两个zero-tail，CNDTR68，按绝对raw截止收尾。默认TIM1频率不是运行时事实，实际PSC/ARR/CCR由RCC读回频率计算。
+- W25Q64：64Mbit/8MiB 逻辑规划；真实 JEDEC ID、SFDP、Page/Erase/时序必须目标读取。
+- microTF：SDMMC1 内部 IDMA；Cache/MPU/持续写入必须目标验证。
+- 当前没有原理图证据证明 TIM1 BKIN、外部 Kill 或独立电机电源门控存在；不得声称已具备硬件 Kill。
+
+项目已有 `board/CubeMX_Config/Flight.ioc`、`board/CubeMX_Config/Inc/`、`board/CubeMX_Config/Src/`、`board/board.c` 和 `board/linker_scripts/`。这些文件存在不表示与工作簿、07资源表和真实板卡已经一致，尤其不能把 `.ioc` 的配置视作当前 SCons 目标已全部编入。原理图、真实 ESC/电机/桨叶/电池和动力学证据仍须补齐；未核验项保持 `SOURCE_EVIDENCE_PENDING`，不得通过重新生成 BSP/驱动消除差异。
+
+## 10. MAVLink、MAVSDK、MAVProxy 与遥测
+
+### 10.1 拓扑和权限
+
+- FCU USART2 ↔ 数传电台 ↔ 地面 MAVProxy router ↔ QGroundControl/MAVSDK clients。
+- Companion 使用独立 USART1 Profile 接口；Debug/FinSH 与 Companion 互斥，不能同时启用。
+- MAVProxy 只路由，不解释并改变 Authority；不得成为飞控闭环依赖。
+- MAVSDK 是 Companion/地面上层 API，不进入 STM32 固件。
+- FCU 只接受经 M4 授权的高层命令：Arm/Disarm（必须通过最新 PreArm 与地面/阶段守卫）、Takeoff、Land、RTL、白名单 Flight Mode request、Mission Upload/Start/Pause/Resume/Abort/Clear，以及受控 Parameter Read/Write。
+- Mission Upload 必须先进入 staging；具备 transaction_id、分片序号/完整性、超时、去重和容量上限；完成 schema/Profile/hash/坐标/Origin/Geofence/速度/高度约束检查后原子提交。上传成功不代表任务自动启动。
+- Parameter Read 仅开放公开白名单参数；Parameter Write 仅开放逐项登记的非安全参数，必须 DISARMED、维护授权，并经唯一 Parameter Manager 事务执行。核心控制参数、ControlModel、执行器映射、安全包线和飞行安全策略不得通过普通 MAVLink 参数写入。
+- 第一版拒绝直接 actuator、attitude/rate、MANUAL_CONTROL/GCS joystick 与 RC 竞争控制、任意电机测试命令，以及未经 M4 授权的 SET_POSITION_TARGET_* Offboard setpoint。
+- 每个命令必须有 request_id/source_session_id、source allowlist、有效期、ACK、去重、拒绝 reason code；非幂等操作必须支持事务去重。命令只生成 OperationRequest，不直接改写 FMS 状态或模块内部变量。
+
+### 10.2 自定义 Dialect
+
+`applications/mavlink/FCU.xml` 显式声明每个 `<message id="...">`；mavgen 不自动分配 ID。本轮以spec/contracts/FCU.xml冻结私有ID 43000–43012及字段；未来复制/生成到applications/mavlink/FCU.xml，导入的common.xml仍须运行冲突检查；未生成生产C库前不标协议集成PASS。CRC_EXTRA 由固定版本 mavgen 生成，不手工填写。
+
+消息包括：
+`FCU_OPERATION_STATUS`、`FCU_NAV_STATUS`、`FCU_SENSOR_HEALTH`、`FCU_CONTROL_STATUS`、`FCU_ACTUATOR_STATUS`、`FCU_LINK_STATUS`、`FCU_STORAGE_STATUS`、`FCU_RESOURCE_STATUS`、`FCU_TIME_STATUS`、`FCU_EVENT`、`FCU_PREARM_STATUS`、`FCU_RC_INPUT_STATUS`、`FCU_BUILD_INFO`。
+
+QGC 预编译版不保证识别私有消息；要么构建集成 FCU Dialect 的 QGC，要么由地面桥接进程解析私有消息并以标准 MAVLink/地面站插件呈现。不能假定自定义消息自动显示。
+
+### 10.3 带宽和队列
+
+115200 baud、8N1 的理论单向字节上限 11,520B/s；飞控 TX 设计预算不超过 60%=6,912B/s。V1.9.1 自定义消息按 MAVLink2 signed frame `payload+25B` 估算，目标总和≤3,500B/s；标准 MAVLink/ACK/突发事件保留≥2,500B/s；总峰值必须通过抓包实测。TX/RX 分别预算，不能把全双工混为一条总线。
+
+队列优先级：P0 命令 ACK/安全事件/失联告警；P1 状态/导航/控制；P2 健康/资源/存储；P3 调试。拥塞先丢 P3，再限频 P2；不得阻塞实时任务。`FCU_EVENT` 速率限制并在本地持久化，不依赖遥测发送成功。
+
+### 10.4 签名和密钥
+
+MAVLink2 signing 提供认证/完整性/防重放，不提供加密。密钥必须每机唯一，具备生产注入、轮换、吊销、恢复出厂和泄露响应流程。密钥不得写入 SD 或 W25Q64 普通日志/参数区。当前 H723 是否具备足够的内部 Flash RDP/PCROP 保护，必须以实际料号和 Option Bytes 验证；否则需要安全元件。未完成密钥保护验证不得标记 Security PASS。
+
+重放高水位/时间戳状态可存储在 Recovery Metadata，但不得把高水位误当密钥。重启后无法证明签名时间单调性时，必须 fail-closed 或重新配对。
+
+## 11. SD / W25Q64 存储
+
+### 11.1 FatFs 唯一实现
+
+- 采用上游 FatFs R0.16，并应用官方 patch-1、patch-2；版本和补丁内容均计入 SHA256。
+- 采用独立 FatFs + `diskio`/SDMMC1 IDMA 适配；RT-Thread DFS 默认不启用，禁止 DFS+FatFs 双栈。
+- `LoggerTask` 是唯一 FatFs API 调用者；`FF_FS_REENTRANT=0`，禁止其他任务直接 `f_open/f_write/f_sync`。
+- 首版 FAT32、MBR 单数据分区、512B sector；`FF_FS_EXFAT=0`、`FF_MIN_SS=FF_MAX_SS=512`、`FF_USE_LFN=3`、`FF_MAX_LFN=32`、`FF_USE_MKFS=0`。不自动格式化用户 SD 卡。
+- 文件/目录名使用 ASCII；`/LOG/BOOT_<16hex>/FLIGHT_<16hex>/`；日志文件滚动小于 4GiB。
+- SD 不存在、满、拔出、超时只降低日志能力，不阻塞飞行控制；记录 drop count、队列高水位和存储状态。
+
+### 11.2 W25Q64
+
+8MiB 分区采用本版候选逻辑布局（沿用原始容量规划；实际器件和地址范围仍需 JEDEC ID/SFDP/数据手册核验）：
+- 0x000000–0x00FFFF：Factory/Board Identity 64KiB；
+- 0x010000–0x02FFFF：A/B Parameter Journal 128KiB；
+- 0x030000–0x03FFFF：Recovery Metadata 64KiB；
+- 0x040000–0x0FFFFF：Critical Event Ring 768KiB；
+- 0x100000–0x1FFFFF：Emergency Blackbox 1MiB；
+- 0x200000–0x7FFFFF：Reserved 6MiB。
+
+实际几何以 JEDEC ID + SFDP + 数据手册核对；4KiB erase/256B page 仅为通用候选。写前预擦除、append-only、CRC32C、sequence、commit marker、掉电扫描。`CriticalFlashTask` 独立写关键事件；不得从高优先级控制任务同步擦写。密钥不进入 W25Q64。
+
+## 12. 构建系统和第三方依赖
+
+### 12.1 唯一构建入口
+
+- 固件唯一入口沿用根 `SConstruct` / `SConscript` 的 RT-Thread SCons 构建，细节见03 §0.3；不新增顶层 CMake 包装，不迁移既有目录。
+- 在 `Flight/` 执行 `scons`；MDK/IAR 工程由同一 SCons 入口导出。工具链沿用 `rtconfig.py`，当前默认 Keil，通过 `RTT_CC` / `RTT_EXEC_PATH` 选择实际环境；GCC 是现有可选路径，不因规格改版强制切换编译器。
+- Kconfig/Env 配置链沿用根 `.config` 和 `rtconfig.h`；未来 Product Manifest/四份应用调参分别在 `applications/products/` 和 `applications/config/`，应用生成头进入 `build/generated/`。不搬动 RT-Thread 配置源，不另造重复宏源。
+- Host/SIL/H723 后续共用同一产品配置与 feature/hash；Host/SIL 可独立使用 CMake/Ninja，不能让桌面参考入口和依赖进入 H723 镜像。
+- 复用现有 `.ioc`、初始化、链接和驱动源。当前授权不包含 CubeMX 或驱动重新生成；未来硬件修改按差异、资源和目标验证受控适配。
+- 公共契约头要求 32 位枚举（如 `sizeof(TimeQuality)==4` 的静态断言）；ARM GCC 默认最小化枚举，因此所有包含 `applications/contracts/` 头的 C/C++ 编译单元必须统一使用 `-fno-short-enums`，该旗标由 `rtconfig.py` 顶层维护，模块不得各自局部添加（CR-V191-B03）。
+- Release 记录命令、环境、实际编译器、源码基线/Hash、修改状态、map、实际固件产物 SHA256 和 SBOM。当前工作目录未检测到 Git 元数据时使用源码快照 Hash，不伪造 commit/dirty 结论；报告输出规划到 `build/validation/`。
+
+### 12.2 现有依赖复用与历史候选版本
+
+本次不升级依赖或核验上游发行状态。先复用现有源码、配置与工具链，记录实际内容；原规格版本号仅保留为后续选型/移植输入，不证明已安装、已兼容，也不要求为匹配表格替换当前 HAL/CMSIS 或重新生成驱动。
+
+| 现有资产 | 当前接入依据 | 后续需要锁定的内容 |
+|---|---|---|
+| `rt-thread/` | 本地内核、组件、设备框架和构建工具；设计基线5.3.0 | 实际版本、完整commit或源码Hash、项目补丁和配置 |
+| `packages/CMSIS-Core-latest/` | 根Kconfig/包配置及包SConscript | 实际CMSIS-Core版本/Hash及与Device/HAL匹配关系 |
+| `packages/stm32h7_cmsis_driver-latest/` | 现有STM32H7 Device包 | 头文件/启动源码版本、Hash和芯片选择 |
+| `packages/stm32h7_hal_driver-latest/` | 现有STM32H7 HAL包 | HAL实际版本、Hash、使能模块和补丁 |
+| `rtconfig.py` | 默认Keil；已有GCC/IAR选项 | 实际选择、安装版本、路径、C/C++与浮点ABI/链接选项 |
+
+`packages/pkgs.json` 当前三包的版本标记为 `latest`，目录名也带 `-latest`；本次保留其现状，不运行包更新或改名。发布时必须在规划的 `packages/deps.lock` 补齐不可变来源/内容Hash，不能只把 `latest` 标签当作可复现版本；目录后缀本身不等于锁定结果。第三方公用源码始终在 `packages/`，项目Port/业务适配在 `applications/`。
+
+| 组件 | 原规格候选输入（未在本轮核验） | 本工程接入位置/约束 |
+|---|---|---|
+| Arm GNU Toolchain | 本地14.3.1；15.3.Rel1仅历史候选 | `rtconfig.py` 的GCC可选路径；不覆盖默认Keil，不使用Linux ABI工具链 |
+| CMake | 4.4.5 | 可选Host/SIL/上游参考构建；不是固件顶层入口 |
+| Ninja | 1.13.2 | 可选Host构建后端；不接管根SCons |
+| SCons | 4.11.1 | 现有根SConstruct及RT-Thread构建工具；实际运行版本后续记录 |
+| STM32CubeH7 | 1.13.0 | 历史vendor bundle候选；当前以本地HAL/Device/Core包核验组合，不自动替换 |
+| STM32CubeMX | 6.18.1 | 配置来源追踪；复用现有 `.ioc`，本次不运行生成器 |
+| CMSIS-Core/Device | 历史CubeH7匹配组合；Core 6.4.0曾作比较输入 | 当前使用现有三包，不能从候选号推断已匹配或另拷贝一份CMSIS |
+| CMSIS-DSP | 1.18.0 | 实际启用时作为 `packages/` 公用包；只保留一个arm_math.h/库来源 |
+| OSQP | 1.0.0 | 后续 `packages/` 求解器包；固定维数、静态workspace、无运行期heap |
+| FatFs | R0.16 + patch-1 + patch-2 | 经现有RT-Thread DFS/存储链核对实际文件系统来源/补丁，不并行引入重复文件系统 |
+| Python（通用Host工具） | 3.15.2 | `applications/tools/` 的Host环境候选；实际可用解释器及依赖以执行证据为准 |
+| Python（MAVLink工具环境） | 3.14.10 | 后续独立Host环境候选；安装前核实所选工具的支持范围 |
+| pymavlink/mavgen | 2.4.50 | Host Dialect生成/测试；输入XML/生成器锁来源，H723仅编入所需协议代码 |
+| MAVSDK | 4.1.0 | Companion/GCS工具；不进入H723镜像，不混用不同主版本API |
+| MAVProxy | 1.8.75 | 地面/伴随主机路由工具，不进入MCU实时闭环 |
+| QGroundControl | 5.1.4 | GCS候选；私有Dialect适配单独核验 |
+| MATLAB/Simulink | R2026b | `applications/sim/` 的Host/SIL/HIL模型，不进入H723固件 |
+| Eigen | 5.0.1 | 后续 `packages/` 固定维数线性代数；C++14/目标编译/数值/WCET待回归 |
+| yaml-cpp | 0.9.0 | Host工具按需使用，不进入H723 |
+| Abseil C++ | 20260817.0 LTS | Host上游参考按需使用，可独立使用C++17，不进入H723 |
+| MAVLink protocol/dialect | MAVLink 2；common.xml + FCU.xml | 第三方协议源归 `packages/`；自有 `applications/mavlink/FCU.xml` 与mavgen锁相同来源链 |
+| KF-GINS | i2Nav-WHU/KF-GINS；完整commit待锁定 | 后续 `packages/KF-GINS/` 保留来源、GPL-3.0许可证和修改清单；项目22维扩展和Port在应用插件目录，按05裁剪验证 |
+
+上游参考、Host移植验证、H723固件必须区分源集与依赖图。KF-GINS原版参考保留其原依赖；候选Eigen/yaml-cpp/Abseil不能先覆盖黄金参考。上游许可证与SBOM按05/09追踪，当前规格修订不导入或分发上游源码。任何后续升级需记录完整commit/归档Hash、许可证、构建选项和兼容矩阵；实际编译/数值/实时/硬件证据通过后再改变接纳状态。
+
+### 12.3 兼容性规则
+
+- STM32CubeH7 HAL/Device/CMSIS vendor bundle 必须成套；CMSIS-DSP 可以独立升级，但只能有一个 `arm_math.h` 和一个 DSP library 来源。
+- OSQP 0.6.x API 不得混入 1.0.0；迁移后重新生成固定维数接口并回归。
+- 采用上述FatFs候选时须核对其实际补丁与现有RT-Thread文件系统集成；不能仅改 `FF_VERSION` 或引入第二份实现。
+- MAVSDK/MAVProxy/pymavlink/QGC 是 Host/Companion/GCS 工具，不进入 H723 RTOS 镜像。
+- KF-GINS上游桌面CMake依赖不直接继承：**当前H723矩阵实现使用项目自带的固定维数层，未链接Eigen**（CR-V191-B02）；Eigen 5.0.1仅为后续候选，须完成C++14/ARM/数值/WCET接纳并经CR批准后才能替换，未接纳前不得在正文或证据中宣称使用Eigen。yaml-cpp 0.9.0与Abseil 20260817.0只允许Host工具按需使用，不得链接进H723。Host上游参考目标与H723算法核心分开构建，05 §6.2的矩阵实现条款按本条解释。
+- 任何升级都必须通过 Host、SIL、H723 build、WCET、RAM、HIL 回归后才能从 candidate 改为 approved。
+
+## 13. Agent协作、CR与本轮授权边界
+
+A负责平台/BSP/RTOS/驱动/时间/ICD；B负责M2语义/M3/源级完整性；C负责M4～M7策略算法/Plant；D负责集成、CI、追踪和独立复核。一份文件一个维护Owner，唯一详细表在10，包括本00由D维护；其他角色通过patch/CR提交，不并行改同一权威文件。
+
+任务主状态、迁移/退回、按类型DoD唯一见10；活动实例只在AGENT_HANDOFF的结构化记录。验证状态只用NOT_RUN/IN_PROGRESS/PASS/FAIL/WAIVED，证据台账唯一在09。闭环表只记录本轮R01～R22的document_resolution，不维护另一份任务状态。
+
+历史工作单 USER-20261104-SPEC-REVISION 对应 R01～R22 处置。目录适配后，USER-20261104-GLOBAL-AUDIT授权逐文件技术修订并追加两轮复审；范围仍为spec，不执行交接任务、不更改硬件或生成驱动。设计处置为 SPECIFIED，独立审查状态 NOT_RUN；后续工程冻结按09记录。
+
+CR记录设计处置、独立审查、用户批准scope、实现和验证状态，不能用一个REVIEW表示所有阶段。D编写的CI/测试假设由相应技术Owner交叉审查；D维护的治理规范由A/B/C至少一名非作者复核，职责/安全/ABI/发布批准仍由用户按范围记录。没有自动消息通道时使用HANDOFF人工路由字段，不声称自动通知。
+
+## 14. 工程冻结与飞行放行门禁
+
+唯一Gate定义、需求/测试命名空间与证据台账在09；本00仅引用。Gate A为设计输入/接口独立复核与工程冻结；B平台采集/时间/驱动；C测量/导航/FDIR；D车辆业务与控制集成；E系统/资源/HIL；F飞行安全与发布范围批准。它们不是任务状态。
+
+本次目录/链接检查只覆盖规格适配，不替代尚未提供的布局/参考工具输出。Host生产ABI、ARM构建、目标板寄存器/波形、map/WCET/stack、Flash掉电、SIL/HIL/无桨台架、真实模型/输出策略/密钥与飞行安全证据均仍NOT_RUN。目标缺口不得以“规范已闭环”转换成PASS或WAIVED。
+
+22项规范修订清单见11号闭环表，逐条引用权威章节和后续测试ID；独立审查可据此复核，发现问题时按10退回/新建关联任务，不回到旧副本实施。
+
+**任何适用Gate F证据或用户放行未满足，保持FLIGHT_RELEASE_NOT_AUTHORIZED。**
+
+
+## 2026-11-05 M4/M5 实施增量
+
+用户授权实现STM32固件M4/M5。CR-V191-M45-01增加明确Guidance目标和M5质量/重力模型视图，当前QUAD Product/Port Revision=0x00010905（0x00010904仅为历史版本），Schema6.0不变。02末尾增量和生产头定义字段；ABI锁随生产检查生成。固件H723只接纳NONE障碍源，Host辅助默认模型是合成夹具。交付状态与实际命令见`applications/core/m5/M4_M5_IMPLEMENTATION.md`；此实施记录不是独立审核、WCET或飞行批准。

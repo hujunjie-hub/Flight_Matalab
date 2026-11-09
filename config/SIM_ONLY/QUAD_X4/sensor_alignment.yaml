@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "status": "SIM_ONLY",
+  "calibration_version": 1,
+  "imu_to_cg_frd_m": [0,0,0],
+  "antenna_from_imu_frd_m": [0,0,0],
+  "imu_installation": [1,0,0,0,1,0,0,0,1],
+  "mag_installation": [1,0,0,0,1,0,0,0,1],
+  "static_gyro_bias_radps": [0,0,0],
+  "static_accel_bias_mps2": [0,0,0],
+  "scale_error": [0,0,0],
+  "imu_pipeline_delay_us": 2000,
+  "imu_transport_delay_us": 300,
+  "gnss_transport_delay_us": 10000,
+  "baro_transport_delay_us": 5000,
+  "mag_transport_delay_us": 3000,
+  "gnss_backend": "SIM_PVT",
+  "pps_backend": "SIM_PPS_EPOCH",
+  "magnetic_field_ned_ut": [25,0,40],
+  "pressure_height0_m": 100
+}

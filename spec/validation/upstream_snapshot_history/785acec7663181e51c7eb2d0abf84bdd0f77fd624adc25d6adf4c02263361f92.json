@@ -1,0 +1,210 @@
+{
+  "date": "2026-11-05",
+  "parent_spec_root": "D:/STM32Project/FMT-Firmware-1.2.0/Flight/spec",
+  "impact_review_status": "READ_AND_INCORPORATED",
+  "approval_scope": "READ_ONLY_IMPACT_REVIEW; not Gate A or ABI approval",
+  "declared_schema": "6.0",
+  "declared_quad_product_port_revision": "0x00010905",
+  "initial_inventory_preserved": true,
+  "reviewed_normative_sha256": {
+    "00_工程基线与唯一权威规范.md": "61d5a72684e6554580da78e5efb9558c803eba1929a8e294ec4869aee6635316",
+    "01_系统总体架构与设计决议.md": "a88bed8ad007ce7552c43f870f39412c0c7a9ff739ffd7fa38daf069bbe46217",
+    "02_接口契约与公共数据规范.md": "6280a7d6cfd55cdddb6e08b4d455a0d71322e7e9dc7f6d5268c96dc993311220",
+    "03_平台软件架构与驱动设计.md": "dd8de459878cd55e275d179aa08b6c86b003ac85ac30ca89b12242d206630adc",
+    "04_飞控核心模块与控制系统设计.md": "94cc71a95982492e5b173fcde2dbdf2109cd32d14052de0c472e2b6bae2fa602",
+    "05_传感器采集时间基准与GNSS独立运行.md": "8ac552eee328f8886f1bb3680970f23704bb1814456ba58ebb30fbb68e0ec06c",
+    "06_FMS通信与系统安全设计.md": "eca2f1b91386be991f0b340ceb97aeae2a94f6310ac4e9cb995b4323b2636a8b",
+    "07_实时调度与板级硬件资源设计.md": "9dc3ac5a134c58280d823eb886053324373d825b029881f57e053b82e4abf689",
+    "08_产品配置插件与参数管理.md": "76ba0561f098691720aa0b556e59b8e369ef6ec0943bc7d734f82d5c660fed03",
+    "09_需求验证实施与发布管理.md": "6212f28b46ef4272157c63806432bc67177c441d4f2ad44cf8ecb7a9fbba0e67",
+    "10_Agent分工与工程执行规范.md": "851a557db9476bcd86978dd3964aa80567df88db55d8f3a3d6b7efe829e321f3",
+    "11_审核问题闭环与变更追踪.md": "f1bb463b73fe0f3b7aa87442ee6ceef5bdf89b5270edd489994ea167c31e4f0a",
+    "12_全量审查问题清单与落地边界.md": "5338fe4074c454b40140e4c71d760f67efc7942bc751f0470bb8c1c36aa92e2d",
+    "AGENT.md": "eb17b2d30d2bcfd5a45cf013ecaf95c3deba00abcc804f985bcc50f7eb2bf655",
+    "README.md": "98eed2bb4c69e20f01d17488bcfad25129755c663ac3f75cc4a563f939face00",
+    "contracts/FCU.xml": "1be7adc3b849bc89f812ad66353368ae2c8c6290f2ea97168ee710a7145446ed",
+    "contracts/message_registry.json": "e2893aebd8c1121b1ede80591849730ec722c5f9e0616443507c2ff99179bf41",
+    "tools/audit_spec.py": "370e54a05472bbaaf002d71682ed3c6e70b525fe1b01846ec558967ebb456a1f",
+    "tools/check_dialect.py": "cb201938235cd8ec6d5387470d2f21f5dc4a91bd414a9cfafc940da49a7ca025",
+    "tools/check_reference_models.py": "116a1d95cc3b203b1567633a0a8dd85b5e6a2edb7f0dbc89ebf47ae820f38ad9"
+  },
+  "impact_notes": {
+    "00_工程基线与唯一权威规范.md": "Read QUAD0x10904, H723 fixed-matrix selection and flags; update Host dependency/compatibility boundary. Additional impact read: Read current94.5KiB DTCM summary and0x10904 synchronization; no Host hardware resource PASS inferred. Current-session impact read: Read explicit M45-01 override: QUAD Product/Port0x00010905, Schema6.0 retained; targets/shared mass-gravity view, NONE-only H723 scope and synthetic Host helper. Historical04 summary is not current. GNSS correction impact read: Read CR-V191-GNSS-REQUIRED-01: required UM982/UART4 DMA/PPS, runtime outage/recovery, obsolete optional/default-off withdrawn; no schema/layout/revision change.",
+    "02_接口契约与公共数据规范.md": "Read Mission epoch valid_mask bit8, ProductGeofenceConfig/Profile ownership and Schema6.0/QUAD0x10904; replaced old missing-field scheme. Additional impact read: Read updated C02 text specifying Root private quad_x4_fms_configure_product_geofence before init; public API/schema6.0/Product-Port0x10904 retained. Already synchronized in Host interface/plan. Current-session impact read: Read actual05 macros and M45-01: target mask/position/yaw owned by M4 and directive epoch; shared positive mass/gravity; bounded NONE quintic/24 intervals and Nav-State-Time header; explicit ALTITUDE_AUTOMATIC=5 typed altitude, no Pilot authority, token0, no fictional XYZ, reject unproven fence. Incorporated in interface/M4/M5/M6/tests. Host fixed grid and private two-lane envelopes are explicit conformance differences. GNSS correction impact read: Read fixed GNSS_SUPPORT=1/GNSS_PPS_CAPTURE=1 and mandatory paths; invalid PVT/PPS/UTC distinct; no no-GNSS production profile; same Schema6.0/Port05. Also read M45 geometry copy/consume-on-init geofence clarification and current05 summaries.",
+    "05_传感器采集时间基准与GNSS独立运行.md": "Read body l/nav L Jacobian, pressure and replay/CG clauses; use exact retraction tests. Host N0 alignment remains explicit. GNSS correction impact read: Read primary required UM982/PPS header, deleted optional/no-GNSS production baseline, runtime four-state/time matrix, fixed support/capture and native-parser NOT_READY gap; physical/time/geodesy equations unchanged in inspected affected sections.",
+    "06_FMS通信与系统安全设计.md": "Read Mission epoch command guards and compiled fence init; synchronized transaction tests. Additional impact read: Read exact Root private geofence install hook before init and no runtime/Companion calls; synchronized.",
+    "07_实时调度与板级硬件资源设计.md": "Read B-R08 15KiB per instance/30KiB total and retained 14KiB historical sentence; no Host RAM claim. Delta/checkpoint/journal capacities remain256/24/64 and are reused only logically. Current-session impact read: Read B-R08 active/shadow15KiB each, total DTCM94.5KiB with33.5KiB free; source retains historical14KiB sentence. History256/checkpoint24x2304/journal64x320 unchanged. No target RAM/WCET PASS inferred. GNSS correction impact read: Read required UART4 DMA/PPS owners retained across outage, hardware channels always on. Read M45 static arena48696B/49152B and M5 4672B; no Host target-resource PASS inferred.",
+    "08_产品配置插件与参数管理.md": "Read compiled geofence section3.2 and four CORE/Profile authority; readonly config generated at build. Additional impact read: Read section3.2 private installation order and restriction; readonly Profile binding synchronized. GNSS correction impact read: Read required/enabled/pps_capture manifest fields, mandatory BSP rejection, no removal of devices on signal loss; other aids independently accepted.",
+    "09_需求验证实施与发布管理.md": "Read accepted review task/C-REV conditions/A-REV ABI discrepancy; not interpreted as Gate A or current production PASS. Additional impact read: Read C01 CLOSED/A-REV closure and lock rebuild/D review PASS; C02 SPECIFIED and Gate A separate. Current-session impact read: Read C01/C02 CLOSED with Gate-D/user scope; contract diff20/20/ABI evidence is old04. Gate A/full ABI freeze separate. New M6 prerequisite references C03 with implementation/user approval incomplete. Not new05 ABI or MATLAB evidence. GNSS correction impact read: Read TEST-ACC-050 now required-GNSS build/negative-config/outage evidence scope; existing loss/recovery/no-auto-resume validation remains distinct from this Host documentation.",
+    "11_审核问题闭环与变更追踪.md": "Read C01/C02 tracking; historical proposed entries not assumed current field absence; body version/ABI evidence separately checked. Additional impact read: Read C01 CLOSED/C02 SPECIFIED and retained historical proposal headings; statuses source-attributed, not new MATLAB evidence. Current-session impact read: Read C01/C02 approved table and retained earlier SPECIFIED sentence, resolving current closure with09. C03 selects OSQP1.0.0/mode2/static15variables/190rows and ControlModelPort v1; firmware C-M6/link approval PENDING. No package imported/linked in this Host-spec task. GNSS correction impact read: Read CR-V191-GNSS-REQUIRED-01 user clarification, obsolete optional/default-off historical results revoked, unchanged public ABI/layout and runtime quality rules; no firmware execution by this task.",
+    "AGENT.md": "Read revision updated to0x10904 and scope/status discipline; no change to Host algorithm. Current-session impact read: Read updated05 entry and scope/Owner/time-state-authority rules. This task continues Host spec only; no HANDOFF task or firmware implementation executed. GNSS correction impact read: Read latest required GNSS/PPS and runtime outage entry. Another task has firmware/spec authorization; this task continues the user-requested Flight_Matalab specification scope and does not claim other task outputs.",
+    "README.md": "Read current schema6.0/Product-Port0x10904 index and scope; synchronize new README input identity. Current-session impact read: Read current05 input index and unchanged applications/packages/doc/driver/SCons boundaries. Updated this project source identity without modifying parent. GNSS correction impact read: Read GNSS correction notice: primary mandatory UM982/PPS, runtime outage/recovery, obsolete optional/no-GNSS production clauses revoked.",
+    "01_系统总体架构与设计决议.md": " GNSS correction impact read: Read fixed required GNSS/PPS, local timing/IMU independent of signal availability, navigation/time failures and M4 responsibilities kept separate.",
+    "03_平台软件架构与驱动设计.md": " GNSS correction impact read: Read always-present UART4 GNSS and initialization failure vs no-fix distinction; local clock/IMU unaffected by signal outage.",
+    "04_飞控核心模块与控制系统设计.md": " GNSS correction impact read: Read fixed GNSS queue/health paths, no-fix not not-installed, invalid observation rejection with continuous INS/P and capability-based decisions.",
+    "12_全量审查问题清单与落地边界.md": " GNSS correction impact read: Read correction of historical disabled-backend-to-hardware-off disposition; required transport with native protocol/time/golden acceptance still NOT_READY, historical row retained."
+  },
+  "review_history": [
+    {
+      "observed_at_utc": "2026-11-04T16:37:41.930492+00:00",
+      "previous_snapshot_sha256": "608197447223977b3f778dbc7d17fa02ce161fd731695741a6d76eae281286de",
+      "previous_snapshot_file": "upstream_snapshot_history/608197447223977b3f778dbc7d17fa02ce161fd731695741a6d76eae281286de.json",
+      "changes": {
+        "00_工程基线与唯一权威规范.md": {
+          "old_sha256": "01ba6dc7a8842e99bf87492b27de8387d64f33334df8f4a666ef0d2e4ac13d20",
+          "new_sha256": "b60d6dc6ca39dee35cc4da6a321230ab6edb6d70c3e9355d6462848ae299f7ea",
+          "impact_read": "Read current94.5KiB DTCM summary and0x10904 synchronization; no Host hardware resource PASS inferred."
+        },
+        "02_接口契约与公共数据规范.md": {
+          "old_sha256": "85f99a8f4c67c196907170e308b98d6a831728f2371580902262cd9bdcbf5bcb",
+          "new_sha256": "f903baabc1a8f42693142530c952bafab96fae19b0723530aa4b72037b8401c4",
+          "impact_read": "Read updated C02 text specifying Root private quad_x4_fms_configure_product_geofence before init; public API/schema6.0/Product-Port0x10904 retained. Already synchronized in Host interface/plan."
+        },
+        "06_FMS通信与系统安全设计.md": {
+          "old_sha256": "68304e13ad3e653fcdfc06ddf37d193fa55a4762f2d3ab8107a456e549a1f999",
+          "new_sha256": "eca2f1b91386be991f0b340ceb97aeae2a94f6310ac4e9cb995b4323b2636a8b",
+          "impact_read": "Read exact Root private geofence install hook before init and no runtime/Companion calls; synchronized."
+        },
+        "08_产品配置插件与参数管理.md": {
+          "old_sha256": "07640cf6e8e0dd4cfe8246b4cafff35daf0a7bea5f331b62497c19e0e1d375d7",
+          "new_sha256": "eff26cfe3bb4e4e78dc9a2976c343a30097885f8a3a8656ca150ed6ca03d27f4",
+          "impact_read": "Read section3.2 private installation order and restriction; readonly Profile binding synchronized."
+        },
+        "09_需求验证实施与发布管理.md": {
+          "old_sha256": "71943f3bb3ed77d776d0bd6d7c21e004ec0a2996c5c7433e1a2671d62816552f",
+          "new_sha256": "72cb991e235b32157943f2ee8e1bf6f518321090ca2deceb2de4c623838d9dff",
+          "impact_read": "Read C01 CLOSED/A-REV closure and lock rebuild/D review PASS; C02 SPECIFIED and Gate A separate."
+        },
+        "11_审核问题闭环与变更追踪.md": {
+          "old_sha256": "83311e61ae5b87ea66ca24d3d5414238a5773979f0bfa446e20a10ef170aa5d2",
+          "new_sha256": "0bf6ec9be13d7d6e4ab7cf77d42f1fd659aa13f10a113c5ed8a41d1add33a9fc",
+          "impact_read": "Read C01 CLOSED/C02 SPECIFIED and retained historical proposal headings; statuses source-attributed, not new MATLAB evidence."
+        }
+      }
+    },
+    {
+      "observed_at_utc": "2026-11-04T22:09:25.940871+00:00",
+      "review_session": "R4_R6_FINAL_INPUT_IMPACT_REVIEW",
+      "previous_snapshot_sha256": "56322026944d9e2c9d6919dc59feea01ff9138ae881658ebc36c1cbbd38476fb",
+      "previous_snapshot_file": "upstream_snapshot_history/56322026944d9e2c9d6919dc59feea01ff9138ae881658ebc36c1cbbd38476fb.json",
+      "changes": {
+        "00_工程基线与唯一权威规范.md": {
+          "old_sha256": "b60d6dc6ca39dee35cc4da6a321230ab6edb6d70c3e9355d6462848ae299f7ea",
+          "new_sha256": "fa434771b57c62e69e4b1a531df5600f57796d44605da1d66a0427d90045093e",
+          "impact_read": "Read explicit M45-01 override: QUAD Product/Port0x00010905, Schema6.0 retained; targets/shared mass-gravity view, NONE-only H723 scope and synthetic Host helper. Historical04 summary is not current."
+        },
+        "02_接口契约与公共数据规范.md": {
+          "old_sha256": "f903baabc1a8f42693142530c952bafab96fae19b0723530aa4b72037b8401c4",
+          "new_sha256": "315c76994847e3898d1e0a1f20e999108ba2d7ebe5a0da7493aa5dd08fa2a960",
+          "impact_read": "Read actual05 macros and M45-01: target mask/position/yaw owned by M4 and directive epoch; shared positive mass/gravity; bounded NONE quintic/24 intervals and Nav-State-Time header; explicit ALTITUDE_AUTOMATIC=5 typed altitude, no Pilot authority, token0, no fictional XYZ, reject unproven fence. Incorporated in interface/M4/M5/M6/tests. Host fixed grid and private two-lane envelopes are explicit conformance differences."
+        },
+        "07_实时调度与板级硬件资源设计.md": {
+          "old_sha256": "332a80fd4dfe888af9a6eac9c1360204dfd128c021b344354823a12c8e28ea75",
+          "new_sha256": "5fdd472facd0f7d4fb5c76c163b9ea4ae2838aff7ec1276195dab59206cc2e16",
+          "impact_read": "Read B-R08 active/shadow15KiB each, total DTCM94.5KiB with33.5KiB free; source retains historical14KiB sentence. History256/checkpoint24x2304/journal64x320 unchanged. No target RAM/WCET PASS inferred."
+        },
+        "09_需求验证实施与发布管理.md": {
+          "old_sha256": "72cb991e235b32157943f2ee8e1bf6f518321090ca2deceb2de4c623838d9dff",
+          "new_sha256": "dd4b7424b8ccc73ea1b4acbb539f8b227af9200545964b5d9ddf411daf954428",
+          "impact_read": "Read C01/C02 CLOSED with Gate-D/user scope; contract diff20/20/ABI evidence is old04. Gate A/full ABI freeze separate. New M6 prerequisite references C03 with implementation/user approval incomplete. Not new05 ABI or MATLAB evidence."
+        },
+        "11_审核问题闭环与变更追踪.md": {
+          "old_sha256": "0bf6ec9be13d7d6e4ab7cf77d42f1fd659aa13f10a113c5ed8a41d1add33a9fc",
+          "new_sha256": "b11d05c5cf2a3f7eab14f30ca833d68f9f78f758c5e3c7a4a8f6d09e853ada03",
+          "impact_read": "Read C01/C02 approved table and retained earlier SPECIFIED sentence, resolving current closure with09. C03 selects OSQP1.0.0/mode2/static15variables/190rows and ControlModelPort v1; firmware C-M6/link approval PENDING. No package imported/linked in this Host-spec task."
+        },
+        "AGENT.md": {
+          "old_sha256": "606f4c5fc0779e478c13f68a11f64a12cee638cb7168f120fd2af1da39b10790",
+          "new_sha256": "f843951a30972c864fdb4ca0658fd4fd125dff6eb930253c5505f3d278192181",
+          "impact_read": "Read updated05 entry and scope/Owner/time-state-authority rules. This task continues Host spec only; no HANDOFF task or firmware implementation executed."
+        },
+        "README.md": {
+          "old_sha256": "b4c44ee2d301bcdaa3009ca00d5f8a80fd60bf2f597c197717ec8dc5d908c316",
+          "new_sha256": "3314bc357162c88634b7c31720869135c3577303352356bbe42b57c15956a5fb",
+          "impact_read": "Read current05 input index and unchanged applications/packages/doc/driver/SCons boundaries. Updated this project source identity without modifying parent."
+        }
+      }
+    },
+    {
+      "observed_at_utc": "2026-11-04T22:28:50.510725+00:00",
+      "review_session": "GNSS_PPS_REQUIRED_RUNTIME_OUTAGE_CORRECTION",
+      "previous_snapshot_sha256": "0ffadaadd67fcf7b48db40576d2163ac398f1a462c48cf8ca19462edf2ba3d9d",
+      "previous_snapshot_file": "upstream_snapshot_history/0ffadaadd67fcf7b48db40576d2163ac398f1a462c48cf8ca19462edf2ba3d9d.json",
+      "changes": {
+        "00_工程基线与唯一权威规范.md": {
+          "old_sha256": "fa434771b57c62e69e4b1a531df5600f57796d44605da1d66a0427d90045093e",
+          "new_sha256": "61d5a72684e6554580da78e5efb9558c803eba1929a8e294ec4869aee6635316",
+          "impact_read": "Read CR-V191-GNSS-REQUIRED-01: required UM982/UART4 DMA/PPS, runtime outage/recovery, obsolete optional/default-off withdrawn; no schema/layout/revision change."
+        },
+        "01_系统总体架构与设计决议.md": {
+          "old_sha256": "37441fb42795f8195418653fea8794eaea089b23aec077a70738249ab6b3b409",
+          "new_sha256": "a88bed8ad007ce7552c43f870f39412c0c7a9ff739ffd7fa38daf069bbe46217",
+          "impact_read": "Read fixed required GNSS/PPS, local timing/IMU independent of signal availability, navigation/time failures and M4 responsibilities kept separate."
+        },
+        "02_接口契约与公共数据规范.md": {
+          "old_sha256": "315c76994847e3898d1e0a1f20e999108ba2d7ebe5a0da7493aa5dd08fa2a960",
+          "new_sha256": "6280a7d6cfd55cdddb6e08b4d455a0d71322e7e9dc7f6d5268c96dc993311220",
+          "impact_read": "Read fixed GNSS_SUPPORT=1/GNSS_PPS_CAPTURE=1 and mandatory paths; invalid PVT/PPS/UTC distinct; no no-GNSS production profile; same Schema6.0/Port05. Also read M45 geometry copy/consume-on-init geofence clarification and current05 summaries."
+        },
+        "03_平台软件架构与驱动设计.md": {
+          "old_sha256": "19ec41e940cfef05f572d200eb24d33642c3ee4e4ac8008a71b3f965eb1fa1af",
+          "new_sha256": "dd8de459878cd55e275d179aa08b6c86b003ac85ac30ca89b12242d206630adc",
+          "impact_read": "Read always-present UART4 GNSS and initialization failure vs no-fix distinction; local clock/IMU unaffected by signal outage."
+        },
+        "04_飞控核心模块与控制系统设计.md": {
+          "old_sha256": "5270517b172179674e390cccc00fcffa8208ea6484d4a315d9995aff4bb34ef2",
+          "new_sha256": "94cc71a95982492e5b173fcde2dbdf2109cd32d14052de0c472e2b6bae2fa602",
+          "impact_read": "Read fixed GNSS queue/health paths, no-fix not not-installed, invalid observation rejection with continuous INS/P and capability-based decisions."
+        },
+        "05_传感器采集时间基准与GNSS独立运行.md": {
+          "old_sha256": "deaaf0de274e19de57e3688c2a4a4df8cf1cc52a1181fa43c7574336be6b6d2b",
+          "new_sha256": "8ac552eee328f8886f1bb3680970f23704bb1814456ba58ebb30fbb68e0ec06c",
+          "impact_read": "Read primary required UM982/PPS header, deleted optional/no-GNSS production baseline, runtime four-state/time matrix, fixed support/capture and native-parser NOT_READY gap; physical/time/geodesy equations unchanged in inspected affected sections."
+        },
+        "07_实时调度与板级硬件资源设计.md": {
+          "old_sha256": "5fdd472facd0f7d4fb5c76c163b9ea4ae2838aff7ec1276195dab59206cc2e16",
+          "new_sha256": "9dc3ac5a134c58280d823eb886053324373d825b029881f57e053b82e4abf689",
+          "impact_read": "Read required UART4 DMA/PPS owners retained across outage, hardware channels always on. Read M45 static arena48696B/49152B and M5 4672B; no Host target-resource PASS inferred."
+        },
+        "08_产品配置插件与参数管理.md": {
+          "old_sha256": "eff26cfe3bb4e4e78dc9a2976c343a30097885f8a3a8656ca150ed6ca03d27f4",
+          "new_sha256": "76ba0561f098691720aa0b556e59b8e369ef6ec0943bc7d734f82d5c660fed03",
+          "impact_read": "Read required/enabled/pps_capture manifest fields, mandatory BSP rejection, no removal of devices on signal loss; other aids independently accepted."
+        },
+        "09_需求验证实施与发布管理.md": {
+          "old_sha256": "dd4b7424b8ccc73ea1b4acbb539f8b227af9200545964b5d9ddf411daf954428",
+          "new_sha256": "6212f28b46ef4272157c63806432bc67177c441d4f2ad44cf8ecb7a9fbba0e67",
+          "impact_read": "Read TEST-ACC-050 now required-GNSS build/negative-config/outage evidence scope; existing loss/recovery/no-auto-resume validation remains distinct from this Host documentation."
+        },
+        "11_审核问题闭环与变更追踪.md": {
+          "old_sha256": "b11d05c5cf2a3f7eab14f30ca833d68f9f78f758c5e3c7a4a8f6d09e853ada03",
+          "new_sha256": "f1bb463b73fe0f3b7aa87442ee6ceef5bdf89b5270edd489994ea167c31e4f0a",
+          "impact_read": "Read CR-V191-GNSS-REQUIRED-01 user clarification, obsolete optional/default-off historical results revoked, unchanged public ABI/layout and runtime quality rules; no firmware execution by this task."
+        },
+        "12_全量审查问题清单与落地边界.md": {
+          "old_sha256": "a161cc7bdedbca33f5d7c554f279e601662ea7b20f01f8533798ff809072e033",
+          "new_sha256": "5338fe4074c454b40140e4c71d760f67efc7942bc751f0470bb8c1c36aa92e2d",
+          "impact_read": "Read correction of historical disabled-backend-to-hardware-off disposition; required transport with native protocol/time/golden acceptance still NOT_READY, historical row retained."
+        },
+        "AGENT.md": {
+          "old_sha256": "f843951a30972c864fdb4ca0658fd4fd125dff6eb930253c5505f3d278192181",
+          "new_sha256": "eb17b2d30d2bcfd5a45cf013ecaf95c3deba00abcc804f985bcc50f7eb2bf655",
+          "impact_read": "Read latest required GNSS/PPS and runtime outage entry. Another task has firmware/spec authorization; this task continues the user-requested Flight_Matalab specification scope and does not claim other task outputs."
+        },
+        "README.md": {
+          "old_sha256": "3314bc357162c88634b7c31720869135c3577303352356bbe42b57c15956a5fb",
+          "new_sha256": "98eed2bb4c69e20f01d17488bcfad25129755c663ac3f75cc4a563f939face00",
+          "impact_read": "Read GNSS correction notice: primary mandatory UM982/PPS, runtime outage/recovery, obsolete optional/no-GNSS production clauses revoked."
+        }
+      }
+    }
+  ],
+  "effective_contract_resolution": {
+    "authority": "02 actual macros and explicit CR-V191-M45-01 override;00 final M45 section agrees",
+    "historical_summaries": "Port03/04 and optional/default-off GNSS statements are historical; current Schema6.0/Port05 and fixed GNSS support apply.",
+    "host_profile": "HOST_NATIVE_V2",
+    "firmware_equivalence": "NOT_RUN",
+    "gate_A_or_ABI_approval_by_this_task": false,
+    "gnss_requirement": "CR-V191-GNSS-REQUIRED-01: fixed required/enabled UM982/PPS; signal outage is runtime quality, not optional hardware"
+  }
+}

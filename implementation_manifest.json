@@ -1,0 +1,487 @@
+{
+  "schema": "flight-matlab-implementation/2",
+  "status": "PASS_HOST_SIL",
+  "implementation": "FLIGHT_FIRMWARE_HOST_SIL",
+  "three_final_entries_complete": true,
+  "firmware_equivalent": false,
+  "contract_schema": [
+    6,
+    0
+  ],
+  "product_contract_revision": "0x00010906",
+  "upstream_source_count": 457,
+  "upstream_sil_checks_passed": 3151,
+  "final_entries": {
+    "FMT_DataSIM": "simulation/FMT_DataSIM.slx",
+    "FMT_MILSIM": "simulation/FMT_MILSIM.slx",
+    "FMT_ExtINS_DataSIM": "simulation/FMT_ExtINS_DataSIM.slx"
+  },
+  "evidence": {
+    "input_preflight": {
+      "scope": "LOCKED_INPUT_PREFLIGHT",
+      "status": "PASS",
+      "headers_verified": 10,
+      "osqp_files_verified": 47,
+      "kf_files_verified": 54,
+      "config_hashes": {
+        "config/SIM_ONLY/QUAD_X4/controller_tuning.yaml": "5d034e59b492e99daac181d9ecf095fbe8ba45f4a0ccbd452840a78fce338c42",
+        "config/SIM_ONLY/QUAD_X4/estimator_tuning.yaml": "7233cd3779296a8ac8a4467a1eb3ee628b2351f9388868038984e806d1fc61f5",
+        "config/SIM_ONLY/QUAD_X4/profile_manifest.json": "ce86f3371b54dc583dbbdbfb03b6959703307bc6591b6c8462db785ab2448e74",
+        "config/SIM_ONLY/QUAD_X4/sensor_alignment.yaml": "f872fc0b00b20242e56bd1075572dc5f8a9e4ca028e35668bf9eaa5948507574",
+        "config/SIM_ONLY/QUAD_X4/vehicle_model.yaml": "e4eb7fabfe11313f0ef7aa0b3266e53b4a36897c38170dfaedad2011c387a8c5"
+      },
+      "config_content_sha256": "89f022e32f708c3ab86ccb8e842b867d423b6ac8133d9ee4d4f70210525c4a93"
+    },
+    "flight_entries": {
+      "status": "PASS",
+      "duration_s": 26,
+      "maximum_altitude_m": 1.9859695926096619,
+      "final_height_m": -0.0029419949999999924,
+      "final_speed_mps": 1.66011517700715e-13,
+      "mpc_updates": 1300,
+      "actuator_commits": 7976,
+      "sensor_replay_identical": true,
+      "external_navigation_control_identical": true,
+      "invalid_sensors_inhibit": true
+    },
+    "cold_start_report": {
+      "scope": "NEW_MATLAB_PROCESS_FLIGHT_HOST_SIL",
+      "status": "PASS",
+      "entries": {
+        "status": "PASS",
+        "duration_s": 26,
+        "maximum_altitude_m": 1.9859695926096619,
+        "final_height_m": -0.0029419949999999924,
+        "final_speed_mps": 1.66011517700715e-13,
+        "mpc_updates": 1300,
+        "actuator_commits": 7976,
+        "sensor_replay_identical": true,
+        "external_navigation_control_identical": true,
+        "invalid_sensors_inhibit": true
+      },
+      "matlab_version": "26.2.0.3433840 (R2026b) Update 1",
+      "project_checks": [
+        {
+          "id": "Project:Checks:ProjectFilesExist",
+          "description": "\u6240\u6709\u5de5\u7a0b\u6587\u4ef6\u548c\u6587\u4ef6\u5939\u90fd\u5b58\u5728\u4e8e\u6587\u4ef6\u7cfb\u7edf\u4e2d",
+          "passed": true
+        },
+        {
+          "id": "Project:Checks:ReferencedSubprojects",
+          "description": "\u6b64\u5de5\u7a0b\u5f15\u7528\u4e86\u5b50\u6587\u4ef6\u5939\u4e2d\u7684\u6240\u6709\u5de5\u7a0b",
+          "passed": true
+        },
+        {
+          "id": "Project:Checks:MDLToSLX",
+          "description": "\u5de5\u7a0b\u4e2d\u7684\u6a21\u578b\u90fd\u6ca1\u6709\u4e0d\u5339\u914d\u7684\u6587\u4ef6\u683c\u5f0f",
+          "passed": true
+        },
+        {
+          "id": "Project:Checks:SLPRJ",
+          "description": "\u5de5\u7a0b\u4e2d\u6ca1\u6709 slprj \u6216 sfprj \u6587\u4ef6\u5939",
+          "passed": true
+        },
+        {
+          "id": "Project:Checks:PathCaseSensitive",
+          "description": "\u5728\u5de5\u7a0b\u6587\u4ef6\u3001\u8def\u5f84\u548c\u5f15\u7528\u4e2d\u6ca1\u6709\u68c0\u6d4b\u5230\u5927\u5c0f\u5199\u4e0d\u5339\u914d",
+          "passed": true
+        },
+        {
+          "id": "Project:Checks:ProjectPath",
+          "description": "MATLAB \u641c\u7d22\u8def\u5f84\u4e0a\u7684\u6240\u6709\u5de5\u7a0b\u6587\u4ef6\u5939\u90fd\u5728\u5de5\u7a0b\u8def\u5f84\u4e0a",
+          "passed": true
+        },
+        {
+          "id": "Project:Checks:MissingOrDuplicateLabelsInProject",
+          "description": "\u5de5\u7a0b\u6ca1\u6709\u91cd\u590d\u6216\u7f3a\u5931\u7684\u5185\u7f6e\u6807\u7b7e",
+          "passed": true
+        },
+        {
+          "id": "Project:Checks:OutdatedPcodedFiles",
+          "description": "\u4e0d\u5b58\u5728\u8fc7\u671f\u7684 P \u4ee3\u7801\u6587\u4ef6",
+          "passed": true
+        },
+        {
+          "id": "Project:Checks:UnsavedProjectFiles",
+          "description": "\u6ca1\u6709\u5de5\u7a0b\u6587\u4ef6\u5b58\u5728\u672a\u4fdd\u5b58\u7684\u66f4\u6539",
+          "passed": true
+        }
+      ]
+    },
+    "plant_open_loop_report": {
+      "scope": "PLANT_COMPONENT_OPEN_LOOP",
+      "status": "PASS",
+      "tests": [
+        {
+          "id": "P-02",
+          "status": "PASS",
+          "description": "Symmetric force and torque"
+        },
+        {
+          "id": "P-03",
+          "status": "PASS",
+          "description": "Front-left motor torque signs"
+        },
+        {
+          "id": "P-04",
+          "status": "PASS",
+          "description": "Free fall without drag/contact"
+        },
+        {
+          "id": "P-05",
+          "status": "PASS",
+          "description": "Hover force with initialized motor speed"
+        },
+        {
+          "id": "P-01",
+          "status": "PASS",
+          "description": "First-order rotor speed step"
+        },
+        {
+          "id": "P-06",
+          "status": "PASS",
+          "description": "Quaternion sign invariance and norm"
+        },
+        {
+          "id": "P-15",
+          "status": "PASS",
+          "description": "No normal force 1cm above ground while descending"
+        },
+        {
+          "id": "P-11",
+          "status": "PASS",
+          "max_penetration_m": 0.013740045837808607
+        }
+      ],
+      "all_P01_P16_accepted": false,
+      "system_closed_loop": "NOT_RUN",
+      "gravity_mps2": 9.80665
+    },
+    "component_checks": {
+      "scope": "IMPLEMENTED_COMPONENTS_ONLY",
+      "status": "PASS",
+      "checks": {
+        "parameters": {
+          "scope": "GENERATED_PARAMETER_VIEW",
+          "status": "PASS",
+          "shared_flight_runtime_gravity": "PASS",
+          "gravity_mps2": 9.80665,
+          "P0_22_Qc_19": "PASS",
+          "white_STD_to_PSD": "PASS",
+          "initial_and_stationary_STD_separate": "PASS"
+        },
+        "osqp": {
+          "scope": "G0_OSQP_MEX",
+          "status": "PASS",
+          "version": "1.0.0",
+          "mode": 2,
+          "variables": 15,
+          "constraints": 190,
+          "P_nnz": 45,
+          "A_nnz": 702,
+          "known_optimum": "PASS",
+          "independent_KKT": "PASS",
+          "matrix_update": "PASS",
+          "strict_candidate_accepted": false,
+          "strict_validation_in_model": "NOT_RUN",
+          "invalid_bounds": "PASS",
+          "qp_assembly_in_model": "NOT_RUN"
+        },
+        "execution": {
+          "scope": "G1_EXECUTION_TOPOLOGY",
+          "status": "PASS",
+          "tests": [
+            {
+              "model": "FMT_G1_DataSIM",
+              "duration_s": 2,
+              "status": "PASS",
+              "phase_counts": [
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000
+              ],
+              "rate_slot_counts": [
+                4000,
+                2000,
+                800,
+                200,
+                100,
+                20,
+                2,
+                2
+              ],
+              "stop_boundary": "PASS"
+            },
+            {
+              "model": "FMT_G1_MILSIM",
+              "duration_s": 2,
+              "status": "PASS",
+              "phase_counts": [
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000
+              ],
+              "rate_slot_counts": [
+                4000,
+                2000,
+                800,
+                200,
+                100,
+                20,
+                2,
+                2
+              ],
+              "stop_boundary": "PASS"
+            },
+            {
+              "model": "FMT_G1_ExtINS_DataSIM",
+              "duration_s": 2,
+              "status": "PASS",
+              "phase_counts": [
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000,
+                4000
+              ],
+              "rate_slot_counts": [
+                4000,
+                2000,
+                800,
+                200,
+                100,
+                20,
+                2,
+                2
+              ],
+              "stop_boundary": "PASS"
+            },
+            {
+              "model": "FMT_G1_MILSIM",
+              "duration_s": 60,
+              "status": "PASS",
+              "phase_counts": [
+                120000,
+                120000,
+                120000,
+                120000,
+                120000,
+                120000,
+                120000,
+                120000,
+                120000,
+                120000,
+                120000
+              ],
+              "rate_slot_counts": [
+                120000,
+                60000,
+                24000,
+                6000,
+                3000,
+                600,
+                60,
+                60
+              ],
+              "stop_boundary": "PASS"
+            }
+          ],
+          "continuous_states": 0,
+          "flight_algorithms_implemented": false,
+          "three_final_entries_accepted": false
+        },
+        "plant": {
+          "scope": "PLANT_COMPONENT_OPEN_LOOP",
+          "status": "PASS",
+          "tests": [
+            {
+              "id": "P-02",
+              "status": "PASS",
+              "description": "Symmetric force and torque"
+            },
+            {
+              "id": "P-03",
+              "status": "PASS",
+              "description": "Front-left motor torque signs"
+            },
+            {
+              "id": "P-04",
+              "status": "PASS",
+              "description": "Free fall without drag/contact"
+            },
+            {
+              "id": "P-05",
+              "status": "PASS",
+              "description": "Hover force with initialized motor speed"
+            },
+            {
+              "id": "P-01",
+              "status": "PASS",
+              "description": "First-order rotor speed step"
+            },
+            {
+              "id": "P-06",
+              "status": "PASS",
+              "description": "Quaternion sign invariance and norm"
+            },
+            {
+              "id": "P-15",
+              "status": "PASS",
+              "description": "No normal force 1cm above ground while descending"
+            },
+            {
+              "id": "P-11",
+              "status": "PASS",
+              "max_penetration_m": 0.013740045837808607
+            }
+          ],
+          "all_P01_P16_accepted": false,
+          "system_closed_loop": "NOT_RUN",
+          "gravity_mps2": 9.80665
+        },
+        "pid": {
+          "scope": "RATE_PID_COMPONENT_TRANSACTION",
+          "status": "PASS",
+          "read_current_I": "PASS",
+          "same_nav_no_commit": "PASS",
+          "failed_transaction_atomic": "PASS",
+          "reset_retains_commit_count": "PASS",
+          "current_allocation_aw": "PASS",
+          "integral_limit": "PASS",
+          "complete_M6_time_context_guard": "NOT_RUN",
+          "closed_loop_rate_step": "NOT_RUN"
+        },
+        "pid_allocator_feedback": {
+          "scope": "PID_ALLOCATOR_SAME_TRANSACTION_FEEDBACK",
+          "status": "PASS",
+          "same_tick_residual_and_validation": "PASS",
+          "no_algebraic_loop": "PASS",
+          "failed_allocation_no_commit": "PASS"
+        },
+        "actuation": {
+          "scope": "ACTUATION_NUMERICAL_COMPONENTS",
+          "status": "PASS",
+          "allocation_exact": "PASS",
+          "roll_pitch_priority": "PASS",
+          "shared_roll_pitch_scale": "PASS",
+          "current_residual_sign": "PASS",
+          "integer_force_inverse": "PASS",
+          "quantized_slew": "PASS",
+          "dshot_checksum": "PASS",
+          "invalid_physical_range": "PASS",
+          "sub_lsb_slew_rejection": "PASS",
+          "permit_lifecycle": "NOT_RUN",
+          "frame_apply_500us": "NOT_RUN",
+          "ground_stop_transaction": "NOT_RUN"
+        }
+      },
+      "source_fingerprint": "2f1e49374f5ce87ce24f1d587698a70a9730fbce838a86003d02ba8781b602a2"
+    }
+  },
+  "artifacts_sha256": {
+    "adapters/flight_runtime/fmt_flight_runtime.c": "19f610b1b8cc2e056150b9f0a8815a8d6660ba290923c59970c9932bed79885b",
+    "adapters/flight_runtime/fmt_flight_runtime.h": "4a2e0940dcd072d0402ee79e7057be54796f3b62d7abca5e856a7bb05f00dcf2",
+    "adapters/flight_runtime/fmt_flight_sfun.c": "91bc8040aeb73ef8414ce7ecbbf48dd0602c389dc07c0ca0faaac2a42a266690",
+    "adapters/flight_runtime/fmt_plant_sensors_sfun.c": "2b17ab1347c60b19a571cc6b8fc82413f80a1c515728317166c3a812db10c2af",
+    "config/dependency_history/7b8a015ad473cdbf92ece884534413189517057ef8aa915c50f69c1a9875e4cd.json": "7b8a015ad473cdbf92ece884534413189517057ef8aa915c50f69c1a9875e4cd",
+    "config/dependency_history/applications_to_middle_review.json": "35ef19a32bc66ae26a08c60c90ac3fa8b15cd3844518b8b351bcc57d1632a28b",
+    "config/dependency_history/d45c9253ad099c48eebe57a7731ed79c4fafce37731fec3720c44f384d7ad8ef.json": "d45c9253ad099c48eebe57a7731ed79c4fafce37731fec3720c44f384d7ad8ef",
+    "config/firmware_sources.json": "b3c6be9d63abe7835558a60dd78fba66ee4e1e789aacc4c355b848e32d8c07b7",
+    "config/flight_baseline.json": "727acd8499270feaba91dc6ff9a7f6f45ff80921229c9289cd62888e3c71f217",
+    "config/SIM_ONLY/QUAD_X4/controller_tuning.yaml": "5d034e59b492e99daac181d9ecf095fbe8ba45f4a0ccbd452840a78fce338c42",
+    "config/SIM_ONLY/QUAD_X4/estimator_tuning.yaml": "7233cd3779296a8ac8a4467a1eb3ee628b2351f9388868038984e806d1fc61f5",
+    "config/SIM_ONLY/QUAD_X4/profile_manifest.json": "ce86f3371b54dc583dbbdbfb03b6959703307bc6591b6c8462db785ab2448e74",
+    "config/SIM_ONLY/QUAD_X4/sensor_alignment.yaml": "f872fc0b00b20242e56bd1075572dc5f8a9e4ca028e35668bf9eaa5948507574",
+    "config/SIM_ONLY/QUAD_X4/vehicle_model.yaml": "e4eb7fabfe11313f0ef7aa0b3266e53b4a36897c38170dfaedad2011c387a8c5",
+    "dictionaries/Flight_Contracts.sldd": "567c4f2bf1df92fb3f29eec88301b4ee5f12e6ba6a454ac153a854ee880dbca7",
+    "dictionaries/Flight_Parameters.sldd": "5202733cc9a7fe72706c71bcd9c922556ea5f27e12ea5670ca2a8c547d79a9a1",
+    "interfaces/contract_schema.json": "9cc1a43dcf9771f4db84805cb8d8ab15c0f9fa46a2887fdd8fb09423de254d61",
+    "interfaces/generate_contracts.m": "3e4fb6087dcd2bd2c028cf98f321e864f22832ff60d365634510c931d1497d18",
+    "models/core/fmt_frame_encode_sfun.c": "6cc98bf28a639d65b0fc6126190d5d13c8ce603527aba0a321ad9d821c4b5a45",
+    "models/core/FMT_M7_FrameQuantizer.slx": "975a5ff7d551fa48af160014bd06d15cd2785419d6f12cbfa864ff017114df40",
+    "models/core/FMT_RatePIDTransaction.slx": "be42d639008291597fa8aafee4be5dcf837cd1954099e25f4c7b2ea44fe69662",
+    "models/core/fmt_x4_allocate_sfun.c": "ba2f9b2225b53b39e460d6ee8680eca82d088081aa29d65617a462808d7bfa22",
+    "models/core/FMT_X4_ControlAllocation.slx": "2db4ef557166fba4aacf141535c491b021972619805044881cf0c35501b09acf",
+    "models/flight/FMT_FlightCore.slx": "88d32944470a5ad78dcf068ff9311f4e38ba16da0f565bda3fc6560be16caa34",
+    "models/plant/fmt_ground_sfun.c": "6513f4952458f476b272d75b08b51690775ef4446fee0052a48494cf7e44ab94",
+    "models/plant/FMT_GroundRHS.slx": "d9af4c0c136f3aa0da30729dd1a468dab309a1e696e8972a9f67f97d648f6c44",
+    "models/plant/FMT_MotorRHS.slx": "0fd5c06c263351ffd6229dcfda30a8917992f3cb2bf4e7163a29f3a8c4129f07",
+    "models/plant/fmt_normalize_sfun.c": "dfc9f6fda52be3047fdc23ebfc51f633337f62262a3114a1402e0d0dfd08e393",
+    "models/plant/FMT_PlantRHS.slx": "3e10f9c1082b4905915db6b26830f3aead29facd80d1d9e160151eff994e73ba",
+    "models/plant/FMT_QuadPlant.slx": "044f124c900d45cb1e1e9b7f374fefbd9598effe198eb4464ed37ec4147fae77",
+    "models/plant/FMT_QuadPlantStep.slx": "f5710e6bcab5ea8368998e14dc9a66c479a765b714b3a54197468b8b491c86d1",
+    "models/plant/fmt_rigid_sfun.c": "ff809b8ee9c724173d62f955a28cf44f5d09fdc89ff4b0ed57778bcd4ba0faf4",
+    "models/plant/FMT_RigidBodyRHS.slx": "81b6c218818df53b3f1fdfbe71604142707f929ecd3fb5375f6edc5cb5d445cf",
+    "models/plant/fmt_rotation.h": "9c660552aeaf352a7f1ae0d9efe2f8efdabfdbdfa6589b2bbd105ed48fce2a45",
+    "models/plant/FMT_RotorWrench.slx": "2decaef90befccb874ba81d5ab0aa48938b7d13fe3b2084b3fa6ccf82535a817",
+    "scenarios/flight_sil_recording.mat": "a51a1c7bdae2a00da0940cf13cd199f76597b1d5be1ea3d190afb970ec1e309a",
+    "simulation/FMT_DataSIM.slx": "46ca66c8ef286bdcdef3750c0866a698420a9b9473a96ab04dfaeac15f2a688a",
+    "simulation/FMT_ExtINS_DataSIM.slx": "a16b2209f19620f5d51d1e908f88865937abf1aa78866ed83b04fe92eda12e34",
+    "simulation/FMT_MILSIM.slx": "6ffe46ec9bb22bf748bbdc2ad72a14a67d579f2f9f1045654f90aedb4908ff29",
+    "tests/g1/models/FMT_G1_DataSIM.slx": "15e2e14d86764ef204bfaae6ac009495b5838960367a4c86dd45bb8ae3c3e512",
+    "tests/g1/models/FMT_G1_ExecutionCore.slx": "81b7e279cd3e3542f297d7b16bb5e8716f238d61e19ef53d52dbb0535680ccf4",
+    "tests/g1/models/FMT_G1_ExtINS_DataSIM.slx": "7163956cdf9a3185062c6576e382e40aab3b14eb38eaf918e8bed048b63b560f",
+    "tests/g1/models/FMT_G1_MILSIM.slx": "12f7f351b94dc1b88db14933e9b438278340029fa2228cbcb99344131cdb009e",
+    "tests/g1/models/FMT_G1_OrderedWorker.slx": "faddf0bf77eb239d27cccb35ae020749fdda7096275d4c241002eed0f3b849f1",
+    "tests/g2/models/FMT_PIDAllocationProbe.slx": "81410d3c4d068bb92a69d9cc51c20fa45b65d4e68b6149ba70d6168129500099",
+    "tests/g2/pid_feedback_probe_ids.json": "22664c71cdc3741081774c3a316761824dd75234e6920fe053236db79dc3834e",
+    "tests/verify_actuation_components.m": "3b18cc69a01ad95a8010312ef6bbca49ff72a4aadea18d469c9539bced38dcf5",
+    "tests/verify_execution_gate.m": "6ac9ed74bb832f060e1ac396d6b5d07ae39f5c8407187a7df9de949616897a9f",
+    "tests/verify_flight_entries.m": "c0ffce69ab758a16713c8e8fd147b2cce911f5be2dc1cfac76f81f1b983bd1eb",
+    "tests/verify_osqp_gate.m": "d30ce883355d3c2ca0be74ea713a5e3c0f8246776aee03020be1d74b51ea9f43",
+    "tests/verify_parameter_view.m": "3a463c1e4a9858bd194d2d78635e6f68507252cd6215b1bba288897f9ab5c25d",
+    "tests/verify_pid_allocator_feedback.m": "12f9c22c97acf1caa571b0f33306afa5ea7110b5dc475213ffbde46398ba3641",
+    "tests/verify_plant_open_loop.m": "1583a256ed049ce64055ee7ac8167285c59744acddcafad0cf6f82c774496698",
+    "tests/verify_rate_pid_transaction.m": "bb4836b3099f3cb0c1c51178df10e302b500f3a3030a80e2d22b873fb77563f1",
+    "tools/build_actuation_components.m": "fae0fdd35b963a66c989c669a92f91fa2f163de75b7a1a87d98e5491359d44b7",
+    "tools/build_execution_probe.m": "bca1df6cf631ccb1a414e15ce980a7ec6ce0a80783808fd49b1e4982fb26dfc8",
+    "tools/build_flight_mex.m": "32db82450e59d70dbff623916ccd9cf54e4df3911784199535d7e778a3456a16",
+    "tools/build_flight_models.m": "13fed150285aa936a657721d16a753c65e12eb2af76258bf8438816b13b33708",
+    "tools/build_flight_runtime.ps1": "fe331666fb0a78407ace5a6279d850396cc9be92e9c8f5e2b11ad5a3381dd99a",
+    "tools/build_native_kernels.m": "56bd2fe34b418b367dbe585d0382a43af3a68f7072b81ea1166987ee7c25f6d9",
+    "tools/build_osqp.m": "dab6a3054f0dd34d2ddbcd2586c5bde475ac5d3d855838ca64e943c13f438ae0",
+    "tools/build_pid_allocation_probe.m": "d3b131340915afe505bbb9ded2079fa7892c8a04f98052fdf975223f7e78ec22",
+    "tools/build_plant_models.m": "9d334a161b194417cb93cfc9d61b41b707a4f11cf53195d17ff347b1fb1effd6",
+    "tools/build_rate_pid.m": "25e902b93079df3517ba007dc793242e5615d9204bae0c036a14580b4aef7dbc",
+    "tools/fingerprint_sources.py": "f0e770e6216c228210d3eda44765a24932a92385960e6e8a04ed6eef761b6e06",
+    "tools/flight_shutdown.m": "6849a99a1c1b2b578f287b27ed7b3f31a45e5088359b4b6180c551a147143520",
+    "tools/flight_startup.m": "051f201c6c0339d3aad7dd11bd8fb67c5179bcd338236f71c822d44357468f53",
+    "tools/fmt_default_input.m": "776681af351a42a7443c75931c16396f3164455a62fe8e20bd6a89a67fd8909a",
+    "tools/fmt_edit.m": "32e838472e0f0dddaeb8252c120a89785cd541d88f5f4394ac19ba9564445924",
+    "tools/fmt_flight_metadata.m": "33cea44f5affdf7e4bbb78fdf833239c1138e4a811c588ee10e5f4980d96692a",
+    "tools/fmt_flight_nav_width.m": "fd297cc4177a3a8d9b53ec14e251b44d4a8cc5a70a4d1b1f8513c76093fcbe46",
+    "tools/fmt_osqp_mex.c": "7a366a67c005c3c294e13c1fafb9d292d1725e8be0a0eebddb2653a57252ad61",
+    "tools/generate_parameters.m": "601c685331cd17c0e9150faf4cc4e864cf49fa97ce1099ce89cc52e7a4e1cedd",
+    "tools/prepare_sources.py": "d14d34d42f1614dac6bbfe111e39ebc4c09508327b298d9af062b27e2b4daadb",
+    "tools/record_flight_baseline.py": "75412618f4803b2ddafab395cdc5d946691e1c689bd8248ebaf6067c003cdaee",
+    "tools/register_flight_entries.m": "67d0dda28762129d6202022990f36748953b02292e4720b7f0c43c8a58b38e24",
+    "tools/review_source_relocation.py": "2b3d1685f2398c61236730ebc72c16075c6e45279186b7d0d801f79afe0b4d50",
+    "tools/run_cold_checks.m": "5ac78967220ca8f2cb76e17e2458ea619d4ac1c03a551fd418ba9c856bbe74fb",
+    "tools/run_component_checks.m": "d4db3868649f9b0eb0e73a3811a1a0fdd9b6af0708762b4e882f6bb471a6f0cc",
+    "tools/verify_inputs.py": "8a75482b4277d0dbc00b634c2af650045e55a368999b219be7ba41e2af281bc1",
+    "tools/write_implementation_manifest.py": "a93382b46abee2fce88542523aa03e5fa534b3855f47d7deb691a9c61139d9fc"
+  },
+  "scope": "Windows Host SIL; synthetic quadrotor, sensor and replay fixtures. No STM32 target timing, raw sensor acquisition, PPS, physical motors, HIL transport or real-flight evidence."
+}

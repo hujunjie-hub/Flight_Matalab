@@ -1,0 +1,301 @@
+> 本文件保存R01～R22及目录适配的历史追溯；现行全量审查为[12号清单](12_全量审查问题清单与落地边界.md)，各领域定义直接见02～08。历史测试/状态不自动继承为当前PASS。
+
+## 2026-11-05 CR-V191-GNSS-REQUIRED-01：GNSS主要器件与运行期丢失
+
+- 来源/授权：用户明确指出GNSS是主要器件，原意是运动过程中可能丢失信号；要求同步修改代码和spec。
+- 撤销的假设：GNSS可不安装、无GNSS硬件生产Profile、默认裁剪UART4/PPS，以及因协议解析尚未完成而GNSS_SUPPORT=0。此前报告中的“无GNSS默认配置”仅为已废止历史结果。
+- 当前规则：UM982必装，UART4/DMA1_Stream2/PA2-TIM2_CH3固定接入；运行中PVT、数据链路、PPS、UTC分别门控，驱动常驻并等待恢复。未完成的协议语义接入不伪报完成，也不关闭硬件。
+- 容错边界：有效IMU与本地monotonic持续；PPS/历元守时及恢复窗口按05，主要定位观测缺失时能力降级和模式准入仍由M3/M4负责；不自动恢复任务/许可。
+- 接口：未改变公共ICD布局、Schema或既有Product/Port版本；内部时间服务仅修正丢失/重锁状态和候选/有效PPS记录。
+- 证据：build/gnss_required_correction/，完成后记录实际构建/Host检查；独立审核和目标/HIL保持NOT_RUN。
+
+# V1.9.1 审核问题闭环与变更追踪
+
+## 1. 处置与证据范围
+
+历史工作单USER-20261104-SPEC-REVISION要求将V1.9.0全局审核问题闭环并生成新版。继承的22项均已在权威正文消除已识别缺项/冲突，document_resolution=SPEC_RESOLVED、design_disposition=SPECIFIED；这是规范处置完成，不是生产实现或独立审查PASS。当前工程规格状态唯一见00。本次 USER-20261104-PROJECT-STRUCTURE 在现有 Flight 工程内适配目录，`doc/Flight.xlsx` 和官方资料/用例原样保留；不沿用旧包检查报告。
+
+公共字段/Port改变后Schema升为6.0，Product/Port revision为0x00010904（CR-V191-C01/C02；R3为0x00010903）；旧Major=5消费者必须一起迁移。用户授权范围为规范修改与打包，正式架构/ABI/职责冻结按09 Gate A真实会签。回滚仅能整体回到原V1.9.0作历史输入，原审核问题随之恢复；不能单独回滚02而混用新消费者。
+
+## 2. 逐项闭环索引
+
+| 问题 | 原优先级 | 唯一处置Owner | 新规范位置 | document_resolution | 后续真实验收 |
+|---|---|---|---|---|---|
+| R01 | P1 | A | 02 ControllerInput/Permit；04 M6；06授权；07时效 | SPEC_RESOLVED | TEST-V191-R01（09；NOT_RUN） |
+| R02 | P1 | C | 02 Mission/FMS/Guidance Port；04任务边界；06 MissionManager | SPEC_RESOLVED | TEST-V191-R02（09；NOT_RUN） |
+| R03 | P1 | A | 02定宽消息；07消息槽表；规划 `applications/tools/contract_layout.py`（待实现） | SPEC_RESOLVED | TEST-V191-R03（09；NOT_RUN） |
+| R04 | P1 | A | 07 DShot DMA/Update时序；09 TEST-ACC-061/062 | SPEC_RESOLVED | TEST-V191-R04（09；NOT_RUN） |
+| R05 | P1 | B | 05全观测shadow replay；07历史/预算 | SPEC_RESOLVED | TEST-V191-R05（09；NOT_RUN） |
+| R06 | P1 | A | 02两类时间；07统一时间门限 | SPEC_RESOLVED | TEST-V191-R06（09；NOT_RUN） |
+| R07 | P1 | A | 02 SimulatedMeasurementBatch；09仿真需求 | SPEC_RESOLVED | TEST-V191-R07（09；NOT_RUN） |
+| R08 | P1 | A | 07 NVIC/外设资源；09板级台账 | SPEC_RESOLVED | TEST-V191-R08（09；NOT_RUN） |
+| R09 | P1 | C | 04 A*完整键/Closed；00容量摘要 | SPEC_RESOLVED | TEST-V191-R09（09；NOT_RUN） |
+| R10 | P2 | C | 02 MotionReference/采样；04连续验证/MPC | SPEC_RESOLVED | TEST-V191-R10（09；NOT_RUN） |
+| R11 | P2 | A | 02 raw/time/policy/obstacle/receipt Port | SPEC_RESOLVED | TEST-V191-R11（09；NOT_RUN） |
+| R12 | P2 | A | 07唯一资源账；00摘要 | SPEC_RESOLVED | TEST-V191-R12（09；NOT_RUN） |
+| R13 | P2 | A | 07调度/WCET/接纳；05 replay | SPEC_RESOLVED | TEST-V191-R13（09；NOT_RUN） |
+| R14 | P2 | C | 04障碍适用矩阵；02任务flag；08 Profile | SPEC_RESOLVED | TEST-V191-R14（09；NOT_RUN） |
+| R15 | P2 | B | 02 SensorConsistencyEvidence；05 probation | SPEC_RESOLVED | TEST-V191-R15（09；NOT_RUN） |
+| R16 | P2 | C | 03参数服务；08 CORE/NonSafetySettings | SPEC_RESOLVED | TEST-V191-R16（09；NOT_RUN） |
+| R17 | P2 | D | 10任务状态机/DoD；AGENT_HANDOFF | SPEC_RESOLVED | TEST-V191-R17（09；NOT_RUN） |
+| R18 | P2 | D | 10文件Owner/交接协议；AGENT_HANDOFF | SPEC_RESOLVED | TEST-V191-R18（09；NOT_RUN） |
+| R19 | P2 | D | 00发布/批准范围；09唯一Gate；10 CR | SPEC_RESOLVED | TEST-V191-R19（09；NOT_RUN） |
+| R20 | P2 | D | 09需求/测试唯一台账 | SPEC_RESOLVED | TEST-V191-R20（09；NOT_RUN） |
+| R21 | P2 | D | 00～10及AGENT/README命名 | SPEC_RESOLVED | TEST-V191-R21（09；NOT_RUN） |
+| R22 | P2 | C | 04 MPC内近似域；06 PreArm；02原因码 | SPEC_RESOLVED | TEST-V191-R22（09；NOT_RUN） |
+
+## 3. 可复核的设计处置
+
+原位置是V1.9.0审核时的行号，仅用于追溯；新版定位按文件和章节/类型名，避免新增正文导致旧行号失准。
+
+### R01 M6 的 Permit 关联没有落实到 ControllerPort 调用契约
+
+原审核：02号L1903、02号L613、02号L893、07号L322。
+
+R2当时处置（历史记录，实施按R3权威章节）：ControllerInput显式输入ActuationPermit；control_time与evaluation_time分离。M6使用一致授权bundle生成Demand；同scope续租保持epoch，换scope/撤销使旧请求失效。READY→匹配Permit→ACTIVE消除首次启动互等。
+
+权威定义：02 ControllerInput/Permit；04 M6；06授权；07时效。原验收意图：覆盖首次签发、续租、撤销、模式切换和旧 Permit；证明 M6 能从规范输入生成正确 epoch，M7 会拒绝旧 token。 后续生产验收REQ-REV-191-R01 / TEST-V191-R01见09；独立复核由T191-D-REVIEW路由。
+
+### R02 M4→M5 当前任务项及 MissionStatus 的发布路径未闭合
+
+原审核：04号L378、06号L401、02号L1462、02号L1882、02号L1057、02号L1079。
+
+R2当时处置（历史记录，实施按R3权威章节）：M4唯一推进任务和发布MissionStatus。AuthorizedMissionSnapshot带current_item_id/index及execution_token；M5结果回传同token，M4验证到达条件，拒绝迟到/重复/恢复前结果。
+
+权威定义：02 Mission/FMS/Guidance Port；04任务边界；06 MissionManager。原验收意图：执行至少两个航点，覆盖暂停/恢复、跳项、中止及旧结果迟到；M4 唯一推进，M5 不重跑第一项、不自行推进。 后续生产验收REQ-REV-191-R02 / TEST-V191-R02见09；独立复核由T191-D-REVIEW路由。
+
+### R03 现行标准测量结构放不进冻结的 ring slot
+
+原审核：02号L67、02号L349、02号L360、02号L393、07号L292、07号L296、07号L306、07号L325。
+
+R2当时处置（历史记录，实施按R3权威章节）：按Header88B重新计算全部QUAD消息和实例槽，Raw88B+64B的CPU ingress槽160B；IMU136B等不再放入旧64B槽。保留生产Host/ARM ABI检查，参考布局不等于编译器验证。
+
+权威定义：02定宽消息；07消息槽表；规划 `applications/tools/contract_layout.py`（待实现）。原验收意图：逐类执行 sizeof/alignof/offsetof 与 slot static_assert，并核对最大消息入队、溢出和完整字段传递。当前推算仅为文档结构模型，不是 Host/ARM 编译通过报告。 后续生产验收REQ-REV-191-R03 / TEST-V191-R03见09；独立复核由T191-D-REVIEW路由。
+
+### R04 DShot DMA TC 的停表职责存在直接冲突
+
+原审核：00号L413、07号L622、07号L656、07号L152。
+
+R2当时处置（历史记录，实施按R3权威章节）：明确OCxPE两级流水：本轮重新发现首位启动与UIF合并缺陷，现行设计已改为active零/preload bit0、68word及绝对raw截止收尾，唯一见07；原R2序列不再使用。
+
+权威定义：07 DShot DMA/Update时序；09 TEST-ACC-061/062。原验收意图：用寄存器事件序列及目标波形验证 bit0、bit15、两个零尾 burst、TC 与最终停表时刻；不得以收到 TC 代替零尾输出完成。 后续生产验收REQ-REV-191-R04 / TEST-V191-R04见09；独立复核由T191-D-REVIEW路由。
+
+### R05 Shadow replay 未定义如何保留此前已融合的其他观测
+
+原审核：05号L1331、05号L1338、05号L1340、05号L1389、07号L348。
+
+R2当时处置（历史记录，实施按R3权威章节）：保存进入数值门控的全部观测（含曾拒绝项）及策略/标定版本；回放按稳定顺序重新门控一次。候选绑定fusion revision和journal水位；P4边界原子提交，旧checkpoint代次失效并重建。
+
+权威定义：05全观测shadow replay；07历史/预算。原验收意图：对同一数据集比较按时间顺序处理与多源乱序到达的最终状态/P；覆盖两个 replay 连续提交、旧 checkpoint 复用和回放期间新观测。 后续生产验收REQ-REV-191-R05 / TEST-V191-R05见09；独立复核由T191-D-REVIEW路由。
+
+### R06 2ms 新鲜度门限没有覆盖已知传感器延迟与处理预算
+
+原审核：07号L681、07号L371、07号L160、07号L170、02号L128。
+
+R2当时处置（历史记录，实施按R3权威章节）：原R2的1.8ms pipeline不足；R3按32bit burst和轴延迟修订为3ms pipeline/900us链路/5ms输入年龄，唯一见07。
+
+权威定义：02两类时间；07统一时间门限。原验收意图：按 group-delay 最小/最大值与各阶段预算边界进行时间轴测试，证明有效配置不会在刚发布时即被拒绝，并验证真正陈旧输入会被拒绝。 后续生产验收REQ-REV-191-R06 / TEST-V191-R06见09；独立复核由T191-D-REVIEW路由。
+
+### R07 SensorSimulationPort 没有产生高频 IMU 的定义
+
+原审核：02号L346、02号L1577、02号L1941、02号L2008、04号L212。
+
+R2当时处置（历史记录，实施按R3权威章节）：仿真输出独立ImuSample[4]快速通道和SensorMeasurement[16]慢观测通道；IMU不塞入异步union。真实与仿真接入相同M2标准语义。
+
+权威定义：02 SimulatedMeasurementBatch；09仿真需求。原验收意图：仅依赖公开仿真契约运行 IMU-only 的1kHz传播及完整 SIL；不得绕过 M3 将 PlantTruth 直接写成 NavigationSnapshot。 后续生产验收REQ-REV-191-R07 / TEST-V191-R07见09；独立复核由T191-D-REVIEW路由。
+
+### R08 唯一 NVIC 表遗漏了方案必需的中断路径
+
+原审核：07号L622、07号L648、07号L669、07号L687、03号L321。
+
+R2当时处置（历史记录，实施按R3权威章节）：完整列出TIM1_UP、UART全局IDLE/ERR和各DMA/I2C/SPI IRQ及优先级；TIM1更新尾处理与DMA TC独立。移除未分配的BKIN承诺，实际.ioc/初始化/波形仍待验证。
+
+权威定义：07 NVIC/外设资源；09板级台账。原验收意图：由初始化代码导出完整 IRQ 列表与07比较；覆盖 UART 无 HT/TC 但产生 IDLE 的短帧，以及 DShot TC 后最终 Update 收尾。 后续生产验收REQ-REV-191-R08 / TEST-V191-R08见09；独立复核由T191-D-REVIEW路由。
+
+### R09 Kinodynamic A* 的 Closed bitset 与搜索状态维数不匹配
+
+原审核：00号L251、00号L253、00号L273、04号L384。
+
+R2当时处置（历史记录，实施按R3权威章节）：Closed按512个完整状态Node ID置位64B；1024槽uint16哈希索引2048B，比较voxel/velocity/yaw完整key。更小g可重开；碰撞、满表和探测均有界。
+
+权威定义：04 A*完整键/Closed；00容量摘要。原验收意图：构造必须以不同速度/航向再次进入同一 voxel 才有解的地图，验证不被误判 NO_PATH，同时验证512节点容量耗尽行为。 后续生产验收REQ-REV-191-R09 / TEST-V191-R09见09；独立复核由T191-D-REVIEW路由。
+
+### R10 MotionReference 头部时间覆盖、插值及 MPC 相位尚有歧义
+
+原审核：02号L125、02号L603、02号L605、04号L342、07号L111、07号L116。
+
+R2当时处置（历史记录，实施按R3权威章节）：新增offset=0 anchor并保留24个20ms未来点；位置五次Hermite、yaw解包后三次插值。MPC按State Time+kTs+Tact求值；连续验证覆盖相同24区间，过期不外推，失效立即走快控fallback。
+
+权威定义：02 MotionReference/采样；04连续验证/MPC。原验收意图：覆盖刚发布、首点之前、首点/末点边界、旧新参考切换及±π航向；断言状态和参考确在同一评估时刻。 后续生产验收REQ-REV-191-R10 / TEST-V191-R10见09；独立复核由T191-D-REVIEW路由。
+
+### R11 若干跨层契约仍只有名称或路由，没有固定调用边界
+
+原审核：05号L170、02号L295、02号L1938、02号L1882、04号L316。
+
+R2当时处置（历史记录，实施按R3权威章节）：定义RawIngressBatchDescriptor、TimerCaptureEvent、lease生命周期；公开policy setter/一致性证据和M2→M5有界观测输入；ActuatorCommitReceipt成为M7公共消息，M6按8项历史匹配已应用sequence。
+
+权威定义：02 raw/time/policy/obstacle/receipt Port。原验收意图：以 mock 替换 Estimator/Guidance/Controller 时，外部只按既定接口提供策略、观测和提交回执，插件不得访问其他模块私有对象。 后续生产验收REQ-REV-191-R11 / TEST-V191-R11见09；独立复核由T191-D-REVIEW路由。
+
+### R12 栈合计少算1KiB，RAM总表还不能证明余量成立
+
+原审核：07号L102、07号L131、07号L250、00号L383、00号L401、07号L333、07号L358。
+
+R2当时处置（历史记录，实施按R3权威章节）：线程栈修正52.5KiB（含Init/Idle/可选Timer，不含FinSH）；独立计入active/shadow各14KiB、MPC16KiB、journal、消息/M4 scratch等。AXI253/320KiB，DTCM92.5/128KiB，开发FinSH用D3。
+
+权威定义：07唯一资源账；00摘要。原验收意图：核对本次静态求和，再由真实 linker map/stack watermark 验证；在完整对象清单出现前，将20%余量描述为待证明的设计要求。 后续生产验收REQ-REV-191-R12 / TEST-V191-R12见09；独立复核由T191-D-REVIEW路由。
+
+### R13 CPU分类预算和 replay 追赶目标没有形成可执行预算
+
+原审核：07号L115、07号L123、07号L176、05号L1339、07号L391。
+
+R2当时处置（历史记录，实施按R3权威章节）：M7按Demand+周期守卫最坏2000次/s计费；CPU目标合计85%（快链55/MPC10/replay8/其他7/ISR5），留15%。后台有硬预算；replay400us/5ms、job60ms并事前接纳，删除无条件2×追赶承诺。
+
+权威定义：07调度/WCET/接纳；05 replay。原验收意图：用已批准WCET与事件到达模型离线核算，再以目标trace验证所有预算类和deadline。应能解释为何所允许的最坏组合不会超配。 后续生产验收REQ-REV-191-R13 / TEST-V191-R13见09；独立复核由T191-D-REVIEW路由。
+
+### R14 真实飞行 NONE 障碍模式与全轨迹 fail-closed 验证缺少适用规则
+
+原审核：00号L243、00号L247、04号L392、04号L402、08号L302。
+
+R2当时处置（历史记录，实施按R3权威章节）：NONE只允许明确不要求障碍保证的任务，障碍项NOT_APPLICABLE_BY_PROFILE且能力声明不可用；仍校验动态/时空/围栏。要求避障任务拒绝，源故障不得静默降NONE。
+
+权威定义：04障碍适用矩阵；02任务flag；08 Profile。原验收意图：在NONE、STATIC_MAP、SIMULATION及无数据/过期数据场景中，普通任务与要求避障的任务应有确定且不同的结果。 后续生产验收REQ-REV-191-R14 / TEST-V191-R14见09；独立复核由T191-D-REVIEW路由。
+
+### R15 源隔离后的 probation 恢复缺少可获得的观测一致性证据
+
+原审核：03号L20、02号L1001、05号L740、05号L770、05号L774、05号L1342。
+
+R2当时处置（历史记录，实施按R3权威章节）：REJECT源先自检，再用ALLOW_SHADOW_EVALUATION做不修改活动P的隔离评估；输出按源聚合证据供Integrity判断。证据不足超时回隔离；仅允许逐级恢复，单IMU不伪称在飞冗余。
+
+权威定义：02 SensorConsistencyEvidence；05 probation。原验收意图：对一次隔离执行完整恢复：故障消失后能进入probation，通过后渐进恢复；持续异常时保持拒绝，且不因等待缺失证据永久卡住。 后续生产验收REQ-REV-191-R15 / TEST-V191-R15见09；独立复核由T191-D-REVIEW路由。
+
+### R16 编译期只读参数与Flash权威参数的优先关系不明确
+
+原审核：08号L41、08号L45、08号L249、08号L253、08号L258、03号L315。
+
+R2当时处置（历史记录，实施按R3权威章节）：四份CORE YAML唯一经校验/重编译成为固件.rodata，Flash不能覆盖。Flash A/B只存两项显式白名单非安全设置，独立hash、disarmed提交、marker最后写和掉电回退。
+
+权威定义：03参数服务；08 CORE/NonSafetySettings。原验收意图：测试固件H1/FlashH2、旧Schema、回滚、空槽及激活失败，证明不会出现两个同时被认为权威的值。 后续生产验收REQ-REV-191-R16 / TEST-V191-R16见09；独立复核由T191-D-REVIEW路由。
+
+### R17 Agent状态机缺少退回路径，完工定义又把文档任务绑定到HIL
+
+原审核：10号L158、10号L164、AGENT_HANDOFF号L31、AGENT_HANDOFF号L37、00号L546。
+
+R2当时处置（历史记录，实施按R3权威章节）：补齐REVIEW退回和ACCEPTED撤回、BLOCKED恢复、CLOSED后新ID；按SPEC/IMPLEMENTATION/VALIDATION/RELEASE定义关闭证据。文档闭环不再被所有未来HIL绑死，也不伪称任务已审核关闭。
+
+权威定义：10任务状态机/DoD；AGENT_HANDOFF。原验收意图：桌面演练“评审不通过→修改→再审→文档关闭→实现仍未验证”，全过程不新增非规范状态，也不假造硬件PASS。 后续生产验收REQ-REV-191-R17 / TEST-V191-R17见09；独立复核由T191-D-REVIEW路由。
+
+### R18 实际HANDOFF记录未满足自身要求，部分任务没有唯一主责
+
+原审核：10号L81、10号L83、10号L90、AGENT_HANDOFF号L33、AGENT_HANDOFF号L46、AGENT_HANDOFF号L49。
+
+R2当时处置（历史记录，实施按R3权威章节）：每任务唯一Owner，原A+B任务拆成平台A和适配B的依赖项；提供完整JSON字段、可复制prompt、next_owner和状态去重协议。D单写集成状态，没有通道不宣称已私聊接单。
+
+权威定义：10文件Owner/交接协议；AGENT_HANDOFF。原验收意图：任选一个跨A→B→C的任务，仅凭HANDOFF即可完成接单、交付、验收、退回和续办，无须从聊天历史猜测上下文。 后续生产验收REQ-REV-191-R18 / TEST-V191-R18见09；独立复核由T191-D-REVIEW路由。
+
+### R19 冻结、CR评审和Gate定义没有统一的批准边界
+
+原审核：00号L28、00号L556、AGENT_HANDOFF号L68、AGENT_HANDOFF号L72、10号L107、10号L114、09号L176。
+
+R2当时处置（历史记录，实施按R3权威章节）：本次工作授权仅支持修订打包，CR设计SPECIFIED、独立审查NOT_RUN；取消虚假冻结已会签表述。Gate A～F只在09定义，正式冻结、实现、实物/飞行批准分开。
+
+权威定义：00发布/批准范围；09唯一Gate；10 CR。原验收意图：每条冻结结论都能追溯到批准的CR/基线；任一Agent对Gate D/E/F的范围和通过证据给出相同答案。 后续生产验收REQ-REV-191-R19 / TEST-V191-R19见09；独立复核由T191-D-REVIEW路由。
+
+### R20 验收ID重复、状态枚举混用，证据可能挂到错误条目
+
+原审核：09号L211、09号L212、09号L224、09号L225、07号L462、09号L133、09号L98、09号L213、00号L550。
+
+R2当时处置（历史记录，实施按R3权威章节）：REQ/TEST使用不同命名空间；DShot重编号TEST-ACC-061/062，TIM2保留046/047。07板级/RT验收迁入09唯一台账，结果只用NOT_RUN/IN_PROGRESS/PASS/FAIL/WAIVED，阶段另列。
+
+权威定义：09需求/测试唯一台账。原验收意图：全包扫描重复主键、非法状态和悬空引用；每份测试报告只能定位一个验收项，延期项保持NOT_RUN或批准的WAIVED。 后续生产验收REQ-REV-191-R20 / TEST-V191-R20见09；独立复核由T191-D-REVIEW路由。
+
+### R21 活动正文仍残留被替代的职责和命名定义
+
+原审核：02号L909、06号L170、03号L150、03号L356、09号L279、08号L149、06号L568、00号L108、02号L86。
+
+R2当时处置（历史记录，实施按R3权威章节）：清除Mission归M5、第二DriverManager、重复参数目录、旧模式枚举和时间字段宽度规则残留；公共消息/Port、文件Owner、任务名称及权威引用统一。
+
+权威定义：00～10及AGENT/README命名。原验收意图：对旧Owner、旧模式名、DriverManager、旧配置路径及时间类型作全包扫描；人工确认命中项是禁止语句/历史说明还是仍在生效的规范。 后续生产验收REQ-REV-191-R21 / TEST-V191-R21见09；独立复核由T191-D-REVIEW路由。
+
+### R22 MPC推力内接盒引入最低推重比限制，缺少兼容性说明
+
+原审核：04号L272、04号L278、08号L95。
+
+R2当时处置（历史记录，实施按R3权威章节）：显式校验mg≤Tmax/√3（等价TWR≥√3），不满足则MPC兼容拒绝、发布0x0705并禁止依赖该模式解锁。快控安全策略仍按批准产品策略，不能靠QP不可行后才发现。
+
+权威定义：04 MPC内近似域；06 PreArm；02原因码。原验收意图：覆盖推重比低于、等于和高于√3的模型，区分物理不可行与近似导致不可行，并说明各Profile允许范围。 后续生产验收REQ-REV-191-R22 / TEST-V191-R22见09；独立复核由T191-D-REVIEW路由。
+
+## 4. CR记录和消费者迁移
+
+change_set_id=CR-V191-AUDIT-22；基线V1.9.0→V1.9.1；跨文件单包集成。Owner按第2节和10文件表唯一指定。本次编辑者为同一会话的修订者，不能充当四个独立角色的审核签名；independent_review_status=NOT_RUN，实际reviewer/evidence待填写。
+
+影响：A生成公共头、PLATFORM和资源；B迁移M2/M3/policy/replay；C迁移FMS/Guidance/Controller/Actuator；D迁移检查/台账/交接。每个公开指针只在同步调用内有效，原始DMA/lease不进入核心。旧字段/路径的活动定义已替换，历史来源不具实施优先级。时间/权限不匹配、过期、容量不足均按所属正文拒绝/降级，不绕过产品安全策略。许可证来源未变更，真实上游导入仍按05/09检查，不把规范包当作已分发固件。
+
+实现任务、唯一Owner、依赖、完整prompt与待路由审核人见AGENT_HANDOFF；验收结果只维护09。scope为DOCUMENT_STATIC/REFERENCE_MODEL的工具输出，不能填写HOST_PRODUCTION_ABI/ARM_TARGET_BUILD/TARGET_HARDWARE/SIL_HIL/FLIGHT_SAFETY的PASS。当前内存/WCET/推力/时延为明确设计预算或兼容条件，仍需真实map、量测和危险分析。
+
+### 4.1 T191-D-REVIEW 复核意见引出的 CR（PROPOSED）
+
+以下 CR 由 C 的非作者复核提出，D 登记，**尚未实现**；正文修改仍由对应文件 Owner 提交，ABI/资源变化须按10 §3 走完整审批。
+
+| 字段 | CR-V191-C01 | CR-V191-C02 |
+|---|---|---|
+| 原因/问题ID | C-REV-01：06:632 要求 mission 命令携带 `mission_epoch`，但 02 的 `OperationRequest`/`ProductOperationPayload` 无承载字段 | C-REV-02：06:433 规定 M4 为围栏唯一 Owner 且 Companion 只能提交候选，但 02 无围栏命令/字段、`FmsInputView` 无围栏输入 |
+| design_disposition | SPECIFIED | SPECIFIED |
+| 唯一Owner | A（02）；C核对06命令表 | A（02）+ C（06/08） |
+| 影响文件/消费者 | 02 公共消息与 payload、06 命令表、A 的 `applications/contracts/` 与 ABI 锁、C 的 M4 实现 | 02/06/08；M4/M5/Companion 入口 |
+| 设计决议 | 在 `ProductOperationPayload` 增加 `mission_epoch`（u32，0=不适用并配 valid_mask），M4 拒绝同 mission_id 的旧 epoch 命令；若改变布局则升 Schema/Port 并重跑 ABI 锁 | **首版采用编译期产品配置**：`ProductGeofenceSnapshot` 由 Product Manifest/Profile 生成，M4 唯一持有；不新增运行时 `SET_GEOFENCE` 命令，Companion 只能提交候选且不得修改围栏 |
+| ABI/资源 | 需评估 Schema Major 是否升级；Host/ARM ABI 重跑 | 无新增网络消息；Profile hash/资源需重算 |
+| 失败/降级 | epoch 不匹配→拒绝并回 reason code；缺字段→协议校验失败 | 围栏无效/过期→依赖任务拒绝启动（既有规则） |
+| 测试计划 | 旧 epoch/重放/缺字段负向测试；ABI 布局 | 围栏加载/越界/Profile 切换测试 |
+| independent_review_status | **PASS**（D：ABI/布局复核 `TEST-A-ABI-HOST`、`TEST-CONTRACT-DIFF`；A：契约diff `C_CONTRACT_DIFF_A_REVIEW.md`） | **PASS**（同左；围栏入口文字经02/06/08对齐） |
+| user_approval | **APPROVED（用户2026-11-05指示；C01已CLOSED）** | **APPROVED（用户2026-11-05指示完成Gate D并关闭）** |
+| 实现任务 | `T191-C-FMS` rev4（REVIEW）；A 已重建 0x00010904 锁，仍需确认契约diff | `T191-C-FMS` rev4（REVIEW）；C-M5待验收 |
+| closure_status | **CLOSED**（02/生产头/M4实现、0x00010904锁、Host 17/240、ARM PASS） | **CLOSED**（Gate D复核通过；典型编译期入口+围栏测试通过；目标/SIL/HIL仍NOT_RUN） |
+
+CR-V191-C01 已关闭：`mission_epoch` 的 02/生产头/M4 校验与 ABI 0x00010904 锁均已落地并复核。CR-V191-C02 为 SPECIFIED：编译期围栏入口已实现，但 Gate D 复核与目标/SIL/HIL 证据未完成，不得据此宣称“围栏配置链路”已验收。
+
+### 4.2 CR-V191-C03：MPC 求解器包与 ControlModelPort ABI 冻结（SPECIFIED，待用户批准）
+
+| 字段 | 内容 |
+|---|---|
+| 原因/问题ID | C-M6 无生产实现，因求解器包未定、`ControlModelPort` ABI 未冻结而阻塞；C-M6 NOT_STARTED |
+| design_disposition | SPECIFIED（本记录即设计决议；实现归 C-M6） |
+| 唯一Owner | A（求解器包接入/构建）、D（ABI/记录）；C 实现 M6 |
+| 求解器决议 | **OSQP 1.0.0**（与00 §12.2/04一致），codegen embedded **mode 2**、固定15变量/190约束行、静态workspace、无运行期heap；包源放 `packages/osqp/`，由A按包SConscript/Kconfig接入；不混用0.6.x API |
+| ControlModelPort ABI | **冻结 v1**：02 §7 的 `ControlModelDescriptor/State/Input/LinearModel/Bounds/View` 与 `control_model_*` 原型保持现状；本轮不增删字段/原型。任何布局或语义变化须新CR并重跑 Host/ARM ABI锁 |
+| ABI/资源影响 | 不改现有145类型布局；OSQP workspace计入07 MPC 32KiB上限；A导入时锁完整commit/源码Hash/许可证 |
+| 失败/降级 | solver timeout/infeasible/SOLVED_INACCURATE 按04走当个快环PD fallback；不得续用过期解 |
+| 测试计划 | Golden QP/残差/迭代上限、mode2 codegen、WCET/RAM、fallback SIL（C-M6/Gate D） |
+| independent_review_status | NOT_RUN（实现前无独立复核对象；ABI冻结由D审查） |
+| user_approval | **PENDING（显式请求，未预填）** |
+| 实现任务 | `T191-C-M6`（READY/NOT_STARTED）；前置：C-M5与B-REPLAY受理、本CR批准 |
+
+本 CR 批准前 C-M6 不得启动；OSQP 包不得进入固件链接。
+
+## 5. 工具迁移与当前证据
+
+后续工具落点规划为 `applications/tools/contract_layout.py`（定宽布局）、`applications/tools/reference_cases.py`（参考边界）和 `applications/tools/verify_package.py`（版本/资源/交接/闭环），生成报告到 `build/validation/`。当前工程未提供这些工具和旧报告，因此不能声称已重跑、不能复制旧 PASS；当前证据与结果唯一见09 §4.5。目录适配检查报告只覆盖所列静态范围，不代替布局、参考模型、构建或硬件验证。
+
+## 6. Flight 项目结构修订追踪
+
+`change_set_id=USER-20261104-PROJECT-STRUCTURE`，当时修订标识 `V1.9.1-PROJECT-STRUCTURE-R2`。输入为用户当前工程目录与明确约定；本次只改 `spec/`，不新增驱动或应用实现。当时Schema5.0 / Product-Port0x00010901、公共C定义和算法语义未变；本轮R3已升级，不能沿用该声明；HANDOFF未来任务继续原状态，不填造接单/审核记录。
+
+| 变更 | 回填位置 | 核对依据/影响 |
+|---|---|---|
+| 应用统一进入 `applications/` | 01/02/03/04/05/06/08/09、入口和HANDOFF | 从现有 `applications/main.c` / `SConscript` 扩展；清除根级业务目录要求 |
+| 第三方公用包统一进入 `packages/` | 00/03/05/08/09/10、HANDOFF | 复用现有三份CMSIS/HAL包和包构建入口；项目Port与上游通用代码分清 |
+| 官方资料/用例归 `doc/` | README、00/03/05/07/10 | 引用实际手册、no-OS用例及 `doc/Flight.xlsx`，不修改/编译官方整套工程 |
+| 复用已有驱动/板级源 | 00/03/04/05/06/07/09/10、AGENT/HANDOFF | 已有 `.ioc`、MSP/IRQ、链接和驱动源；补适配而不重新生成框架 |
+| 固件构建回归现有 SCons/Kconfig | 00/02/03/05/08/09、AGENT/HANDOFF | 保留现有根配置和默认Keil入口；CMake/Ninja只适用于可选Host/上游参考 |
+| 规划与已实现、旧证据与当前检查分开 | 00/03/07/08/09、README | 缺失脚本/布局报告标明待交付，原两项PASS转为当前工程NOT_RUN；本次检查结果仅在09登记 |
+
+回滚本次修订应恢复完整 `spec/` 快照，不改动 `doc/`、固件、驱动或配置；不能只回滚目录定义而保留新prompt路径。未来实施仍须按03实际源集和09适用验收执行，不由本次规格编辑推断构建/硬件通过。
+
+
+## 2026-11-05 CR-V191-M45-01：M4/M5实施接口及容量
+
+- 授权：用户要求实现STM32固件FMS/轨迹，并明确选择M4/M5。
+- 原问题：TAKEOFF无目标传递字段；M5 20ms区间求解及连续验证退化；导航恢复dwell未执行；水平导航丢失后缺少明确自动垂向参考；M4静态状态和重复围栏配置未计入48KiB合计。
+- 实施：QUAD Product/Port升0x00010905，Schema6.0；02定义明确目标、质量/重力模型视图和GuidanceReferenceKind=5自动垂向着陆。M4唯一授权，M5唯一生成并验证参考；原ABI锁重建，所有消费者必须重编译。04的H723/NONE范围不扩大至地图/A*。
+- 容量：07更新232B Directive slot；规范容量+M4实际BSS=48696B≤48KiB，M5=4672B≤16KiB。
+- 状态：IMPLEMENTED / AUTHOR_VALIDATED；非作者独立审核、WCET/HIL/目标运行均NOT_RUN；没有预填会签或飞行批准。
+- 证据及回滚：applications/core/m5/M4_M5_IMPLEMENTATION.md；build/m4_m5_implementation/evidence/；原文件快照build/m4_m5_implementation/originals/。

@@ -1,0 +1,47 @@
+# FlightSIM 三视角复审与方案替换记录
+
+复审完成日：2026-11-05；基线：FLIGHT-MATLAB-SPEC-1.1-DRAFT；范围SPEC_ONLY。
+本轮是此前两次自审之后新增的三轮作者复审，共22项规格问题已用新方案替换。没有独立会签或模型实施测试PASS；每项实现验证仍NOT_RUN。机器可核对索引为validation/review_findings.json。
+
+## 1. 三轮范围
+
+| 轮次 | 视角 | 审查方法 | 结果范围 |
+|---|---|---|---|
+| 1 | 接口/职责/生命周期 | 从每个消费者倒推输入、Owner和初始/重启依赖，核对上位公共类型与原生输出能力 | 6项，重整M5、启动、事务、外部参考、事件边界 |
+| 2 | 可实现性/因果性/数值 | 逐tick走查Frame/MPC/State Time/Plant，核对原点/地球项/接触/量化与反馈历史 | 8项，整体替换仿真执行方案与物理/输出链 |
+| 3 | 验收/证据/交付 | 从预期失败反推判据，检查阶段依赖、指标可达性、运行矩阵与证据失效 | 8项，重写测试、实施计划和检查器 |
+
+三轮均覆盖系统/架构/接口/Stateflow/制导/控制/估计/数据/Plant/实施与测试的关联项；第三轮再次逐文件交叉核对。旧行为只在本表说明问题，活动正文只保留新方案。
+
+## 2. 逐项方案替换
+
+| ID | 问题 | 新方案 | 活动正文 |
+|---|---|---|---|
+| R1-01 | M5输入与规划职责未闭合 | 完整七层制导、地图/围栏/任务/人工输入和有界Worker替换概略轨迹块 | [FlightSIM-guidance.md](FlightSIM-guidance.md), [FlightSIM-interface-contract.md](FlightSIM-interface-contract.md), [FlightSIM-architecture.md](FlightSIM-architecture.md) |
+| R1-02 | 初始REJECT与Nav一致性证据形成启动互等 | 冷启动Alignment/受控策略与故障probation拆为明确协议 | [FlightSIM-stateflow.md](FlightSIM-stateflow.md), [FlightSIM-estimator.md](FlightSIM-estimator.md) |
+| R1-03 | 局部init可能复用epoch/token，source reset影响范围含糊 | LifecycleCoordinator+Owner外壳EpochStore及分域reset协议 | [FlightSIM-interface-contract.md](FlightSIM-interface-contract.md), [FlightSIM-stateflow.md](FlightSIM-stateflow.md) |
+| R1-04 | 五正交域独立决策可能提交非法组合 | 单DecisionIntent、五域协同迁移、一次Commit/副作用及稳定仲裁 | [FlightSIM-stateflow.md](FlightSIM-stateflow.md) |
+| R1-05 | 原生文本PVA/对角STD无法支撑完整外部控制接口 | 未修改核心+独立逐步Launcher捕获full state/P/同刻rate，文本仅参考 | [FlightSIM-estimator.md](FlightSIM-estimator.md), [FlightSIM-test-plan.md](FlightSIM-test-plan.md) |
+| R1-06 | 事件排序在文档间不一致，传输容量/边界类型不全 | 唯一事件键、准确C typedef、typed batch与显式队列/拒绝策略 | [FlightSIM-interface-contract.md](FlightSIM-interface-contract.md), [FlightSIM-data-replay.md](FlightSIM-data-replay.md) |
+| R2-01 | 连续ode4/事件顺序不能由画图排列保证 | 统一fixed-step discrete、Stateflow相位协调和17维显式RK4有限步Plant | [FlightSIM-architecture.md](FlightSIM-architecture.md), [QuadPlant-architecture.md](QuadPlant-architecture.md) |
+| R2-02 | 同刻求解会掩盖MPC计算/可见性延迟 | pending/active Job、固定虚拟cost/deadline和因果结果释放 | [FlightSIM-control.md](FlightSIM-control.md), [FlightSIM-architecture.md](FlightSIM-architecture.md) |
+| R2-03 | 同Nav发生授权变化时可能在Frame提交旧上下文 | StateAdvance/OutputEvaluate分层，不重复积分并复核新token | [FlightSIM-control.md](FlightSIM-control.md), [FlightSIM-test-plan.md](FlightSIM-test-plan.md) |
+| R2-04 | Origin固定NED与当前LLH-NED/transport项混用 | 完整GeodesyAdapter和固定N0 rate约定，正式对齐留G0，不冒ABI已冻结 | [QuadPlant-architecture.md](QuadPlant-architecture.md), [FlightSIM-interface-contract.md](FlightSIM-interface-contract.md), [FlightSIM-estimator.md](FlightSIM-estimator.md) |
+| R2-05 | 初始CG/地面/Baro零基准不一致 | Origin设初始CG为0、地面D=.15、同点锁存Baro及Home相对高度转换 | [QuadPlant-architecture.md](QuadPlant-architecture.md), [FlightSIM-guidance.md](FlightSIM-guidance.md) |
+| R2-06 | 接地阻尼在尚未接触时也可能产生支撑力 | 先几何门控再计算非负弹簧阻尼，禁止空中阻尼悬浮 | [QuadPlant-architecture.md](QuadPlant-architecture.md), [QuadPlant-test-plan.md](QuadPlant-test-plan.md) |
+| R2-07 | 验code但Plant用未量化N会旁路M7 | code可行整数集合、逆映射N、Receipt/Plant同源、固定应用延迟及明确地面管理stop/空中失效区分 | [FlightSIM-control.md](FlightSIM-control.md), [FlightSIM-interface-contract.md](FlightSIM-interface-contract.md) |
+| R2-08 | 抗饱和可能混用旧alloc/新req并重复Receipt反馈 | 寄存完整同请求残差，首版Receipt附加AW关闭、保留匹配证据 | [FlightSIM-control.md](FlightSIM-control.md), [FlightSIM-architecture.md](FlightSIM-architecture.md) |
+| R3-01 | 20ms过期/20ms周期与非零cost下99%覆盖率冲突 | job成功率99%与时间覆盖90%独立，PD衔接照常计闭环指标 | [FlightSIM-test-plan.md](FlightSIM-test-plan.md), [FlightSIM-control.md](FlightSIM-control.md) |
+| R3-02 | 三入口/制导/故障测试只有概念缺独立可判定结果 | 完整运行矩阵、独立测试ID、转移目录和预置负向reason/deadline | [FlightSIM-test-plan.md](FlightSIM-test-plan.md), [QuadPlant-test-plan.md](QuadPlant-test-plan.md) |
+| R3-03 | 检查失败可能残留旧PASS且漏锚点/范围引用 | 报告先失效、失败覆盖FAIL、精确锚点/区间引用/需求映射及负向自测 | [tools/check_specs.py](tools/check_specs.py), [tools/test_check_specs.py](tools/test_check_specs.py) |
+| R3-04 | 并行上位契约已更新仍沿用缺字段/旧revision | 只读影响审查和准确Hash快照，整体采用Mission bit8/GeofenceConfig/0x10904，新增漂移失败 | [FlightSIM-interface-contract.md](FlightSIM-interface-contract.md), [FlightSIM-research-and-decisions.md](FlightSIM-research-and-decisions.md) |
+| R3-05 | q近零acos、RMS时刻、噪声细化和新boot重复比较口径含糊 | atan2相对q、同物理t指标、随机流独立积分调用、保留身份的语义投影 | [FlightSIM-test-plan.md](FlightSIM-test-plan.md), [QuadPlant-test-plan.md](QuadPlant-test-plan.md), [QuadPlant-architecture.md](QuadPlant-architecture.md) |
+| R3-06 | 安全种子/CORE派生值/第三方包和MEX来源存在双真值风险 | 四CORE+只读Profile统一生成、复用Flight/packages/显式缓存、完整依赖与构建缓存键 | [FlightSIM-data-replay.md](FlightSIM-data-replay.md), [FlightSIM-implementation-plan.md](FlightSIM-implementation-plan.md) |
+| R3-07 | 初始化/地面dwell、takeoff jerk及着陆dwell与名义时间表缺少可行余量 | CONFIGURED_PRIOR30s与STATIC_ALIGN35s分别排完整时序；显式Home/任务事务、4s起飞、23s降落并预留接地/Disarm时间 | [FlightSIM-data-replay.md](FlightSIM-data-replay.md), [FlightSIM-stateflow.md](FlightSIM-stateflow.md) |
+| R3-08 | G0要求G3输出golden、G6依赖G7数据会造成阶段循环 | G0固定可用输入/接口，G2解析fixture，G3生成参考，G8再做MIL记录重放 | [FlightSIM-implementation-plan.md](FlightSIM-implementation-plan.md) |
+
+## 3. 仍需实施前验证的边界
+
+Host固定N0/body rate方案已经选定，仍需与上位ICD正式对齐。上位Mission epoch和编译期围栏入口现在已有正文定义，不能继续按缺字段处理；其生产ABI/配置装载证据及G0冻结仍独立验证。外部依赖/MEX/实际数据资格和最小function-call拓扑也必须实际通过。
+
+本轮检查只证明文档、设计算术、来源快照与拒绝路径；最终.slx、控制性能、SIL/PIL/目标资源、硬件安全均未执行。原FMT-Model只读，本轮不改固件、父spec、官方资料或公用包。

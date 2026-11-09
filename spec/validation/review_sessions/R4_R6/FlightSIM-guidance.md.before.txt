@@ -1,0 +1,51 @@
+# FlightSIM M5制导与规划设计
+
+状态：设计草案；2026-11-05。本文件将M5从概略轨迹模块改为完整、可验收的制导方案。数学与容量唯一来源为[父04第6章](../../spec/04_飞控核心模块与控制系统设计.md)，公共端口唯一来源为[父02 GuidanceInput](../../spec/02_接口契约与公共数据规范.md)。
+
+## 1. 组件与输入闭包
+
+规划FMT_M5_Guidance.slx按以下七层实现：ReferenceInputAdapter→LocalMapManager→PathPlanner→TimeParameterizer→MinimumJerkOptimizer→TrajectorySafetyValidator→ReferenceLifecyclePublisher。规划/固定维数矩阵求解可用有界数学内核；生命周期由Stateflow管理。M5不推进任务、不改Authority、不签Permit、不做MPC。
+
+每次锁存Nav/Capability、Directive、SafetyEnvelope、LandedState、AuthorizedOperatorInput、AuthorityStatus、AuthorizedMissionSnapshot、active Permit、geofences/count、observations/count、EnvironmentConstraint、control_time和evaluation_time。可选项按模式和Profile明确presence；reference消费者不允许只收到p_sp而缺授权上下文。Mission唯一Owner为M4；M5结果回显current_item/execution_token，只有M4可确认到达与推进。
+
+## 2. 编译期障碍Profile
+
+| Profile | 来源与行为 | 必须结果 |
+|---|---|---|
+| SIMULATION，默认30s MIL/合成回放 | 独立SimMapProvider从场景几何产生有来源/期限的地图观测，M2验证后到M5；完整地图/A*启用 | 无障碍fixture也必须显式提供FREE_CONFIRMED证据，不从缺消息推导free |
+| STATIC_MAP，独立回归 | 锁定地图文件/世界变换/Hash，依规定刷新有效来源 | 静态和动态障碍连续验证 |
+| NONE，单独能力裁减回归 | 只接不要求避障的任务，observation_count=0 | OBSTACLE_ASSURANCE_UNAVAILABLE；几何项NOT_APPLICABLE_BY_PROFILE，不能报碰撞PASS |
+
+ONBOARD_SENSOR首版UNSUPPORTED。障碍源丢失不能把既有任务动态改成NONE。地图源是外生场景几何，不读取Plant姿态/位置给M5；移动障碍轨迹有独立时标、速度和不确定度。三个入口使用同一M5 Variant与同格式地图事件；历史没有地图证据时只可选择明确的NONE Profile。
+
+合成地面是已知支持面，不将批准的Home接地点当普通障碍膨胀后阻止着陆；TAKEOFF/LANDING仅允许Home半径0.5m区域触地、穿透上限2cm，其他任务连续曲线不得穿过地面。该支持面属于显式SIM场景几何约束，不以缺障碍观测推定free。
+
+默认窗口16^3、0.5m/cell，覆盖N/E/D各[-4,4)m，变换和中心坐标固定到规划请求快照。显式合成测绘源每250ms刷新，500ms转STALE；UNKNOWN/STALE/INVALID/地图外均拒绝当free。动态track≤8，观测输入≤8/调用，合成动态预测至少1s；地图/track的完整键、cell格式、primitive生成规则直接引用父04，不在此手写第二套bin表。
+
+## 3. 有界规划事务
+
+Planner状态用Stateflow：IDLE→SEARCHING→PARAMETERIZING→OPTIMIZING→VALIDATING→READY，失败到REJECTED；候选与活动参考分槽。事务锁存boot/time/state/origin/authority/directive/mission token/model/envelope/map revision及绝对deadline，提交前再次验证，地图变化或旧任务不得误提交。
+
+Kinodynamic A*使用完整(voxel,velocity,yaw,time)键及父04的60个primitive；512 Node/Open、1024 hash、512扩展上限、每节点≤64边、8段路径、6.2s lattice时间界。根保持实际p/v/a/yaw，首条五次连续连接；容量不足不截断成成功。parent_primitive、reopen、WAIT/BRAKE和稳定平局次序全部继承父04。
+
+Host每500us Worker slice最多8次节点扩展（每次≤64边）或8个连续验证区间工作单元；时间参数/固定矩阵求解各一次有界工作单元。规划绝对deadline种子80ms，虚拟工作单元记录release/finish；Host墙钟单独量测，不宣称该slice等于H723的300us预算。节点/验证容量、期限分别返回父GuidanceReasonCode。
+
+初次Arm按已批准模式生成候选：默认MANUAL_RATE/零throttle输出typed PilotControlReference；POS_HOLD则是当前有效状态的保持MotionReference，仍通过全部适用约束/围栏/地图验证，不需搜索一条零长度路径。新任务规划期间仅可继续尚有效且再次通过当期验证的活动参考；没有有效活动参考就报告不可行并交M4决策。继续既有安全保持不等于接受未完成的新任务。
+
+## 4. 实际消费曲线与授权
+
+路径端点采用父04唯一固定时长minimum-jerk quintic，最多8段；时标器最多16次扩时、总时长≤6.2s。输出为anchor+24点、20ms间隔/480ms预览；M6使用父02的唯一Hermite插值器。必须验证重采样后的消费曲线，不能只验证优化器原始多项式或航点。
+
+独立Validator检查整条连续曲线的frame/epochs/TTL、v/a/jerk/推力/倾角、适用围栏及碰撞；每区间深度≤5、整次最多256工作单元。缺保守速度/加速度界、预测窗口不足或容量耗尽即REJECTED/UNKNOWN。候选只有VALID才READY，M4签匹配Permit后才ACTIVE。
+
+SIM_ONLY几何种子：车辆保守球半径0.35m、几何margin0.10m、位置/速度STD膨胀系数3、反应延迟0.10s、最小制动加速度1m/s²。所有值入Profile Hash，不能作为实测安全证据。视距以v²/(2*a_brake)+v*t_latency+margin检查；不足则限速或拒绝。编译期围栏初始为N/E∈[-3.5,3.5]m、Home相对高度∈[-1,3]m、Origin/epoch与任务一致；M4以有效Home解释高度边界，M5验证时将其转换为当前N0的D区间；Home变化须换约束世代并重验，Origin重建立即失效，重新装载不能只换ID。
+
+Reference每次发布必须基于当期输入完成验证、按父02规则维护reference_id/epoch；不能给已过期旧消息换publish时间续命。40ms消息lease、480ms几何预览、80ms规划事务分别独立。只要新路径未READY，M4不得把其token发给M6。
+
+## 5. 模式入口
+
+MANUAL_RATE/ATTITUDE/ALT_HOLD输出匹配kind的PilotControlReference；人工姿态、yaw积分、三点throttle和垂向PD语义按父04第9节。yaw积分使用实际State Time；只在新授权进入时以有效heading播种。POS_HOLD/任务/RETURN/LAND输出MotionReference。RETURN消费M4的Home转换后目标，M5不拥有Home。Land接地/完成由M4判断。
+
+## 6. 验收接口
+
+T-GDN-01..06分别覆盖：完整输入与七层结构、NONE适用性、A*容量/time键、连续曲线与障碍、候选失效/首次握手、人工/ALT typed参考。比较规划器时同时核对路径端点/primitive和实际消费曲线；可行路径存在不能证明有界搜索一定找到，超容量应明确失败。

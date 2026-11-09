@@ -1,0 +1,70 @@
+# FlightSIM 执行、时间与事务协议
+
+状态：HOST_NATIVE_V2设计规格；2026-11-05。本文是本项目跨组件执行协议的唯一详细来源；公共字段仍引用上位02。Host选定的内部协议不冒充已经冻结的固件Port语义。
+
+## 1. 双时间轴
+
+| 时间轴 | 表示与Owner | 用途 |
+|---|---|---|
+| Simulation Time | SimTimeline.tick/global_us:uint64，global_us=tick*500，Run起点为0且不重置 | Plant积分、物理采样、场景事件、arrival/release、StopTime、能量fixture |
+| FCU Local Time | FcuClock.boot_id/time_epoch/monotonic_us与映射锚点，TimeService唯一Owner | 公共Header、age/TTL/dwell、Control/State Time、参考与任务期限 |
+
+正常段映射local=global-global_anchor+local_anchor，缩放固定1；改time_epoch或boot时建立新锚点。FCU重启可以local=0，而Simulation Time和物理世界连续。数组排序、源延迟队列一律用global release；先验证消息的boot/time/mapping上下文，再做local减法，禁止拿local截止与global队列时刻直接比较。
+
+单source时钟reset只更新其mapping；FCU time失效清依赖；新boot清所有旧业务上下文。正常DISARMED维护重启要求M7无pending帧，重建FCU而不重置Plant；活动飞行MCU reboot为独立预期SimStop用例，不声称无控制还能维持飞行。全新Run才按Scenario重建Plant和全局时间。虚拟MPC/Replay Job保存global available及对应local截止，boot/time不匹配立即丢弃，不把旧Job搬到新local时间轴。
+
+## 2. RunBinding与数据资格
+
+导入生成不可变RunBindingManifest：每段source boot/time/mapping、原始时标→Simulation Time映射、global→本段FCU Local映射、单位/frame/校准、质量和来源Hash。原文件及原Header保留在provenance；活动消息是经过受控适配的新发布，不能直接覆盖原记录。
+
+RAW/STANDARD测量和外部Nav是物理数据，可由各自模拟发布者重新组装本Run Header；保留原measurement ID/顺序、source时间质量及payload意义，新增映射误差按保守界合并，不能升级时间精度。ExternalNav的Origin/Nav/Capability由唯一外部M3外壳一起映射，按同一段建立新的Run-local Origin/state关联，并保留源ID映射表；跨源boot段不混接协方差/杆臂。
+
+历史Permit/Directive/Demand不进入活动链，不适用上述物理数据重绑定。历史操作仅作为新的显式场景请求意图，在新source/session/request上下文经M1/M4重新判断；旧epoch负向记录不可改成当前值。旧boot消息晚到，先拒绝其上下文，禁止先做uint64年龄相减。捕获落在新boot起点附近、pipeline修正会得到负local sample的样本拒绝为TIME_BEFORE_BOOT，等待足够新历史，不借旧boot样本补齐。没有完整RunBinding不能通过严格回放验收。
+
+## 3. M6读取、评价、提交
+
+没有先前State Time的首个有效Nav只做SeedTransaction（I=0、D=0、记录时间/测量），不猜dt积分；同一世代后续有效Nav执行NumericTransaction：Read S[k]→Evaluate→Allocate→Validate→Commit S[k+1]。I[k]、测量/期望姿态历史及last_committed_state_time是有状态寄存器；输出只能使用S[k]，不得先积分后拿I[k+1]计算本次力矩。
+
+每轴：D_candidate=alpha*D[k-1]+(1-alpha)*(omega[k]-omega[k-1])/dt，alpha=exp(-2*pi*f_c*dt)；首帧/上下文重置D=0。tau_req=Kp*e+I[k]-Kd*D_candidate，分配后r[k]=tau_alloc_est[k]-tau_req[k]。I_next=clip(I[k]+Ki*e*dt+Kaw*r[k]*dt, +/-I_limit)。所有本次输入/分配/有限值检查通过才一次提交I_next、D_candidate、历史和时间水位；失败既不推进I也不污染历史。I的Unit Delay已切断因果环，不额外给残差添加一拍延迟。
+
+同State Time的新授权、同刻Nav修订或新MPC结果仅执行ContextEvaluation：计算当前新鲜Nav及当前上下文下的输出，不提交数值状态、不增加dt/jerk额度。新context只做一次显式ResetTransaction（I=0、D/期望前馈=0、旧求解失效）；它不是积分，且不清同一boot/time/state世代的已消费State Time水位。下一条新Nav仍从真实上一有效State Time计算dt。重复相同context/sample调用返回同一候选，不重复reset。
+
+批量Nav按State Time串行完成上述事务，M7仅取本tick最后一份可发布Demand；因新参考anchor而不适用的旧Nav不得偷偷补积分，需记录CONTROL_CONTEXT_SKIPPED。任何跨epoch要先执行受控重置，不能把同Time的旧state当新样本。Receipt附加AW首版仍关闭，主AW使用本次完整分配残差。
+
+输入拒绝时Health可发布新的诊断时间，但Nav/参考/状态有效期不得刷新为当前；最后有效状态只是诊断缓存。ContextEvaluation不能用发布新Health掩盖状态过期。
+
+## 4. 准备与活动上下文双通道
+
+普通热切换采用PREPARE→VALIDATE→COMMIT。M4的TransitionCoordinator Chart最多持有1个PendingContext，活动五域状态和ActiveContext在准备期间保持一致；请求ACK为IN_PROGRESS，不提前宣称新模式/任务已生效。首Arm仍使用ARMING/绝对100ms规则；普通准备上限80ms。
+
+SimPreparedFmsContext是Host私有值容器：transition_id:uint64、expected_active_context_id、request身份、deadline_local_us、目标Directive/Authority/Envelope及保留Mission token、required_reference_kind。M4保留新epoch/token高水位，M5分配候选reference_id/epoch；abort也不得回收复用。它不是ActuationPermit，M6/M7不能消费准备通道。
+
+M5只读准备上下文与同刻新鲜输入，产生PreparedGuidanceCandidate（匹配transition_id、完整Reference/Feasibility、input/map revision、activation_deadline）。活动参考另保存在ActiveReference槽；候选不得覆盖它。M4下一500us事务再次核对上下文、原事实/期限和候选可行性，一次提交五域状态、Directive/Authority/Envelope/Mission、Permit及M5参考句柄到新的ActiveContext。M6的ControllerInput只从这个完整活动上下文组装，不能逐端口拿“最新值”。
+
+准备失败/过期只取消该普通操作并回原因，旧控制仅在原scope仍合法且有新事实时继续；不能给已过期旧参考换头续命。硬故障/强制撤销立即更新M7水位并取消pending，不等80ms准备。Pilot接管使用有界typed快速准备、下一事务提交；不让复杂搜索延迟显式接管。Mission换项也先保留下一token，再准备、提交后唯一推进current_item；旧结果不能重复推进。
+
+这些是Host组合外壳的双槽值消息，不增加固件message_type。现有公共GuidanceInput/GuidanceOutput不能直接被宣称已提供双通道协议；未来C适配需完整映射/契约复核，未完成前只标HOST_NATIVE_V2，不能标FIRMWARE_EQUIVALENT。
+
+## 5. 固定参考grid与未来交接
+
+Reference Time与Control Time分开：Control Time始终取当前Nav State Time。一个Motion参考家族首次建立时，以该新鲜State Time锁存grid_origin_us；以后anchor=grid_origin+floor((control_time-grid_origin)/20000)*20000。anchor不晚于Control Time，最多落后19999us；Header.sample是轨迹anchor，不是Nav测量时刻，不复制到Control Time。
+
+公共点仍offset0..480ms/20ms，M6按真实Control Time插值，不能改Nav时间去凑grid。新规划的handover=anchor+60000us，activation_deadline=handover-10000us。提交必须在deadline前完成；迟到候选丢弃并用新快照重算。
+
+已有Motion家族时，新程序前3个20ms区间复制活动参考在相同绝对grid点的p/v/a、yaw/rate；handover处的新路径初值取旧活动参考，不能以带跟踪误差的Nav直接覆盖参考。新路径段时间为0.2s整数倍，所有切换点均在同一20ms grid；位置Hermite区间重构同一个quintic，前缀在实际授权切换时逐点相同。位置p/v/a为C2，yaw按公共yaw/rate插值为C1；不声称yaw加速度必然C2。
+
+无活动Motion参考的首次进入（例如MANUAL_RATE→TAKEOFF），先从同刻Nav的p/v建立60ms捕获参考，参考加速度按明确a0=0构造；这是选择参考，不是伪造M3状态预测。新路径从捕获参考的handover p/v/a连接。没有跨typed参考种类的虚假位置C2承诺，物理命令仍受M7 slew限制。
+
+rolling保持同一家族的grid_origin/完整程序，只移动20ms整数anchor并增加Header.sequence；不能每次把anchor重置为抖动的最新Nav时间。新任务/约束/语义路径才换reference_id/epoch。若旧前缀在新强约束下不可验证，禁止发布该交接方案，交M4处理；硬撤销不会为等待平滑而延迟。
+
+## 6. M5预览的副作用边界
+
+准备计算一律在局部工作副本进行，不更新活动yaw/高度积分、reference序列水位或任务状态。MANUAL/ALT活动状态在相同(boot,time,state,active_context,State Time)下最多提交一次；重复调用或准备候选只返回同一投影。提交新context时安装一次候选入口状态，后续才按实际State Time积分。
+
+ALT_HOLD按父02现有规则：进入时h_sp=-p_D，v_up_sp=(2*throttle_norm-1)*有效垂向速度上限，实际dt积分并经包线检查；人工yaw/姿态仍按父04。同一人工参考家族的授权输入流更新只增加sequence；kind/Authority/约束语义改变才建立新家族。预览20次也只能产生一次真实积分，不能把函数调用数当经过时间。
+
+## 7. 正常地面停止事务
+
+M4在可靠LANDED的DISARM_BEGIN进入DISARMING时发唯一GroundStopCertificate（boot/time、lifecycle_command_id、已锁存地面证据、150ms领域期限）。M7按GROUND_STOP管理类执行有界降推力：每2.5ms最多100N/s对应的0.25N，并在整数code可行集合选向0的最近码，最终发stop code0；500us应用延迟和电机40ms转速动态继续存在。它不生成运动Demand/Receipt，不清许可水位，也不能在空中失效时被当作通用Kill。M4须等M7报告ZERO_TARGET_APPLIED且无活动帧后才DISARM_DONE→DISARMED；非零管理推力仅存在于DISARMING，不能在DISARMED继续发油门。模块stop/init仍等DISARMED维护点，不能中途拆掉M7。
+
+默认曲线每LSB=10/1999N，每帧最多下移floor(.25/(10/1999))=49个force index；最坏10N需41帧，含起始相位及应用延迟不超过105.5ms，150ms证书覆盖。配置必须保证每帧slew额度至少覆盖最大相邻物理LSB，否则拒绝该量化/速率配置而不是静默卡住。新boot、证书过期或地面事实被撤销时不继续旧停止事务，按当前合法生命周期或预期SimStop处理。

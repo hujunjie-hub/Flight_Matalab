@@ -1,0 +1,10 @@
+work/
+slprj/
+*.slxc
+*.slx.autosave
+*.slx.r*
+*.m~
+*.asv
+*.mexw64
+*.mexa64
+*.mexmaci64

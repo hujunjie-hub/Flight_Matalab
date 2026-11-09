@@ -1,0 +1,4833 @@
+{
+  "scope": "HOST_VALUE_TYPES",
+  "status": "PASS",
+  "schema_major": 6,
+  "port_revision": "0x00010906",
+  "firmware_abi_equivalence": false,
+  "pointer_views_imported": false,
+  "buses": {
+    "ActuationPermit": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "permit_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "directive_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "authority_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reference_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "permit_flags",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "permit_expires_at_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "reason_code",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "output_policy_id",
+        "type": "uint16",
+        "dimensions": 1
+      }
+    ],
+    "ActuatorCapability": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "actuator_layout_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "available_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "controllable_dof_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "degraded_dof_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "vehicle_extension",
+        "type": "Bus: ProductActuatorCapability",
+        "dimensions": 1
+      }
+    ],
+    "ActuatorCommitReceipt": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "applied_control_sequence",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "permit_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "directive_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "authority_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reference_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "commit_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "estimated_apply_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "receipt_expires_at_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "limit_flags",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "output_policy_id",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "result_code",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "committed_demand",
+        "type": "Bus: ProductActuatorDemand",
+        "dimensions": 1
+      }
+    ],
+    "ActuatorDemand": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "actuator_layout_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "valid_channel_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "permit_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "directive_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "authority_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reference_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "control_sequence",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "demand_expires_at_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "demand",
+        "type": "Bus: ProductActuatorDemand",
+        "dimensions": 1
+      }
+    ],
+    "ActuatorHealth": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "component_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "last_error_code",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "consecutive_error_count",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "last_success_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "last_heartbeat_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "health_state",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint8",
+        "dimensions": 7
+      }
+    ],
+    "ActuatorStatus": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "actuator_layout_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "available_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "fault_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "feedback_valid_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "feedback",
+        "type": "Bus: ProductActuatorFeedback",
+        "dimensions": 1
+      }
+    ],
+    "AirspeedSample": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "sensor_instance_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "calibration_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "quality_flags",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "true_airspeed_mps",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "variance_m2ps2",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "AuthorityStatus": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "authority_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "authority_owner",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "operation_mode",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "selected_source_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "flags",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reason_code",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint16",
+        "dimensions": 1
+      }
+    ],
+    "AuthorizedMissionSnapshot": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "mission_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "authority_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "directive_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "origin_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "mission_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "mission_revision",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "mission_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "mission_expires_at_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "current_item_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "current_item_index",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "execution_token",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "mission",
+        "type": "Bus: ProductMissionPayload",
+        "dimensions": 1
+      }
+    ],
+    "AuthorizedOperatorInput": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "authority_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "selected_source_id",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "authority_class",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "input_layout_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "payload",
+        "type": "Bus: ProductOperatorInput",
+        "dimensions": 1
+      }
+    ],
+    "BaroSample": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "sensor_instance_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "calibration_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "quality_flags",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "altitude_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "variance_m2",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "ClockDomainMappingStatus": [
+      {
+        "name": "source_clock_domain_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "source_reset_counter",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "mapping_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "local_time_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "anchor_source_time_ns",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "anchor_local_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "source_rate_error_ppb",
+        "type": "int32",
+        "dimensions": 1
+      },
+      {
+        "name": "mapping_state",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint8",
+        "dimensions": 3
+      },
+      {
+        "name": "uncertainty_ns",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "last_sync_local_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "valid_until_local_us",
+        "type": "uint64",
+        "dimensions": 1
+      }
+    ],
+    "ClockInstant": [
+      {
+        "name": "boot_id",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "monotonic_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "time_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint32",
+        "dimensions": 1
+      }
+    ],
+    "CommandAck": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "request_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "source_session_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "request_source_id",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved_source",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "ack_state",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reason_code",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "completion_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      }
+    ],
+    "CommunicationLinkStatus": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "link_instance_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "link_kind",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "link_state",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reason_code",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "valid_frame_count",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "sequence_gap_count",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "crc_error_count",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "packet_loss_ppm",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "rssi_dbm",
+        "type": "int16",
+        "dimensions": 1
+      },
+      {
+        "name": "link_quality_permille",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "last_valid_frame_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "last_rx_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "recovery_stable_ms",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "flags",
+        "type": "uint32",
+        "dimensions": 1
+      }
+    ],
+    "ContractHeader": [
+      {
+        "name": "schema_major",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "schema_minor",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "message_type",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "source_id",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "sequence",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "profile_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "frame_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "boot_id",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "clock_domain_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "time_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "source_clock_domain_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "source_mapping_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "timestamp_sample_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "timestamp_publish_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "valid_until_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "event_time_uncertainty_us",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "timestamp_quality",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "timestamp_flags",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "validity_flags",
+        "type": "uint32",
+        "dimensions": 1
+      }
+    ],
+    "ControlCapability": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "control_layout_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "controllable_dof_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "degraded_dof_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "health_state",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "control_level",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reason_code",
+        "type": "uint16",
+        "dimensions": 1
+      }
+    ],
+    "ControlHealth": [
+      {
+        "name": "common",
+        "type": "Bus: ModuleHealth",
+        "dimensions": 1
+      },
+      {
+        "name": "solver_status",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "deadline_miss_count",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "last_valid_command_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "max_input_age_us",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "allocation_failure_count",
+        "type": "uint32",
+        "dimensions": 1
+      }
+    ],
+    "ControlLinearModel": [
+      {
+        "name": "A",
+        "type": "single",
+        "dimensions": 36
+      },
+      {
+        "name": "B",
+        "type": "single",
+        "dimensions": 18
+      },
+      {
+        "name": "c",
+        "type": "single",
+        "dimensions": 6
+      },
+      {
+        "name": "sample_time_s",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "ControlModelBounds": [
+      {
+        "name": "state_min",
+        "type": "single",
+        "dimensions": 6
+      },
+      {
+        "name": "state_max",
+        "type": "single",
+        "dimensions": 6
+      },
+      {
+        "name": "input_min",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "input_max",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "input_slew_max",
+        "type": "single",
+        "dimensions": 3
+      }
+    ],
+    "ControlModelDescriptor": [
+      {
+        "name": "model_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "model_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state_layout_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "input_layout_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "model_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "model_kind",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint8",
+        "dimensions": 3
+      }
+    ],
+    "ControlModelInput": {
+      "name": "input",
+      "type": "single",
+      "dimensions": 3
+    },
+    "ControlModelState": {
+      "name": "state",
+      "type": "single",
+      "dimensions": 6
+    },
+    "ControlModelView": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "descriptor",
+        "type": "Bus: ControlModelDescriptor",
+        "dimensions": 1
+      },
+      {
+        "name": "linear_model",
+        "type": "Bus: ControlLinearModel",
+        "dimensions": 1
+      },
+      {
+        "name": "bounds",
+        "type": "Bus: ControlModelBounds",
+        "dimensions": 1
+      },
+      {
+        "name": "model_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "operating_point_id",
+        "type": "uint32",
+        "dimensions": 1
+      }
+    ],
+    "DecisionEvent": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "decision_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "request_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "policy_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "evidence_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "decision_code",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reason_code",
+        "type": "uint16",
+        "dimensions": 1
+      }
+    ],
+    "EnvironmentConstraint": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "constraint_kind",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "severity",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "constraint_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "constraint_expires_at_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "payload",
+        "type": "Bus: ProductEnvironmentConstraint",
+        "dimensions": 1
+      }
+    ],
+    "EstimatorHealth": [
+      {
+        "name": "common",
+        "type": "Bus: ModuleHealth",
+        "dimensions": 1
+      },
+      {
+        "name": "last_imu_sample_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "propagation_age_us",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "rejected_measurement_count",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "covariance_fault_count",
+        "type": "uint32",
+        "dimensions": 1
+      }
+    ],
+    "EstimatorResetRequest": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "reset_type",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "initial_source",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "requested_origin_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "valid_initial_state_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "initial_state",
+        "type": "Bus: NavStateCore",
+        "dimensions": 1
+      }
+    ],
+    "ExternalClockSyncObservation": [
+      {
+        "name": "source_clock_domain_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "source_sequence",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "local_time_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved0",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "local_send_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "source_receive_time_ns",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "source_send_time_ns",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "local_receive_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "source_uncertainty_ns",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "source_reset_counter",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "validity_flags",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint16",
+        "dimensions": 1
+      }
+    ],
+    "ExternalOdometry": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "source_origin_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reset_counter",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "tracking_status",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "position_ned_m",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "velocity_ned_mps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "q_nb_wxyz",
+        "type": "single",
+        "dimensions": 4
+      },
+      {
+        "name": "position_variance_m2",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "velocity_variance_m2ps2",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "attitude_variance_rad2",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "time_sync_uncertainty_us",
+        "type": "uint32",
+        "dimensions": 1
+      }
+    ],
+    "FaultEvidenceEvent": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "event_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "fault_domain",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "evidence_class",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "source_component_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "source_instance_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reason_code",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "related_sequence",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "first_seen_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "last_seen_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "occurrence_count",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "severity",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "active",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint16",
+        "dimensions": 1
+      }
+    ],
+    "FaultSummary": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "active_fault_count",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "latched_fault_count",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "fault_domain_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "highest_severity_fault_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "highest_severity",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint8",
+        "dimensions": 3
+      }
+    ],
+    "FlowSample": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "sensor_instance_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "calibration_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "quality_flags",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "velocity_xy_mps",
+        "type": "single",
+        "dimensions": 2
+      },
+      {
+        "name": "integration_time_s",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "quality",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "FmsHealth": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "component_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "last_error_code",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "consecutive_error_count",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "last_success_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "last_heartbeat_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "health_state",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint8",
+        "dimensions": 7
+      }
+    ],
+    "FmsStateSnapshot": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "arm_state",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "flight_mode",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "authority",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "failsafe_level",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "mission_state",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint8",
+        "dimensions": 3
+      },
+      {
+        "name": "authority_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "directive_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "permit_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reference_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "active_mission_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "active_policy_id",
+        "type": "uint32",
+        "dimensions": 1
+      }
+    ],
+    "GnssSample": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "sensor_instance_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "sample_sequence",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "calibration_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "quality_flags",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "latitude_deg",
+        "type": "double",
+        "dimensions": 1
+      },
+      {
+        "name": "longitude_deg",
+        "type": "double",
+        "dimensions": 1
+      },
+      {
+        "name": "altitude_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "velocity_ned_mps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "position_variance_m2",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "velocity_variance_m2ps2",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "fix_type",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "satellite_count",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint16",
+        "dimensions": 1
+      }
+    ],
+    "GnssTimeObservation": [
+      {
+        "name": "utc_time_ns",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "paired_pps_tick64",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "pps_edge_sequence",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "time_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "receiver_accuracy_ns",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "time_scale",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "validity_flags",
+        "type": "uint16",
+        "dimensions": 1
+      }
+    ],
+    "GuidanceFeasibility": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "reference_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reference_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "feasible",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "severity",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reason_code",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "violated_constraint_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "earliest_violation_offset_us",
+        "type": "uint32",
+        "dimensions": 1
+      }
+    ],
+    "GuidanceHealth": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "component_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "last_error_code",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "consecutive_error_count",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "last_success_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "last_heartbeat_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "health_state",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint8",
+        "dimensions": 7
+      }
+    ],
+    "GuidanceStatus": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "reference_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reference_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "origin_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "authority_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "directive_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "mission_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "current_item_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "execution_token",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "guidance_state",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reference_kind",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reason_code",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "item_result",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reference_expires_at_us",
+        "type": "uint64",
+        "dimensions": 1
+      }
+    ],
+    "ImuSample": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "sensor_instance_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "sample_sequence",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "calibration_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "quality_flags",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "gyro_frd_radps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "accel_frd_mps2",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "temperature_c",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "LandedStateSnapshot": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "state_revision",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "evidence_mask",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "confidence_0_to_1",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "stable_duration_ms",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state_since_us",
+        "type": "uint64",
+        "dimensions": 1
+      }
+    ],
+    "LocalTimebaseDisciplineStatus": [
+      {
+        "name": "time_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "discipline_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "anchor_tick64",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "anchor_monotonic_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "rate_correction_ppb",
+        "type": "int32",
+        "dimensions": 1
+      },
+      {
+        "name": "rate_uncertainty_ppb",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "last_phase_error_ns",
+        "type": "int64",
+        "dimensions": 1
+      },
+      {
+        "name": "last_valid_pps_tick64",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "last_update_monotonic_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "accepted_interval_count",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "discipline_state",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "valid",
+        "type": "uint8",
+        "dimensions": 1
+      }
+    ],
+    "MagSample": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "sensor_instance_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "calibration_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "quality_flags",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "field_frd_ut",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "variance_ut2",
+        "type": "single",
+        "dimensions": 3
+      }
+    ],
+    "MissionStatus": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "mission_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "current_item_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "mission_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "mission_revision",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "execution_token",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "mission_state",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "result_code",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "progress_0_to_1",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "MissionUploadCandidate": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "transaction_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "source_session_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "origin_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "mission_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "mission",
+        "type": "Bus: ProductMissionPayload",
+        "dimensions": 1
+      }
+    ],
+    "ModuleHealth": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "component_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "last_error_code",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "consecutive_error_count",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "last_success_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "last_heartbeat_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "health_state",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint8",
+        "dimensions": 7
+      }
+    ],
+    "MotionReference": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "reference_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reference_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "origin_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "authority_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "directive_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "mission_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "current_item_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "execution_token",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "point_count",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reference_kind",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "anchor",
+        "type": "Bus: MotionReferencePoint",
+        "dimensions": 1
+      },
+      {
+        "name": "points",
+        "type": "Bus: MotionReferencePoint",
+        "dimensions": 24
+      }
+    ],
+    "MotionReferencePoint": [
+      {
+        "name": "offset_us",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "valid_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "point",
+        "type": "Bus: ProductMotionPoint",
+        "dimensions": 1
+      }
+    ],
+    "NavStateCore": [
+      {
+        "name": "valid_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "position_ned_m",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "velocity_ned_mps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "acceleration_ned_mps2",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "q_nb_wxyz",
+        "type": "single",
+        "dimensions": 4
+      },
+      {
+        "name": "body_rate_frd_radps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "position_std_m",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "velocity_std_mps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "attitude_std_rad",
+        "type": "single",
+        "dimensions": 3
+      }
+    ],
+    "NavigationCapability": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "origin_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "capability_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "degraded_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "solution_state",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint8",
+        "dimensions": 3
+      },
+      {
+        "name": "horizontal_position_std_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "vertical_position_std_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "velocity_std_mps",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "heading_std_rad",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "active_source_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "rejected_source_mask",
+        "type": "uint32",
+        "dimensions": 1
+      }
+    ],
+    "NavigationOriginSnapshot": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "origin_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "valid_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "latitude_deg",
+        "type": "double",
+        "dimensions": 1
+      },
+      {
+        "name": "longitude_deg",
+        "type": "double",
+        "dimensions": 1
+      },
+      {
+        "name": "ellipsoid_height_m",
+        "type": "double",
+        "dimensions": 1
+      },
+      {
+        "name": "geoid_separation_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "local_radius_limit_m",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "NavigationSnapshot": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "origin_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "core",
+        "type": "Bus: NavStateCore",
+        "dimensions": 1
+      },
+      {
+        "name": "vehicle_extension",
+        "type": "Bus: ProductNavExtension",
+        "dimensions": 1
+      }
+    ],
+    "OperatingPoint": [
+      {
+        "name": "state",
+        "type": "Bus: ControlModelState",
+        "dimensions": 1
+      },
+      {
+        "name": "input",
+        "type": "Bus: ControlModelInput",
+        "dimensions": 1
+      },
+      {
+        "name": "operating_speed_mps",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "operating_voltage_v",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "OperationRequest": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "request_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "source_session_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "command_code",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "authority_class",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "payload_schema_id",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "execution_deadline_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "payload",
+        "type": "Bus: ProductOperationPayload",
+        "dimensions": 1
+      }
+    ],
+    "OperatorInput": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "input_layout_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "valid_axis_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "payload",
+        "type": "Bus: ProductOperatorInput",
+        "dimensions": 1
+      }
+    ],
+    "PilotControlReference": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "reference_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reference_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "origin_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "authority_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "directive_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reference_kind",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "valid_mask",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "vehicle_extension",
+        "type": "Bus: ProductPilotControlReferencePayload",
+        "dimensions": 1
+      }
+    ],
+    "PpsCaptureEvent": [
+      {
+        "name": "capture_tick64",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "edge_sequence",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "time_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "capture_flags",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint16",
+        "dimensions": 1
+      }
+    ],
+    "PreArmCheckResult": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "check_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "failed_checks_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "primary_reason_code",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "failed_count",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "warning_count",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "checked_at_us",
+        "type": "uint64",
+        "dimensions": 1
+      }
+    ],
+    "ProductActuatorCapability": [
+      {
+        "name": "min_thrust_n",
+        "type": "single",
+        "dimensions": 4
+      },
+      {
+        "name": "max_thrust_n",
+        "type": "single",
+        "dimensions": 4
+      },
+      {
+        "name": "max_slew_nps",
+        "type": "single",
+        "dimensions": 4
+      }
+    ],
+    "ProductActuatorConfig": [
+      {
+        "name": "profile_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "calibration_set_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "calibration_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "config_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "payload",
+        "type": "Bus: ProductActuatorConfigPayload",
+        "dimensions": 1
+      }
+    ],
+    "ProductActuatorConfigPayload": [
+      {
+        "name": "output_policy_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "esc_bit_rate",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "calibration_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "motor_to_timer_channel",
+        "type": "uint8",
+        "dimensions": 4
+      },
+      {
+        "name": "thrust_curve_count",
+        "type": "uint16",
+        "dimensions": 4
+      },
+      {
+        "name": "thrust_curve_n",
+        "type": "single",
+        "dimensions": [
+          4,
+          16
+        ]
+      },
+      {
+        "name": "dshot_curve_code",
+        "type": "uint16",
+        "dimensions": [
+          4,
+          16
+        ]
+      },
+      {
+        "name": "min_thrust_n",
+        "type": "single",
+        "dimensions": 4
+      },
+      {
+        "name": "max_thrust_n",
+        "type": "single",
+        "dimensions": 4
+      },
+      {
+        "name": "max_slew_nps",
+        "type": "single",
+        "dimensions": 4
+      }
+    ],
+    "ProductActuatorDemand": [
+      {
+        "name": "valid_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "motor_thrust_n",
+        "type": "single",
+        "dimensions": 4
+      }
+    ],
+    "ProductActuatorFeedback": [
+      {
+        "name": "valid_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "motor_rpm",
+        "type": "single",
+        "dimensions": 4
+      },
+      {
+        "name": "motor_thrust_est_n",
+        "type": "single",
+        "dimensions": 4
+      }
+    ],
+    "ProductControllerConfig": [
+      {
+        "name": "profile_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "parameter_set_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "parameter_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "config_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "payload",
+        "type": "Bus: ProductControllerConfigPayload",
+        "dimensions": 1
+      }
+    ],
+    "ProductControllerConfigPayload": [
+      {
+        "name": "mass_kg",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "inertia_frd_kgm2",
+        "type": "single",
+        "dimensions": 9
+      },
+      {
+        "name": "motor_position_frd_m",
+        "type": "single",
+        "dimensions": [
+          4,
+          3
+        ]
+      },
+      {
+        "name": "motor_yaw_torque_ratio_m",
+        "type": "single",
+        "dimensions": 4
+      },
+      {
+        "name": "so3_gain_per_s",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "rate_kp_nm_per_radps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "rate_ki_nm_per_rad",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "rate_kd_nm_per_radps2",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "rate_kaw_per_s",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "rate_d_cutoff_hz",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "rate_integral_limit_nm",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "fallback_kp_per_s2",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "fallback_kd_per_s",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "mpc_q_diag",
+        "type": "single",
+        "dimensions": 6
+      },
+      {
+        "name": "mpc_qf_diag",
+        "type": "single",
+        "dimensions": 6
+      },
+      {
+        "name": "mpc_r_diag",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "mpc_s_diag",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "actuation_preview_delay_s",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "manual_hover_throttle_norm",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "mpc_seed_position_error_limit_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "mpc_seed_velocity_error_limit_mps",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "ProductDirectivePayload": [
+      {
+        "name": "flight_phase",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "failsafe_policy",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "max_tilt_rad",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "min_height_above_home_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "max_height_above_home_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "home",
+        "type": "Bus: ProductHomeTargetSnapshot",
+        "dimensions": 1
+      },
+      {
+        "name": "target_valid_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "target_position_ned_m",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "target_yaw_rad",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "ProductEnvironmentConstraint": [
+      {
+        "name": "obstacle_count",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "min_clearance_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "max_wind_mps",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "ProductEnvironmentState": [
+      {
+        "name": "wind_ned_mps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "air_density_kgpm3",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "ProductEstimatorConfig": [
+      {
+        "name": "profile_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "parameter_set_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "parameter_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "config_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "payload",
+        "type": "Bus: ProductEstimatorConfigPayload",
+        "dimensions": 1
+      }
+    ],
+    "ProductEstimatorConfigPayload": [
+      {
+        "name": "initial_covariance_upper",
+        "type": "double",
+        "dimensions": 253
+      },
+      {
+        "name": "gyro_noise_density_radps_per_sqrt_hz",
+        "type": "double",
+        "dimensions": 3
+      },
+      {
+        "name": "accel_noise_density_mps2_per_sqrt_hz",
+        "type": "double",
+        "dimensions": 3
+      },
+      {
+        "name": "gyro_bias_std_radps",
+        "type": "double",
+        "dimensions": 3
+      },
+      {
+        "name": "accel_bias_std_mps2",
+        "type": "double",
+        "dimensions": 3
+      },
+      {
+        "name": "gyro_scale_std",
+        "type": "double",
+        "dimensions": 3
+      },
+      {
+        "name": "accel_scale_std",
+        "type": "double",
+        "dimensions": 3
+      },
+      {
+        "name": "bias_correlation_time_s",
+        "type": "double",
+        "dimensions": 2
+      },
+      {
+        "name": "scale_correlation_time_s",
+        "type": "double",
+        "dimensions": 2
+      },
+      {
+        "name": "baro_bias_rw_psd_m2ps",
+        "type": "double",
+        "dimensions": 1
+      },
+      {
+        "name": "gnss_position_floor_m",
+        "type": "double",
+        "dimensions": 3
+      },
+      {
+        "name": "gnss_velocity_floor_mps",
+        "type": "double",
+        "dimensions": 3
+      },
+      {
+        "name": "baro_floor_m",
+        "type": "double",
+        "dimensions": 1
+      },
+      {
+        "name": "mag_heading_floor_rad",
+        "type": "double",
+        "dimensions": 1
+      },
+      {
+        "name": "antenna_lever_frd_m",
+        "type": "double",
+        "dimensions": 3
+      },
+      {
+        "name": "imu_to_vehicle_reference_frd_m",
+        "type": "double",
+        "dimensions": 3
+      },
+      {
+        "name": "magnetic_declination_rad",
+        "type": "double",
+        "dimensions": 1
+      },
+      {
+        "name": "magnetic_declination_variance_rad2",
+        "type": "double",
+        "dimensions": 1
+      },
+      {
+        "name": "min_horizontal_field_ut",
+        "type": "double",
+        "dimensions": 1
+      },
+      {
+        "name": "initial_latitude_deg",
+        "type": "double",
+        "dimensions": 1
+      },
+      {
+        "name": "initial_longitude_deg",
+        "type": "double",
+        "dimensions": 1
+      },
+      {
+        "name": "initial_ellipsoid_height_m",
+        "type": "double",
+        "dimensions": 1
+      },
+      {
+        "name": "local_radius_limit_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "initial_origin_valid_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "aiding_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "calibration_version",
+        "type": "uint32",
+        "dimensions": 1
+      }
+    ],
+    "ProductFmsConfig": [
+      {
+        "name": "profile_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "parameter_set_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "parameter_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "config_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "payload",
+        "type": "Bus: ProductFmsConfigPayload",
+        "dimensions": 1
+      }
+    ],
+    "ProductFmsConfigPayload": [
+      {
+        "name": "safety_policy_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "output_policy_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "verified_input_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "rc_lost_timeout_us",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "rc_recovery_dwell_us",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "landed_dwell_us",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "first_reference_timeout_us",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "nav_enter_dwell_us",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "attitude_std_limit_rad",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "heading_std_limit_rad",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "horizontal_position_std_limit_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "vertical_position_std_limit_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "horizontal_velocity_std_limit_mps",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "vertical_velocity_std_limit_mps",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "nav_enter_ratio",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "geofence_required",
+        "type": "uint32",
+        "dimensions": 1
+      }
+    ],
+    "ProductFmsInputExtension": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "valid_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "ground_contact_state",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "landing_zone_valid",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "geofence_state",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "energy_state",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "battery_remaining_fraction",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "estimated_return_energy_fraction",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "estimated_landing_energy_fraction",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "wind_ned_mps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "wind_uncertainty_mps",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "ProductGeofenceConfig": [
+      {
+        "name": "profile_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "config_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "geofence_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "payload",
+        "type": "Bus: ProductGeofenceConfigPayload",
+        "dimensions": 1
+      }
+    ],
+    "ProductGeofenceConfigPayload": [
+      {
+        "name": "config_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "fence_count",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "geofence_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "fences",
+        "type": "Bus: ProductGeofenceDefinition",
+        "dimensions": 4
+      }
+    ],
+    "ProductGeofenceDefinition": [
+      {
+        "name": "fence_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "kind",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "vertex_count",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved0",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "vertices_ne_m",
+        "type": "single",
+        "dimensions": [
+          32,
+          2
+        ]
+      },
+      {
+        "name": "min_height_above_home_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "max_height_above_home_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "horizontal_margin_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "vertical_margin_m",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "ProductGeofenceSnapshot": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "fence_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "fence_revision",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "fence_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "frame_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "origin_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "validity",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "kind",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "vertex_count",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved0",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "vertices_ne_m",
+        "type": "single",
+        "dimensions": [
+          32,
+          2
+        ]
+      },
+      {
+        "name": "min_height_above_home_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "max_height_above_home_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "horizontal_margin_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "vertical_margin_m",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "ProductGuidanceConfig": [
+      {
+        "name": "profile_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "parameter_set_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "parameter_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "config_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "payload",
+        "type": "Bus: ProductGuidanceConfigPayload",
+        "dimensions": 1
+      }
+    ],
+    "ProductGuidanceConfigPayload": [
+      {
+        "name": "max_velocity_ned_mps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "max_acceleration_ned_mps2",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "max_jerk_ned_mps3",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "vehicle_radius_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "clearance_margin_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "uncertainty_inflation_factor",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "obstacle_source_mode",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "planning_deadline_us",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "primitive_table_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "max_dynamic_prediction_us",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "mass_kg",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "gravity_mps2",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "ProductHomeTargetSnapshot": [
+      {
+        "name": "home_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "home_revision",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "frame_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "origin_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "validity",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "quality",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "capture_source",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved0",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "captured_at_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "home_expires_at_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "position_ned_m",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "position_std_m",
+        "type": "single",
+        "dimensions": 3
+      }
+    ],
+    "ProductMissionPayload": [
+      {
+        "name": "mission_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "mission_revision",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "mission_hash",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "waypoint_count",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "flags",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "waypoints",
+        "type": "Bus: ProductMissionWaypoint",
+        "dimensions": 32
+      }
+    ],
+    "ProductMissionWaypoint": [
+      {
+        "name": "waypoint_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "position_ned_m",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "yaw_rad",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "acceptance_radius_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "speed_limit_mps",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "flags",
+        "type": "uint32",
+        "dimensions": 1
+      }
+    ],
+    "ProductMotionPoint": [
+      {
+        "name": "valid_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "position_ned_m",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "velocity_ned_mps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "acceleration_ned_mps2",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "yaw_rad",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "yaw_rate_radps",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "ProductNavExtension": [
+      {
+        "name": "valid_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "baro_altitude_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "terrain_range_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "wind_ned_mps",
+        "type": "single",
+        "dimensions": 3
+      }
+    ],
+    "ProductObstacleObservation": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "observation_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "sensor_instance_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "source_health_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "origin_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "observation_kind",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "shape_kind",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "source_health",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved0",
+        "type": "uint8",
+        "dimensions": 3
+      },
+      {
+        "name": "quality_flags",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "obstacle_center_ned_m",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "obstacle_half_extent_m",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "ray_start_ned_m",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "ray_end_ned_m",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "obstacle_velocity_ned_mps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "position_std_m",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "velocity_std_mps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "confidence_0_to_1",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "ProductOperationPayload": [
+      {
+        "name": "mission_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "target_ned_m",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "target_yaw_rad",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "requested_altitude_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "valid_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "requested_mode",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "operation_flags",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "settings_transaction_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "prearm_check_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "mission_transaction_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "mission_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      }
+    ],
+    "ProductOperatorInput": [
+      {
+        "name": "roll_norm",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "pitch_norm",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "yaw_norm",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "throttle_norm",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "mode_switch_bits",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "aux_switch_bits",
+        "type": "uint32",
+        "dimensions": 1
+      }
+    ],
+    "ProductPilotControlReferencePayload": [
+      {
+        "name": "valid_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "body_rate_frd_radps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "q_nb_desired_wxyz",
+        "type": "single",
+        "dimensions": 4
+      },
+      {
+        "name": "yaw_rate_ff_radps",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "collective_throttle_norm",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "altitude_above_origin_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "vertical_velocity_up_mps",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "ProductPlantInitialState": [
+      {
+        "name": "position_ned_m",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "velocity_ned_mps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "q_nb_wxyz",
+        "type": "single",
+        "dimensions": 4
+      },
+      {
+        "name": "body_rate_frd_radps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "motor_omega_radps",
+        "type": "single",
+        "dimensions": 4
+      }
+    ],
+    "ProductPlantTruth": [
+      {
+        "name": "position_ned_m",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "velocity_ned_mps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "q_nb_wxyz",
+        "type": "single",
+        "dimensions": 4
+      },
+      {
+        "name": "body_rate_frd_radps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "motor_omega_radps",
+        "type": "single",
+        "dimensions": 4
+      }
+    ],
+    "ProductSafetyEnvelopePayload": [
+      {
+        "name": "valid_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "max_velocity_ned_mps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "max_acceleration_ned_mps2",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "max_jerk_ned_mps3",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "max_tilt_rad",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "min_total_thrust_n",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "max_total_thrust_n",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "max_body_rate_frd_radps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "min_height_above_home_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "max_height_above_home_m",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "QuadSensorProcessingConfig": [
+      {
+        "name": "config_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "calibration_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "imu_to_frd_rotation",
+        "type": "double",
+        "dimensions": 9
+      },
+      {
+        "name": "mag_to_frd_rotation",
+        "type": "double",
+        "dimensions": 9
+      },
+      {
+        "name": "imu_bias_gyro_radps",
+        "type": "double",
+        "dimensions": 3
+      },
+      {
+        "name": "imu_bias_accel_mps2",
+        "type": "double",
+        "dimensions": 3
+      },
+      {
+        "name": "imu_scale_gyro",
+        "type": "double",
+        "dimensions": 3
+      },
+      {
+        "name": "imu_scale_accel",
+        "type": "double",
+        "dimensions": 3
+      },
+      {
+        "name": "mag_hard_iron_ut",
+        "type": "double",
+        "dimensions": 3
+      },
+      {
+        "name": "mag_soft_iron_matrix",
+        "type": "double",
+        "dimensions": 9
+      },
+      {
+        "name": "imu_axis_delay_us",
+        "type": "single",
+        "dimensions": 6
+      },
+      {
+        "name": "imu_delay_uncertainty_us",
+        "type": "single",
+        "dimensions": 6
+      },
+      {
+        "name": "baro_delay_us",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "baro_delay_uncertainty_us",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "mag_delay_us",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "mag_delay_uncertainty_us",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "verified_sensor_mask",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint32",
+        "dimensions": 1
+      }
+    ],
+    "RangeSample": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "sensor_instance_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "calibration_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "quality_flags",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "range_m",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "variance_m2",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "RawIngressBatchDescriptor": [
+      {
+        "name": "boot_id",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "time_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "source_mapping_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "capture_ticks64",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "capture_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "dma_start_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "dma_complete_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "spi_eot_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "event_sequence",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "sensor_instance_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "generation",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "clock_domain_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "acquisition_flags",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "event_time_uncertainty_us",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "payload_length_bytes",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "sample_count",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "timestamp_quality",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint8",
+        "dimensions": 3
+      }
+    ],
+    "SafetyEnvelope": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "safety_envelope_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "envelope_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "max_linear_speed_mps",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "max_linear_accel_mps2",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "max_angular_rate_radps",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "max_yaw_rate_radps",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "vehicle_extension",
+        "type": "Bus: ProductSafetyEnvelopePayload",
+        "dimensions": 1
+      }
+    ],
+    "SensorConsistencyEvidence": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "sensor_instance_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "policy_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "calibration_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "window_duration_us",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "evaluated_count",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "accepted_count",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "rejected_count",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "probation_pass_count",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "evidence_flags",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reason_code",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "evaluation_mode",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "last_evaluated_sample_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "evidence_expires_at_us",
+        "type": "uint64",
+        "dimensions": 1
+      }
+    ],
+    "SensorDataGapEvent": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "sensor_instance_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "first_missing_sequence",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "last_missing_sequence",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reason_code",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "last_good_sample_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "next_sample_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      }
+    ],
+    "SensorDiagnostic": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "sensor_instance_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "diagnostic_class",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "severity",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "flags",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reason_code",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "occurrence_count",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "last_good_sample_us",
+        "type": "uint64",
+        "dimensions": 1
+      }
+    ],
+    "SensorUsePolicy": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "sensor_instance_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "policy_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "use_state",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reason_code",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "degraded_noise_profile_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "evaluation_flags",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "effective_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "policy_expires_at_us",
+        "type": "uint64",
+        "dimensions": 1
+      }
+    ],
+    "StateResetEvent": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "old_state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "new_state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "old_origin_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "new_origin_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "reset_type",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "position_delta_m",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "velocity_delta_mps",
+        "type": "single",
+        "dimensions": 3
+      },
+      {
+        "name": "attitude_delta_rad",
+        "type": "single",
+        "dimensions": 3
+      }
+    ],
+    "TimeServiceStatus": [
+      {
+        "name": "monotonic_now_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "utc_estimate_ns",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "utc_uncertainty_ns",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "holdover_duration_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "last_valid_pps_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "last_valid_reference_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "estimated_frequency_error_ppb",
+        "type": "int32",
+        "dimensions": 1
+      },
+      {
+        "name": "clock_domain_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "time_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "utc_mapping_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "status_flags",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reference_source",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "utc_valid",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "local_clock_valid",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "frequency_discipline_valid",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint8",
+        "dimensions": 3
+      }
+    ],
+    "TimerCaptureEvent": [
+      {
+        "name": "boot_id",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "capture_ticks64",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "capture_time_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "time_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "discipline_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "edge_sequence",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "event_time_uncertainty_us",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "timer_instance",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "channel",
+        "type": "uint8",
+        "dimensions": 1
+      },
+      {
+        "name": "flags",
+        "type": "uint8",
+        "dimensions": 1
+      }
+    ],
+    "VehicleDirective": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "directive_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "authority_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "state_epoch",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "policy_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "operation_code",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "guidance_mode_code",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reason_code",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "reserved",
+        "type": "uint16",
+        "dimensions": 1
+      },
+      {
+        "name": "directive_expires_at_us",
+        "type": "uint64",
+        "dimensions": 1
+      },
+      {
+        "name": "required_nav_capabilities",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "safety_envelope_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "payload",
+        "type": "Bus: ProductDirectivePayload",
+        "dimensions": 1
+      }
+    ],
+    "WaterSpeedSample": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "sensor_instance_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "calibration_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "quality_flags",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "water_speed_mps",
+        "type": "single",
+        "dimensions": 1
+      },
+      {
+        "name": "variance_m2ps2",
+        "type": "single",
+        "dimensions": 1
+      }
+    ],
+    "WheelOdometrySample": [
+      {
+        "name": "header",
+        "type": "Bus: ContractHeader",
+        "dimensions": 1
+      },
+      {
+        "name": "sensor_instance_id",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "calibration_version",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "quality_flags",
+        "type": "uint32",
+        "dimensions": 1
+      },
+      {
+        "name": "wheel_speed_mps",
+        "type": "single",
+        "dimensions": 4
+      },
+      {
+        "name": "steering_angle_rad",
+        "type": "single",
+        "dimensions": 1
+      }
+    ]
+  },
+  "import_diagnostics": {
+    "Bus": [],
+    "Enum": [],
+    "AliasType": []
+  }
+}

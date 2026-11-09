@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "status": "SIM_ONLY",
+  "error_state_rank": 22,
+  "noise_rank": 19,
+  "initial_std": {
+    "position_m": [0.5,0.5,0.5], "velocity_mps": [0.1,0.1,0.1],
+    "attitude_deg": [1,1,5], "gyro_bias_radps": [0.001,0.001,0.001],
+    "accel_bias_mps2": [0.02,0.02,0.02], "gyro_scale": [0.0001,0.0001,0.0001],
+    "accel_scale": [0.0001,0.0001,0.0001], "baro_bias_m": 0.5
+  },
+  "gyro_rate_white_std_radps": 0.001,
+  "accel_rate_white_std_mps2": 0.02,
+  "bias_correlation_time_s": 3600,
+  "gyro_bias_stationary_std_radps": 0.0001,
+  "accel_bias_stationary_std_mps2": 0.002,
+  "gyro_scale_stationary_std": 0.00002,
+  "accel_scale_stationary_std": 0.00002,
+  "baro_bias_rw_psd_m2ps": 0.0001,
+  "gnss_position_floor_std_m": 0.2,
+  "gnss_velocity_floor_std_mps": 0.03,
+  "baro_floor_std_m": 0.05,
+  "mag_floor_std_rad": 0.02
+}

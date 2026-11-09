@@ -1,0 +1,97 @@
+{
+  "scope": "EXECUTABLE_SPEC_REFERENCE",
+  "date": "2026-11-05",
+  "status": "PASS",
+  "round": 6,
+  "cases": [
+    {
+      "id": "D6-01",
+      "status": "PASS",
+      "evidence": {
+        "cells": 4096,
+        "object_absence_is_free": false,
+        "snapshot_requires_all_cells": true,
+        "old_two_free_updates_at_8_per_20ms_s": 20.48
+      }
+    },
+    {
+      "id": "D6-02",
+      "status": "PASS",
+      "evidence": {
+        "Qc19_diagonal": [
+          4.0000000000000003e-07,
+          4.0000000000000003e-07,
+          4.0000000000000003e-07,
+          1e-09,
+          1e-09,
+          1e-09,
+          5.5555555555555555e-12,
+          5.5555555555555555e-12,
+          5.5555555555555555e-12,
+          2.222222222222222e-09,
+          2.222222222222222e-09,
+          2.222222222222222e-09,
+          2.2222222222222227e-13,
+          2.2222222222222227e-13,
+          2.2222222222222227e-13,
+          2.2222222222222227e-13,
+          2.2222222222222227e-13,
+          2.2222222222222227e-13,
+          0.0001
+        ],
+        "stationary_variance": 1e-08,
+        "P0_is_separate": true,
+        "phi": 0.9999997222222609
+      }
+    },
+    {
+      "id": "D6-03",
+      "status": "PASS",
+      "evidence": {
+        "generated_IMU": 30000,
+        "released_IMU": 29998,
+        "propagated_after_initial_previous_sample": 29997,
+        "last_GNSS_arrival": 29910000,
+        "coverage_end": 30000000,
+        "EOF_is_not_last_timestamp": true
+      }
+    },
+    {
+      "id": "D6-04",
+      "status": "PASS",
+      "evidence": {
+        "takeoff_s": 2.4000000000000004,
+        "route_per_leg_s": 3.0,
+        "land_s": 3.8000000000000003,
+        "35s_energy_fraction": 0.865,
+        "wrong_FCU_reset_value": 0.895,
+        "provider_time": "global simulation seconds; coverage equals RunInterval"
+      }
+    }
+  ],
+  "independent_polynomial_extrema_checks": 192,
+  "matlab_model_execution": "NOT_RUN",
+  "production_algorithm_execution": "NOT_RUN",
+  "limitation": "Mathematical and finite protocol references only; not Simulink integration or firmware proof.",
+  "script_sha256": "b59699f34d225cdefa4cace98017dd12c1bd8c041933c5800f368729baffbd2d",
+  "document_sha256": {
+    "FlightSIM-architecture.md": "6b1a43b19d69b5672414273de0695a327e8c3acca0a27b36686274fe6ab992d1",
+    "FlightSIM-control.md": "da5c845807a92441206d3cc914efbb86430693588216561e4ef4b995ee604430",
+    "FlightSIM-data-replay.md": "802d0e28e68cb7fa33326a67854963a1ec2361830f067e9a5814850d969f509b",
+    "FlightSIM-estimator.md": "ff2b3b6b35dee85b66bd54fa516e38afe5701eb20ea4f0ca27423f7317724ff1",
+    "FlightSIM-execution-protocol.md": "6fa57970014b303dfcb1d9684032f9d067b948d95fd1dda1fbf0f5dfe29b47dd",
+    "FlightSIM-guidance.md": "cc60392bb1a7779c2880b77015648b4d078208c2ed1c9925a2b81a87d9826ef5",
+    "FlightSIM-implementation-plan.md": "d1b66f484be68fd2cf879d95a3a51ea17385ab17130b8d830cee95b7c6347278",
+    "FlightSIM-interface-contract.md": "441f5b768515338ba4414c6e9745b1cd947084418608482b3ca347aa01a6456b",
+    "FlightSIM-research-and-decisions.md": "a41071a598f3fb256bef9820bea6a30961157af11dc96a568c714cf31b002f29",
+    "FlightSIM-review-log.md": "89fe08b2d97114cb6c885e50b025016dba789fbba25b9a48cba333c890c25316",
+    "FlightSIM-stateflow.md": "e0b991f3966436946b73eba13d88a924ead2de7fd9c0e04c3f69cfb1f2f637ba",
+    "FlightSIM-system.md": "725c28e1fbb5392c1c39306d12ad4e87bb2fa0bf432db28f9fe2df97f44c3346",
+    "FlightSIM-test-plan.md": "1ebf54bab6e396a840ea6c5336416fca401b3cb368e5a103629e63c4bcd971bf",
+    "QuadPlant-architecture.md": "012c28ea53ffa4745caea3243bf31e70afcc14d79ff9a521c27499a3b717a096",
+    "QuadPlant-implementation-plan.md": "bd2e3646ffb326ba0a4763e59c17d74bf5b782ad10f158b1fac5240127bb6e0a",
+    "QuadPlant-system.md": "277d640bb861b598a76d4c3db584322bdb766de933ecb2f4468a617e9d50a449",
+    "QuadPlant-test-plan.md": "dc868da60ae4aae7d0a346e6375e3c9ccda11525e983f66771fb1ba48487192c",
+    "README.md": "11375969fd1865697f18b330e6c358d649b49f3931460920b3de05b1b08ec24a"
+  }
+}

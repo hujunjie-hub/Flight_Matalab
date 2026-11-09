@@ -1,0 +1,157 @@
+# FlightSIM 来源、设计决策与改造前问题
+
+状态：设计草案；2026-11-05。
+
+## 1. 已取得的输入
+
+| 输入 | 已确认内容 | 证据范围 |
+|---|---|---|
+| 原FMT-Model | Git de49649f05c9069af8df69f769c94524c0efb356；实际入口DataSIM/MILSIM/ExtINS_DataSIM | 文件/配置只读及model_overview/model_read，不是编译通过 |
+| 父Flight/spec | 最初输入V1.9.1-GLOBAL-AUDIT-R3/Port0x00010903；当前已读Schema6.0/Port0x00010905 | 初始清单保留；准确当前Hash与历次影响审查见upstream_review_snapshot |
+| MATLAB | R2026b 26.2.0.3386108，Simulink/Stateflow等安装可见 | 环境探测；不代替license checkout/MEX验证 |
+| library settings | 当前工作目录未发现配置，gatePass=true | 只表明无已配置的库门禁；原FMT_Model_Lib实际仍需选择/路径核验 |
+| 官方KF-GINS MATLAB | commit021ad5385c6000dae2c70b59c91bd2303f45b55e，21/18维 | 工程外sparse读取；未导入、未运行数据集 |
+| OSQP | 选择v1.0.0，tag解析236713ce9a56c182ac3230d52108f952afce1523 | 上游标签查证；MEX及codegen仍NOT_RUN |
+
+本轮未主动执行旧FMT_Model_Init或旧模型初始化脚本，未进行模型仿真/保存。只读加载得到配置引用/path/旧storage-class警告，文件实际存在；必须区分“当前path未激活”和“源码文件缺失”。加载后的原模型Dirty=off，源文件完整性另做Hash复核。
+
+## 2. 实际迁移问题
+
+| ID | 问题 | 规格处置 | 改造阶段 |
+|---|---|---|---|
+| MIG-01 | 源入口无FMT前缀，旧核心名会与多个车辆实现冲突 | 新入口/组件唯一FMT命名，选择性path | G1 |
+| MIG-02 | 老INS混合预处理/融合，老FMS混合任务/制导/状态 | 分为M2/M3、M4/M5；M7独立物理输出 | G3～G5 |
+| MIG-03 | 2ms/4ms旧周期不等于1kHz/100Hz/50Hz/400Hz | 500us基本tick和显式事件调度 | G0/G2 |
+| MIG-04 | 旧uint32 ms与uint16[16]执行器命令不兼容 | 严格边界转换，不反推未标定N | G2 |
+| MIG-05 | 老CF/归一化PID不等于KF22/物理Nm+MPC | 旧算法只作参考，新主链明确实现 | G3/G5 |
+| MIG-06 | 配置集和custom library在只读上下文未解析 | 新项目显式path/字典/配置集，不能运行旧启动脚本补洞 | G0/G1 |
+| MIG-07 | 原生KF21与项目22及velocity模型不同 | pristine/project/reference分开，比较限制前提 | G3 |
+| MIG-08 | 上游README数据单位/入口与实际driver不一致 | 固定commit并核对实际golden数据，显式manifest | G0/G3 |
+| MIG-09 | ExtNav缺可信方差/参考点就可能绕过质量门控 | Bundle与来源检查；缺项REFERENCE_ONLY | G2/G3 |
+| MIG-10 | 回放输出被误说成闭环控制效果 | physics_closed_loop显式分类；只MIL评价闭环 | G6/G7 |
+| MIG-11 | 原Plant/控制默认值被当实机参数 | 独立SIM_ONLY fixture，真实CORE只引用不复制 | G0/G7 |
+| MIG-12 | q对应相对NED，但gyro相对惯性，父字段只写FRD | 选Host固定N0、GeodesyAdapter及ω_b/N0，按当前LLH-NED做完整旋转；正式冻结前补足同范围语义决定 | G0 |
+
+这些是实施输入/阶段门槛，不是本轮已经修好模型的记录。MIG-12及本文件第7节列出的并行复核契约缺口需要在G0形成上位一致处置；不会在本轮改父ICD。
+
+## 3. 当前设计决定
+
+| 决定 | 本版选择 | 理由/退出条件 |
+|---|---|---|
+| DEC-01 | 只交付Flight_Matalab，原工程只读 | 用户明确选择 |
+| DEC-02 | 三入口共享同一核心 | 避免状态/单位/算法三份漂移 |
+| DEC-03 | 状态机Stateflow，数值控制Simulink | 用户指定；有限数值内核不包整个控制器 |
+| DEC-04 | dt_base=500us | 1ms和2.5ms同时为整数倍 |
+| DEC-05 | 项目22/外部pristine21分开 | 防止不等价算法作同一黄金 |
+| DEC-06 | OSQP1.0.0/mode2，只封装QP kernel | 继承父架构，可更新固定稀疏P/A |
+| DEC-07 | 全部实物参数/认证留独立门槛 | 只有合成证据，不能声称可试飞 |
+| DEC-08 | 姿态/物理与传感器先验证，后整闭环 | 防止控制整定掩盖frame/重力错误 |
+| DEC-09 | 本机UM982/PPS固定安装、默认启用；GNSS中途丢失属于运行故障 | 用户明确纠正；PVT/PPS/历元独立质量与恢复，其他产品无GNSS裁减不属于本交付 |
+
+G0-HOST需实际验证依赖/编译器、数据列/精度、schema和许可；G3生成原生golden。Host frame/rate已选定，固件语义对齐在独立FirmwareConformanceGate处理。不能把这些用空字典/理想truth/另一个QP求解器掩盖。
+
+## 4. Appendix B：研究与API核验
+
+- [Stateflow AND/OR分解](https://www.mathworks.com/help/stateflow/ug/state-decomposition.html)：支持五个并发域、域内互斥状态；域间顺序和事务发布仍由本规格明定。
+- [Rate Transition](https://www.mathworks.com/help/simulink/slref/ratetransition.html)：数据完整性与确定延迟是不同设置；异步转换不据此获得确定性保证。
+- [Simulink.Bus](https://www.mathworks.com/help/simulink/slref/simulink.bus.html)：共享对象验证字段/类型/尺寸；存数据字典/base，不放model workspace；不保证C内存布局。
+- [SimulationInput](https://www.mathworks.com/help/simulink/slref/simulink.simulationinput.html)：运行时临时覆盖参数与Dataset，避免为了测试改存盘模型。
+- [6DOF Quaternion](https://www.mathworks.com/help/aeroblks/6dofquaternion.html)：固定质量/惯量、CG载荷假设可作为物理分解依据；具体坐标/重力适配仍须测试。
+- [OSQP codegen](https://osqp.org/docs/codegen/index.html)：mode2可更新固定稀疏P/A与向量，生成数值内核不自动实现控制保护。
+- [KF-GINS MATLAB官方源](https://github.com/i2Nav-WHU/KF-GINS-Matlab)：实际Initialize/ErrorFeedback/GNSSUpdate与driver用于确认维数/反馈/单位差异，不能仅依README推断。
+
+MATLAB会话实际查询确认SimulationInput/Bus、Stateflow.Chart、matlab.project.createProject存在；尚未测试字典生成、Stateflow新图编辑、QP MEX、模型编译/仿真或导出C。未来出现新API应先查官方文档/实际签名，不能把“预计支持”写成已通过。
+
+本轮按MBD算法与Plant规格技能组织系统/架构/实施/测试四层，并额外拆出接口、状态、控制、估计与数据细则。全部模型实施安排等待规格阅览后开始，不据本文件自动派发任务。
+
+GNSS单位核验补充：已从同一锁定commit读取dataset1/GNSS-RTK.txt，首条纬度约30.44、经度约114.47，结合driver乘D2R证明该数据输入为deg；README对应表的rad不能照搬。具体数值/文件Hash见来源报告，仍未运行上游滤波。
+
+
+## 5. 本轮两次文档复审修正
+
+| 复审 | 发现 | 已写回 |
+|---|---|---|
+| 1 | 旧毫秒记录的误差界不能笼统取500us，截断/未知需要1000us | 接口旧数据转换及严格时间验收边界 |
+| 1 | 参考采样double内核容差不能直接套给公开single输出 | 控制测试分开精度层 |
+| 1 | README与driver的GNSS角度单位不一致 | 同commit真实数据首行核验与manifest规则 |
+| 2 | Imported bus前缀和C指针view容易造成虚假的ABI映射 | 值类型用C typedef名；view/union单独适配 |
+| 2 | LandDetector依赖加速度valid，而非零杆臂无补偿时不能提供 | 明确名义已知零杆臂/加速度验证，缺项UNKNOWN及独立非零测试 |
+| 2 | 参数与安全策略初值不全会让后续实现临时猜数值 | 补齐SIM_ONLY初始化/噪声/能力门限/能源提供者种子 |
+
+这些是文档自查修正，不是独立工程会签，也不是模型仿真通过。
+
+复审2另修正实施依赖：G2提供解析1kHz回放fixture，避免G6需要G7的MIL记录、而G7又等待G6的循环依赖。GNSS数据列依据可复核的[固定driver](https://github.com/i2Nav-WHU/KF-GINS-Matlab/blob/021ad5385c6000dae2c70b59c91bd2303f45b55e/kf_gins.m)与同commit样本，不跟随main。
+
+## 6. 本次追加三轮的上位输入影响审查
+
+旧规格初稿引用Schema6.0/Product-Port0x00010903。复审期间父00/02/05/06/07/08/09/11及AGENT/README及交接记录在本会话之外更新；本会话全部保留，只读核查相关变化。先前C01/C02以0x00010904新增Mission epoch bit8和ProductGeofenceConfig，06/08已给编译期围栏入口；旧“请求无字段/围栏入口未定义”方案已从活动正文替换。本次最后读取的实际宏及M45-01增量又升0x00010905，目标字段、M5模型视图及kind5自动垂向分支据此同步。
+
+05新增/澄清杆臂Jacobian的body l与NED L及矩阵次序，本项目解析/差分测试按此执行；H723矩阵库/编译旗标与Host MATLAB矩阵不同范围，00与05若有实施口径差异由固件Owner收敛，不能据此推导MATLAB已编译。07现列M3每实例15KiB/总30KiB而仍有旧14KiB句子；Host不据此作目标RAM通过结论。09/11最新记录C01 CLOSED、ABI锁0x10904已重建及D复核PASS，C02在最新09记录CLOSED（Gate D复核及用户批准）；部分历史PROPOSED/未实现句子仍在。这里记录其来源状态，不代替本工程对准确生产头/锁的导入验证，也不把任务接受当Gate A批准。
+
+原始初稿Hash清单继续保留source_inventory.json；本次准确读取快照另存validation/upstream_review_snapshot.json。所有已变正文记录影响和读入Hash；检查器不再把09/11当可无条件忽略的元数据，也不刷新旧Hash掩盖变化。今后任一规范文件偏离本次快照须重审，交接/validation类非定义产物仅记录并行活动。原FMT-Model仍用原378文件Hash检查，不把父固件并行变化算作本会话改源。
+
+## 7. 当前设计决定与G0退出
+
+本版Host选定HOST_NATIVE_V2，完整协议见FlightSIM-execution-protocol.md。G0-HOST冻结本项目已明确的接口/执行选择并实际验证依赖、数据和生成schema；不要求先取得未来G3 golden。G1仍需真实Model Reference/function-call最小模型compile验证，尚未执行。
+
+| 项 | Host活动方案 | 固件等价声明前的独立核对 |
+|---|---|---|
+| Nav | Origin固定N0及omega_b/N0，完整Geo Jacobian | 当前LLH-NED/rate/协方差语义 |
+| 时间/参考 | global与FCU local分开；Control Time=Nav，anchor用家族20ms grid | Parent端口注释/消费者对参考anchor的映射 |
+| 热切换 | M4 pending/active双通道，M5纯准备，COMMIT整组 | 现有C Port/消息通道是否可完整承载 |
+| M5 | 原子Host规划、约束retimed lattice、GoalConnector、3+5段 | 与原固定短duration primitive的内部算法差异 |
+| 地图 | 完整Host调查/coverage及私有动态对象 | 来源注册、真实空体积观测与能力接纳 |
+| 输出 | DISARMING证书降码，零目标已应用才DISARMED | 真实策略/设备Port与时序；不借Host批准飞行 |
+| 公共值类型 | 当前M45-01/实际宏Schema6.0/QUAD0x10905 | 准确生产头/布局锁/数值和目标回归，不只比较名称 |
+
+C01/C02关闭记录只在其真实范围复用，不使新的Host内部协议自动成为固件冻结接口。Host建模目标完整明确；尚未进行的实现验证继续NOT_RUN。
+
+## 8. 三轮追加复审的历史与研究依据
+
+历史R1～R3的22项和本次R4～R6的13项均见[逐轮复审](FlightSIM-review-log.md)，累计作者自审8轮；未冒独立审核。
+
+- [固定步长求解器](https://www.mathworks.com/help/simulink/ug/fixed-step-solvers-in-simulink.html)：discrete求解器不自动替代数值积分，故本方案把RK4四阶段显式建成Plant数值图。
+- [子系统执行语义](https://www.mathworks.com/help/simulink/slref/simulink-subsystem-semantics.html)、[执行顺序](https://www.mathworks.com/help/simulink/ug/controlling-and-displaying-the-sorted-order.html)：function-call连接/调用定义依赖，不能靠Priority保证所有执行顺序；G1需实际compile验证。
+- [仿真阶段](https://www.mathworks.com/help/simulink/ug/simulating-dynamic-systems.html)：连续求解可能在minor step重复调用数学输出；本设计整体改离散执行，队列/噪声只更新一次。
+- [ECEF点到NED](https://www.mathworks.com/help/map/ref/ecef2ned.html)、[ECEF向量到NED](https://www.mathworks.com/help/map/ref/ecef2nedv.html)：点转换含原点平移，向量只旋转。这里是数学参考，Mapping Toolbox不是强制运行依赖；有限WGS数学内核需独立验证。
+
+本轮没有新建模型或运行仿真。Python设计算术结果单列ANALYTIC_DESIGN，MATLAB/Stateflow结构行为仍待G1实测。
+
+## 9. R4～R6数学及协议核对
+
+- 固定短边反例由实际quintic端点重构、递归驻点求根得出；导数约束以de Casteljau有界细分Bernstein凸包认证，不靠离散采样放行。五次端点量的参考见[MathWorks quinticpolytraj](https://www.mathworks.com/help/robotics/ref/quinticpolytraj.html)，本工程不强制依赖Robotics工具箱。
+- PID输出用当前I、当前饱和残差写下一I，因果由I的状态寄存器断开；[外部抗饱和参考](https://www.mathworks.com/help/simulink/slref/discretepidcontroller.html)只用于核对回算方向，具体离散律仍见执行协议及父04。
+- 已重新读取锁定MATLAB Initialize.m：P0使用init*std，Qc使用独立的gyrbiasstd/accbiasstd/scalestd与2*sigma²/tau，不是同一组参数。19维扩展保留原18维顺序。
+- 13项可执行参考、192组多项式界、准备延迟/帧相位、前缀一致性及EOF边界结果只在EXECUTABLE_SPEC_REFERENCE范围有效。没有运行MATLAB模型、OSQP生产MEX或H723代码。
+
+## 10. 并行M45实施增量的最新影响
+
+02实际PORT/QUAD宏为0x00010905，末尾CR-V191-M45-01明确覆盖旧摘要；00也在末尾记录该增量。目标valid_mask/POSITION/YAW及M5 mass/gravity视图已同步到本接口/制导。其自动垂向kind5同步到接口、M4/M5/M6和测试；具备垂向能力而无水平/Home时不再强造XYZ或假授Pilot权限，待证明围栏仍拒绝。09/11的C01/C02关闭状态与其旧0x10904证据保留来源意义，不挪作10905新布局锁。
+
+10905固件NONE直接quintic的MotionReference仍要求Header.sample=Nav State Time，Host V2的MotionReference使用固定grid，两者不隐瞒差异。11新增C03选OSQP1.0.0/mode2和现有ControlModelPort v1，尚有固件实施/链接的批准范围；本轮只审Host规格，没有导入或链接包。07资源修订只作来源输入，未换算成Host或目标RAM PASS。
+
+## 11. GNSS/PPS固定器件与运行失锁纠正
+
+用户明确：“这是主要器件”，原意是“gnss信号中途丢失”。本机UM982/PPS因此固定安装、默认启用；旧的硬件可选/默认无GNSS表述不能作为本产品目标。上位规范已在并行工作中按CR-V191-GNSS-REQUIRED-01整体改为本机GNSS/PPS固定启用；旧无GNSS生产Profile被废止。最初父05因缺原生协议/标定而禁用硬件的处置已撤销，协议/标定未完成仍独立保留NOT_READY，不能当器件可选性。本次只修Flight_Matalab/spec，未改父规范、Kconfig、固件或驱动。
+
+只读证据见[配置观察](validation/gnss_pps_configuration_observation.json)，含准确源文件Hash及初始OFF/末次必装接入两次观察的链；工作树在本会话之外变化，不是本会话改动或实物验证：
+
+| 当前读取事实 | 本项目目标/后续门槛 |
+|---|---|
+| 初始观察为BSP_FLIGHT_GNSS default n；末次观察该开关已删除，Kconfig强制UART4/RX DMA，.config与rtconfig.h已启用 | 固定接入与本项目目标一致；观察有历史Hash，不把初始OFF继续写成当前事实；本会话未修改/构建固件 |
+| 原开关已删除；UART4接收、TIM2_CH3捕获和gnss_pps_installed在当前源中常驻；缺UART4/RX DMA触发编译错误 | PVT/PPS/历元独立失效/恢复，不能故障时拆通道或改编译配置 |
+| .ioc已有UART4 460800、PA2 PPS、PA3 IMU DRDY | 证明配置资产存在，不等于当前构建已打开设备或实物波形已验收 |
+| sensor_alignment.native_backend仍为DISABLED；M2头已更正必装语义，但明确只有已解码PVT语义、无UART parser | Host以SIM_PVT/M2标准语义开发；正式UM982协议/CRC/golden frame/标定/时延接纳仍未完成；仅开BSP宏不能关闭此门槛 |
+| GNSS标定/epoch offset仍为TBD，未有实物连线/波形证据 | 不复制未知实机值为0；SIM_ONLY合成参数保留来源标签，固件等价与硬件验收NOT_RUN |
+
+活动设计统一到[执行协议第8节](FlightSIM-execution-protocol.md#8-固定gnsspps与运行中失锁)。系统/Manifest、M3/Integrity/Stateflow、PPS时间服务、SensorFrontend、三入口回放、ExtINS观测历史与T-GNSS-01..06已同步；失锁只改运行有效性，不改安装/启用或滤波源拓扑。原有13项数学/协议参考仍只覆盖其既定范围，新增GNSS模型用例均NOT_RUN，不借用旧PASS。
+
+本次只读复核还读到父02的围栏几何复制/安装标志消费规则，以及07的M4/M5静态容量核算（48696B/49152B、M5 4672B）；本Host不保存C指针或作目标RAM结论，原有隔离边界不变。来源快照单独保留更新历史。
+
+## 12. 独立项目迁移
+
+用户要求将Flight_Matalab从Flight下移到FMT-Firmware-1.2.0下。现工程根为`D:/STM32Project/FMT-Firmware-1.2.0/Flight_Matalab`，与Flight/FMT-Model同级。迁移前97个文件逐个SHA256登记，移动后在编辑路径前逐个比对一致；原位置移除，不另留工作副本。历史来源清单/审查快照不改写，当前规格链接、命令与规划依赖定位统一从新ProjectRoot解析。
+
+首次Move-Item因MATLAB当前目录占用而被Windows拒绝；已确认没有活动MATLAB Project，临时切到父目录释放占用后完成移动。未关闭/保存源模型，未创建模型或 `.prj`。迁移记录见[逐文件记录](validation/project_relocation_report.json)。
+
+末次上位09只追加GNSS软件验证范围：必需配置/链接资源、113项GNSS Host及平台回归，保留M2旧断言失败和原生协议/实物未验收状态。本项目只读其准确增量，不继承为MATLAB模型PASS；源码/上位快照与本工程迁移证据分开。

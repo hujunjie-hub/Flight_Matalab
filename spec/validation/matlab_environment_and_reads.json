@@ -1,0 +1,105 @@
+{
+  "source_model_reads": [
+    {
+      "index": 0,
+      "model": "DataSIM",
+      "read_ok": true,
+      "warnings": 0,
+      "scope": "STRUCTURE_READ_ONLY",
+      "compiled": "NOT_RUN"
+    },
+    {
+      "index": 1,
+      "model": "ExtINS_DataSIM",
+      "read_ok": true,
+      "warnings": 0,
+      "scope": "STRUCTURE_READ_ONLY",
+      "compiled": "NOT_RUN"
+    },
+    {
+      "index": 2,
+      "model": "Controller",
+      "read_ok": true,
+      "warnings": 13,
+      "scope": "STRUCTURE_READ_ONLY",
+      "compiled": "NOT_RUN"
+    },
+    {
+      "index": 3,
+      "model": "FMS",
+      "read_ok": true,
+      "warnings": 7,
+      "scope": "STRUCTURE_READ_ONLY",
+      "compiled": "NOT_RUN"
+    },
+    {
+      "index": 4,
+      "model": "INS",
+      "read_ok": true,
+      "warnings": 1,
+      "scope": "STRUCTURE_READ_ONLY",
+      "compiled": "NOT_RUN"
+    },
+    {
+      "index": 5,
+      "model": "Plant",
+      "read_ok": true,
+      "warnings": 3,
+      "scope": "STRUCTURE_READ_ONLY",
+      "compiled": "NOT_RUN"
+    }
+  ],
+  "environment": {
+    "release": "R2026b",
+    "matlab_version": "26.2.0.3386108",
+    "installation_entries": [
+      "MATLAB 版本: 26.2.0.3386108 (R2026b)",
+      "MATLAB                                                版本 26.2             (R2026b)",
+      "Simulink                                              版本 26.2             (R2026b)",
+      "Aerospace Blockset                                    版本 26.2             (R2026b)",
+      "Embedded Coder                                        版本 26.2             (R2026b)",
+      "MATLAB Coder                                          版本 26.2             (R2026b)",
+      "MATLAB Compiler                                       版本 26.2             (R2026b)",
+      "MATLAB Compiler SDK                                   版本 26.2             (R2026b)",
+      "MATLAB MCP Server Toolbox                             版本 0.4.0            (R2026a)",
+      "MATLAB Report Generator                               版本 26.2             (R2026b)",
+      "MATLAB Test                                           版本 26.2             (R2026b)",
+      "Model Predictive Control Toolbox                      版本 26.2             (R2026b)",
+      "Simulink 3D Animation                                 版本 26.2             (R2026b)",
+      "Simulink Check                                        版本 26.2             (R2026b)",
+      "Simulink Code Inspector                               版本 26.2             (R2026b)",
+      "Simulink Coder                                        版本 26.2             (R2026b)",
+      "Simulink Compiler                                     版本 26.2             (R2026b)",
+      "Simulink Control Design                               版本 26.2             (R2026b)",
+      "Simulink Coverage                                     版本 26.2             (R2026b)",
+      "Simulink Design Optimization                          版本 26.2             (R2026b)",
+      "Simulink Design Verifier                              版本 26.2             (R2026b)",
+      "Simulink Desktop Real-Time                            版本 26.2             (R2026b)",
+      "Simulink FMU Builder                                  版本 26.2             (R2026b)",
+      "Simulink Fault Analyzer                               版本 26.2             (R2026b)",
+      "Simulink PLC Coder                                    版本 26.2             (R2026b)",
+      "Simulink Real-Time                                    版本 26.2             (R2026b)",
+      "Simulink Report Generator                             版本 26.2             (R2026b)",
+      "Simulink Test                                         版本 26.2             (R2026b)",
+      "Simulink Variant Manager                              版本 26.2             (R2026b)",
+      "Stateflow                                             版本 26.2             (R2026b)",
+      "System Composer                                       版本 26.2             (R2026b)"
+    ],
+    "license_checkout": "NOT_RUN",
+    "mex_compile": "NOT_RUN"
+  },
+  "api_availability": {
+    "method": "which and meta.class.fromName in connected MATLAB",
+    "SimulationInput": true,
+    "Bus": true,
+    "StateflowChart": true,
+    "createProject": true
+  },
+  "library_settings": {
+    "found": false,
+    "gatePass": true,
+    "enabled": false
+  },
+  "model_dirty_after_inspection": "off for all seven source models",
+  "new_model_compilation": "NOT_RUN"
+}

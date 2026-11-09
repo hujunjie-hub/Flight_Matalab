@@ -1,0 +1,116 @@
+function build_flight_models
+%BUILD_FLIGHT_MODELS Build the shared firmware core and three runnable entries.
+root = flight_startup;
+gate = library.settingsLookup;
+assert(gate.gatePass,'Flight:BlockPolicy','The Simulink block policy gate did not pass.');
+build_flight_mex;
+
+core = 'FMT_FlightCore';
+folder = fullfile(root,'models','flight');
+create(core);
+fmt_edit(core,'root',{settings(core), ...
+    port('Inport','SensorFrame','sensor',1,'18'),port('Inport','OperationRequest','cmd',2,'2'), ...
+    port('Inport','ExternalNavFrame','nav',3,'fmt_flight_nav_width','uint8'), ...
+    port('Inport','EntryMode','mode',4,'1'), ...
+    port('Outport','CommittedThrustN','motors',1),port('Outport','FlightStatus','status',2), ...
+    port('Outport','PublishedNavFrame','pub',3), ...
+    block('S-Function','FlightFirmwareSIL','kernel',struct('Parameters','fmt_flight_nav_width,fullfile(fileparts(which(''fmt_flight_sfun'')),''fmt_flight_runtime.dll'')', ...
+    'FunctionName','fmt_flight_sfun')), ...
+    wire('#sensor.y1','#kernel.u1'),wire('#cmd.y1','#kernel.u2'),wire('#nav.y1','#kernel.u3'), ...
+    wire('#mode.y1','#kernel.u4'),wire('#kernel.y1','#motors.u1'),wire('#kernel.y2','#status.u1'), ...
+    wire('#kernel.y3','#pub.u1')});
+finish(core,folder);
+
+entries = {'FMT_DataSIM','FMT_MILSIM','FMT_ExtINS_DataSIM'};
+folder = fullfile(root,'simulation');
+for k = 1:numel(entries)
+    model = entries{k};
+    create(model);
+    ops = {settings(model),reference('FlightFirmware','flight',core), ...
+        block('Constant','EntryMode','mode',struct('Value',num2str(k-1))), ...
+        port('Outport','CommittedThrustN','motors',1),port('Outport','FlightStatus','status',2), ...
+        port('Outport','PublishedNavFrame','pub',3), ...
+        wire('#mode.y1','#flight.u4'),wire('#flight.y1','#motors.u1'), ...
+        wire('#flight.y2','#status.u1'),wire('#flight.y3','#pub.u1')};
+    if k == 2
+        ops = [ops, {port('Inport','OperationRequest','cmd',1,'2'), ...
+            block('Constant','NominalEnvironment','env',struct('Value','[zeros(1,9),1,1,ones(1,4)]')), ...
+            reference('QuadX4Plant','plant','FMT_QuadPlant'), ...
+            block('S-Function','SimulatedSensors','sensor',struct('Parameters','GravityMps2','FunctionName','fmt_plant_sensors_sfun')), ...
+            block('Terminator','GroundForceDiagnostic','fn',struct), ...
+            block('Terminator','QuaternionNormDiagnostic','norm',struct), ...
+            port('Outport','PlantState','x',4),port('Outport','SensorFrame','s',5), ...
+            wire('#env.y1','#plant.u2'),wire('#flight.y1','#plant.u1'), ...
+            wire('#plant.y1','#sensor.u1'),wire('#plant.y3','#sensor.u2'), ...
+            wire('#plant.y1','#x.u1'),wire('#sensor.y1','#s.u1'), ...
+            wire('#plant.y2','#fn.u1'),wire('#plant.y4','#norm.u1'), ...
+            wire('#sensor.y1','#flight.u1')}];
+    else
+        ops = [ops, {port('Inport','SensorFrame','sensor',1,'18'), ...
+            port('Inport','OperationRequest','cmd',2,'2'),wire('#sensor.y1','#flight.u1')}];
+    end
+    if k == 3
+        ops = [ops,{port('Inport','ExternalNavFrame','nav',3,'fmt_flight_nav_width','uint8')}];
+    else
+        ops = [ops,{block('Constant','UnusedExternalNav','nav', ...
+            struct('Value','zeros(1,fmt_flight_nav_width,''uint8'')','OutDataTypeStr','uint8'))}];
+    end
+    fmt_edit(model,'root',[ops,{wire('#nav.y1','#flight.u3'),wire('#cmd.y1','#flight.u2')}]);
+    finish(model,folder);
+end
+end
+
+function create(model)
+if bdIsLoaded(model), close_system(model,0); end
+new_system(model);open_system(model);
+end
+
+function finish(model,folder)
+result = char(model_check(model,'root','["all"]'));
+assert(contains(result,'status: healthy'),'Flight:Connectivity','%s',result);
+save_system(model,fullfile(folder,[model '.slx']));
+fprintf('Saved %s\n',model);
+end
+
+function op = settings(model)
+params = struct('SolverType','Fixed-step','Solver','FixedStepDiscrete','FixedStep','0.0005', ...
+    'EnableMultiTasking','off','StopTime','26','ReturnWorkspaceOutputs','on', ...
+    'SaveTime','on','SaveOutput','on','SaveFormat','Dataset','AlgebraicLoopMsg','error');
+if strcmp(model,'FMT_FlightCore')
+    params.ModelReferenceNumInstancesAllowed = 'Single';
+    params.Description = 'Current Flight firmware runtime. Shared Host SIL instance.';
+else
+    params.LoadExternalInput = 'on';
+    params.ExternalInput = sprintf('fmt_default_input(''%s'')',model);
+    params.Description = 'Current Flight firmware Host SIL. See README for recording and boundary contracts.';
+end
+if strcmp(model,'FMT_MILSIM'), params.DataDictionary = 'Flight_Parameters.sldd'; end
+op = struct('op','configure','target',['config:' model],'params',params);
+end
+
+function op = port(type,name,ref,num,width,datatype)
+params = struct('Port',num2str(num));
+if strcmp(type,'Inport')
+    if nargin < 6, datatype = 'double'; end
+    params.PortDimensions = width;
+    params.OutDataTypeStr = datatype;
+    params.SampleTime = '0.0005';
+    params.Interpolate = 'off';
+end
+op = block(type,name,ref,params);
+end
+
+function op = reference(name,ref,model)
+op = block('ModelReference',name,ref,struct('ModelName',model,'SimulationMode','Normal'));
+end
+
+function op = block(type,name,ref,params)
+op = struct('op','add_block','type',type,'name',name,'ref',ref,'params',params);
+end
+
+function op = wire(source,destination)
+op = struct('op','connect','target',[source ' -> ' destination]);
+end
+
+
+

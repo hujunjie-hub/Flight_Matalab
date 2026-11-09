@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-05",
+  "scope": "SPEC_VALIDATOR_NEGATIVE_TESTS",
+  "status": "PASS",
+  "tests_run": 8,
+  "exit_code": 0,
+  "script_sha256": "c8cdc96d610de10d7e106985ca63e3e06b82171c69ee2654e4138a889a004367",
+  "validator_sha256": "9a4b82e7289b3551f3b80aa6b57ee846f3cc01606d4b99b3c0ff1a4ad02f6005",
+  "output": "test_design_coverage_is_separate_from_simulation (__main__.SpecValidationTests.test_design_coverage_is_separate_from_simulation) ... ok\ntest_implementation_phase_preserves_strict_default_and_root_boundary (__main__.SpecValidationTests.test_implementation_phase_preserves_strict_default_and_root_boundary) ... ok\ntest_invalid_input_replaces_prior_pass_with_fail (__main__.SpecValidationTests.test_invalid_input_replaces_prior_pass_with_fail) ... ok\ntest_missing_anchor_is_an_error_even_when_file_exists (__main__.SpecValidationTests.test_missing_anchor_is_an_error_even_when_file_exists) ... ok\ntest_range_expansion_covers_middle_ids (__main__.SpecValidationTests.test_range_expansion_covers_middle_ids) ... ok\ntest_round_identifier_pattern_covers_current_and_historical_rounds (__main__.SpecValidationTests.test_round_identifier_pattern_covers_current_and_historical_rounds) ... ok\ntest_semantic_evidence_rejects_changed_documents_script_and_duplicates (__main__.SpecValidationTests.test_semantic_evidence_rejects_changed_documents_script_and_duplicates) ... ok\ntest_source_drift_includes_added_deleted_and_modified (__main__.SpecValidationTests.test_source_drift_includes_added_deleted_and_modified) ... ok\n\n----------------------------------------------------------------------\nRan 8 tests in 0.055s\n\nOK\n",
+  "model_execution": "NOT_RUN"
+}

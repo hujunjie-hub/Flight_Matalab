@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-05",
+  "scope": "SPEC_ONLY",
+  "prior_self_reviews": 5,
+  "requested_new_rounds": [
+    4,
+    5,
+    6
+  ],
+  "documents_before": {
+    "FlightSIM-architecture.md": "c148e1f55103323cfd088c4dd92725d15bb758fb145747b7b97f23a822e84493",
+    "FlightSIM-control.md": "fff54397c1ab7e3c18b9787abc053faced6a946a08f4f5fa60952f91cab56fb0",
+    "FlightSIM-data-replay.md": "28a4e2455cfe61e0fa33a917379db2d982dd94f5039869ff2a15bd1522eb3333",
+    "FlightSIM-estimator.md": "2b08c12aa5be915ee448167085923f38dc3c812577244720ba69cc5285f018bf",
+    "FlightSIM-guidance.md": "a79ec443e9af1daf4b015a16f322b8337f2cda2605bfed50ba9136b8740c4b50",
+    "FlightSIM-implementation-plan.md": "d1b66f484be68fd2cf879d95a3a51ea17385ab17130b8d830cee95b7c6347278",
+    "FlightSIM-interface-contract.md": "0c2f0fd75849b77a16de20e8a58e0eb55b61f0ed2fd15b44f1b253fae3482346",
+    "FlightSIM-research-and-decisions.md": "a41071a598f3fb256bef9820bea6a30961157af11dc96a568c714cf31b002f29",
+    "FlightSIM-review-log.md": "89fe08b2d97114cb6c885e50b025016dba789fbba25b9a48cba333c890c25316",
+    "FlightSIM-stateflow.md": "5007e64c939bf76661276d360337b5fc1d87d7e142eacae6b9c77e65c1b67685",
+    "FlightSIM-system.md": "725c28e1fbb5392c1c39306d12ad4e87bb2fa0bf432db28f9fe2df97f44c3346",
+    "FlightSIM-test-plan.md": "1ebf54bab6e396a840ea6c5336416fca401b3cb368e5a103629e63c4bcd971bf",
+    "QuadPlant-architecture.md": "012c28ea53ffa4745caea3243bf31e70afcc14d79ff9a521c27499a3b717a096",
+    "QuadPlant-implementation-plan.md": "bd2e3646ffb326ba0a4763e59c17d74bf5b782ad10f158b1fac5240127bb6e0a",
+    "QuadPlant-system.md": "277d640bb861b598a76d4c3db584322bdb766de933ecb2f4468a617e9d50a449",
+    "QuadPlant-test-plan.md": "feddcc328757afa05f8e75e425e7c50513c2dcdad1f48496482554cf7f1ee1a3",
+    "README.md": "11375969fd1865697f18b330e6c358d649b49f3931460920b3de05b1b08ec24a"
+  },
+  "findings_before_sha256": "d0a1fa0e515b97b61f21635f4dbf801525d40bf7c2a959b69c5570322162f6fb"
+}

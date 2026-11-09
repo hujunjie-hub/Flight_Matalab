@@ -1,0 +1,23 @@
+{
+  "schema": "flight-matlab-sources/2",
+  "path_base": "ProjectRoot",
+  "flight_root": "../Flight",
+  "legacy_model_root": "../FMT-Model",
+  "read_only": true,
+  "implementation": "FLIGHT_FIRMWARE_HOST_SIL",
+  "firmware_equivalent": false,
+  "contract_schema_major": 6,
+  "contract_schema_minor": 0,
+  "product_port_revision": "0x00010906",
+  "selected_custom_library_blocks": [],
+  "core_files": {
+    "vehicle_model": "../Flight/config/vehicle_model.yaml",
+    "sensor_alignment": "../Flight/config/sensor_alignment.yaml",
+    "estimator_tuning": "../Flight/config/estimator_tuning.yaml",
+    "controller_tuning": "../Flight/config/controller_tuning.yaml"
+  },
+  "contracts_dir": "../Flight/middleware/contracts",
+  "product_dir": "../Flight/middleware/contracts/product_contract",
+  "osqp_dir": "../Flight/middleware/model/control/outer_loop/quad_x4/mpc_solver/osqp",
+  "qp_pattern_file": "../Flight/middleware/model/control/outer_loop/quad_x4/mpc_solver/osqp/mpc_sparsity_pattern.h"
+}

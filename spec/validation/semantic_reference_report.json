@@ -1,0 +1,240 @@
+{
+  "scope": "EXECUTABLE_SPEC_REFERENCE",
+  "date": "2026-11-05",
+  "status": "PASS",
+  "round": null,
+  "cases": [
+    {
+      "id": "D4-01",
+      "status": "PASS",
+      "evidence": {
+        "old_duration_s": 0.4,
+        "old_peak_accel": 6.70837336785189,
+        "old_peak_jerk": 159.37499999999994,
+        "retimed": {
+          "ticks": 5,
+          "duration_s": 1.0,
+          "coefficients": [
+            0,
+            0.0,
+            0.0,
+            0.5,
+            -0.25,
+            0.0
+          ],
+          "bounds": [
+            0.5,
+            0.75,
+            3.0
+          ],
+          "attempts": 4
+        }
+      }
+    },
+    {
+      "id": "D4-02",
+      "status": "PASS",
+      "evidence": {
+        "nearest_3d_grid_error_m": 0.4330127018922193,
+        "acceptance_radius_m": 0.2,
+        "connector": {
+          "ticks": 15,
+          "duration_s": 3.0,
+          "coefficients": [
+            0.25,
+            1.5,
+            0.0,
+            8.5,
+            -14.25,
+            6.0
+          ],
+          "bounds": [
+            0.9041748046875,
+            0.8194444444444444,
+            2.5555555555555554
+          ],
+          "attempts": 8
+        }
+      }
+    },
+    {
+      "id": "D4-03",
+      "status": "PASS",
+      "evidence": {
+        "request_uses_I_k": 0.16,
+        "I_k_plus_1": -0.00021999999999999998,
+        "wrong_preintegrated_request": 0.16008
+      }
+    },
+    {
+      "id": "D4-04",
+      "status": "PASS",
+      "evidence": {
+        "global_reboot": 12000000,
+        "global_release": 12012000,
+        "FCU_sample": 2000,
+        "FCU_arrival": 12000,
+        "old_boot_rejected_before_age_subtraction": true
+      }
+    },
+    {
+      "id": "D5-01",
+      "status": "PASS",
+      "evidence": {
+        "prepared_delay_variants": 41,
+        "frame_phases": 5,
+        "frame_checks": 2870,
+        "old_active_tuple": [
+          2,
+          1,
+          1
+        ],
+        "old_guard_rejects": true,
+        "same_nav_needs_context_evaluation": true,
+        "invariant": "active context stays intact until atomic commit; reserved identities are not reused"
+      }
+    },
+    {
+      "id": "D5-02",
+      "status": "PASS",
+      "evidence": {
+        "copied_jet_checks": 15330,
+        "old_program_segments": 2,
+        "old_knot_s": 0.2,
+        "max_prefix_jet_error": 4.107825191113079e-13,
+        "handover_C2_error": 0.0,
+        "grid_us": 20000,
+        "prefix_us": 60000
+      }
+    },
+    {
+      "id": "D5-03",
+      "status": "PASS",
+      "evidence": {
+        "preview_count": 20,
+        "numeric_commit_count": 1,
+        "committed_yaw_height": [
+          0.202,
+          1.004
+        ]
+      }
+    },
+    {
+      "id": "D5-04",
+      "status": "PASS",
+      "evidence": {
+        "preserved_nav": {
+          "sample": 1000,
+          "valid_until": 6000,
+          "publish": 3500
+        },
+        "new_health_publish": 7000,
+        "Nav_is_stale": true
+      }
+    },
+    {
+      "id": "D5-05",
+      "status": "PASS",
+      "evidence": {
+        "management_frames": 41,
+        "nonzero_management_phase": "DISARMING",
+        "final_arm_state": "DISARMED",
+        "maximum_delta_N": 0.2451225612806403,
+        "command_stop_bound_us": 105500,
+        "certificate_TTL_us": 150000
+      }
+    },
+    {
+      "id": "D6-01",
+      "status": "PASS",
+      "evidence": {
+        "cells": 4096,
+        "object_absence_is_free": false,
+        "snapshot_requires_all_cells": true,
+        "old_two_free_updates_at_8_per_20ms_s": 20.48
+      }
+    },
+    {
+      "id": "D6-02",
+      "status": "PASS",
+      "evidence": {
+        "Qc19_diagonal": [
+          4.0000000000000003e-07,
+          4.0000000000000003e-07,
+          4.0000000000000003e-07,
+          1e-09,
+          1e-09,
+          1e-09,
+          5.5555555555555555e-12,
+          5.5555555555555555e-12,
+          5.5555555555555555e-12,
+          2.222222222222222e-09,
+          2.222222222222222e-09,
+          2.222222222222222e-09,
+          2.2222222222222227e-13,
+          2.2222222222222227e-13,
+          2.2222222222222227e-13,
+          2.2222222222222227e-13,
+          2.2222222222222227e-13,
+          2.2222222222222227e-13,
+          0.0001
+        ],
+        "stationary_variance": 1e-08,
+        "P0_is_separate": true,
+        "right_rectangle_error": 5.000000000000002e-05,
+        "uniform_delta_noise_variance_consistent": true,
+        "wrong_P0_as_process_PSD_factor": 100.0,
+        "phi": 0.9999997222222609
+      }
+    },
+    {
+      "id": "D6-03",
+      "status": "PASS",
+      "evidence": {
+        "generated_IMU": 30000,
+        "released_IMU": 29998,
+        "propagated_after_initial_previous_sample": 29997,
+        "last_GNSS_arrival": 29910000,
+        "coverage_end": 30000000,
+        "EOF_is_not_last_timestamp": true
+      }
+    },
+    {
+      "id": "D6-04",
+      "status": "PASS",
+      "evidence": {
+        "takeoff_s": 2.4000000000000004,
+        "route_per_leg_s": 3.0,
+        "land_s": 3.8000000000000003,
+        "35s_energy_fraction": 0.865,
+        "wrong_FCU_reset_value": 0.895,
+        "provider_time": "global simulation seconds; coverage equals RunInterval"
+      }
+    }
+  ],
+  "independent_polynomial_extrema_checks": 192,
+  "matlab_model_execution": "NOT_RUN",
+  "production_algorithm_execution": "NOT_RUN",
+  "limitation": "Mathematical and finite protocol references only; not Simulink integration or firmware proof.",
+  "script_sha256": "51f975b65dee42dc2c655c953c49cef1092d6233d2bf3a0404ce6cb382bccfc6",
+  "document_sha256": {
+    "FlightSIM-architecture.md": "b7651f65db0c20abc2fccc36562a5fb6d8d29921c793cbecd9d2c3240b48e224",
+    "FlightSIM-control.md": "55428facca63d700b7edd4079bcadf6515576233295d0cc065f1c91e7f766a22",
+    "FlightSIM-data-replay.md": "7448a52c4a28ea53c6a91dae1024e60f6e406b79f89c4af60a4317f27b5d7c9d",
+    "FlightSIM-estimator.md": "8e717e4388cee1e80ba778ce42b426e30326fe1f300663743ef12a7d03d88eb2",
+    "FlightSIM-execution-protocol.md": "fb5df693a5c852b18600e12d949be0c792a42eb827193a5368afdf53b92245e3",
+    "FlightSIM-guidance.md": "062257312683e8c2f925655fcb6e7f7e99ce199ed46506c84d9354c54effa3b7",
+    "FlightSIM-implementation-plan.md": "a9da204aa36d91763d4a62764d2ab5ec6e49d98e6fb50a48c5eb4dd06e604938",
+    "FlightSIM-interface-contract.md": "21d4c65c0edc8038b211abe828df3088258c642b72c6d4bc0c70f7a151c97448",
+    "FlightSIM-research-and-decisions.md": "ab029f0352d1c2375bf2cb7da1c805fdd7376471177ab0e2dbdbafb6f8992fa4",
+    "FlightSIM-review-log.md": "0ebb1216333a83d7792d434b21038991daa9326bf0fda1caf5aea1179007d703",
+    "FlightSIM-stateflow.md": "6a297958752b3f58a02de183d4ee562412969f67f954680c1682f9c82ccfa54b",
+    "FlightSIM-system.md": "56b4721dfa6fe5570326af4925545b3dedfba55afb0209a7f555b32dc771eaf6",
+    "FlightSIM-test-plan.md": "86cd6ed5548b857dc7bdc3265ef1ce2888e35473f40c25d3557521a907fcb23b",
+    "QuadPlant-architecture.md": "0762f4b9f478a1b2cc014adaea9e8ae7af55522f4c74efb3e78c59f54fbc436c",
+    "QuadPlant-implementation-plan.md": "b08356a2f710aa2c24ffd5f6efd3c3afa5e945d3c20f8c2c33427244ebfd0818",
+    "QuadPlant-system.md": "983681179419261b73c4e2d74093ae32458f1eb94452e321c683bf4c81459b00",
+    "QuadPlant-test-plan.md": "3d68f84665a7f0607a07a8befe9679624c3f159bcbcb0216b46d25bd9162d343",
+    "README.md": "5c4dce0e91fbe0fe490810e2963973b4309bf4dfc3a36c8e1379f7fc3853f779"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "date": "2026-11-05",
+  "parent_spec_root": "D:/STM32Project/FMT-Firmware-1.2.0/Flight/spec",
+  "impact_review_status": "READ_AND_INCORPORATED",
+  "approval_scope": "READ_ONLY_IMPACT_REVIEW; not Gate A or ABI approval",
+  "declared_schema": "6.0",
+  "declared_quad_product_port_revision": "0x00010904",
+  "initial_inventory_preserved": true,
+  "reviewed_normative_sha256": {
+    "00_工程基线与唯一权威规范.md": "01ba6dc7a8842e99bf87492b27de8387d64f33334df8f4a666ef0d2e4ac13d20",
+    "01_系统总体架构与设计决议.md": "37441fb42795f8195418653fea8794eaea089b23aec077a70738249ab6b3b409",
+    "02_接口契约与公共数据规范.md": "85f99a8f4c67c196907170e308b98d6a831728f2371580902262cd9bdcbf5bcb",
+    "03_平台软件架构与驱动设计.md": "19ec41e940cfef05f572d200eb24d33642c3ee4e4ac8008a71b3f965eb1fa1af",
+    "04_飞控核心模块与控制系统设计.md": "5270517b172179674e390cccc00fcffa8208ea6484d4a315d9995aff4bb34ef2",
+    "05_传感器采集时间基准与GNSS独立运行.md": "deaaf0de274e19de57e3688c2a4a4df8cf1cc52a1181fa43c7574336be6b6d2b",
+    "06_FMS通信与系统安全设计.md": "68304e13ad3e653fcdfc06ddf37d193fa55a4762f2d3ab8107a456e549a1f999",
+    "07_实时调度与板级硬件资源设计.md": "332a80fd4dfe888af9a6eac9c1360204dfd128c021b344354823a12c8e28ea75",
+    "08_产品配置插件与参数管理.md": "07640cf6e8e0dd4cfe8246b4cafff35daf0a7bea5f331b62497c19e0e1d375d7",
+    "09_需求验证实施与发布管理.md": "71943f3bb3ed77d776d0bd6d7c21e004ec0a2996c5c7433e1a2671d62816552f",
+    "10_Agent分工与工程执行规范.md": "851a557db9476bcd86978dd3964aa80567df88db55d8f3a3d6b7efe829e321f3",
+    "11_审核问题闭环与变更追踪.md": "83311e61ae5b87ea66ca24d3d5414238a5773979f0bfa446e20a10ef170aa5d2",
+    "12_全量审查问题清单与落地边界.md": "a161cc7bdedbca33f5d7c554f279e601662ea7b20f01f8533798ff809072e033",
+    "AGENT.md": "606f4c5fc0779e478c13f68a11f64a12cee638cb7168f120fd2af1da39b10790",
+    "README.md": "b4c44ee2d301bcdaa3009ca00d5f8a80fd60bf2f597c197717ec8dc5d908c316",
+    "contracts/FCU.xml": "1be7adc3b849bc89f812ad66353368ae2c8c6290f2ea97168ee710a7145446ed",
+    "contracts/message_registry.json": "e2893aebd8c1121b1ede80591849730ec722c5f9e0616443507c2ff99179bf41",
+    "tools/audit_spec.py": "370e54a05472bbaaf002d71682ed3c6e70b525fe1b01846ec558967ebb456a1f",
+    "tools/check_dialect.py": "cb201938235cd8ec6d5387470d2f21f5dc4a91bd414a9cfafc940da49a7ca025",
+    "tools/check_reference_models.py": "116a1d95cc3b203b1567633a0a8dd85b5e6a2edb7f0dbc89ebf47ae820f38ad9"
+  },
+  "impact_notes": {
+    "00_工程基线与唯一权威规范.md": "Read QUAD0x10904, H723 fixed-matrix selection and flags; update Host dependency/compatibility boundary.",
+    "02_接口契约与公共数据规范.md": "Read Mission epoch valid_mask bit8, ProductGeofenceConfig/Profile ownership and Schema6.0/QUAD0x10904; replaced old missing-field scheme.",
+    "05_传感器采集时间基准与GNSS独立运行.md": "Read body l/nav L Jacobian, pressure and replay/CG clauses; use exact retraction tests. Host N0 alignment remains explicit.",
+    "06_FMS通信与系统安全设计.md": "Read Mission epoch command guards and compiled fence init; synchronized transaction tests.",
+    "07_实时调度与板级硬件资源设计.md": "Read B-R08 15KiB per instance/30KiB total and retained 14KiB historical sentence; no Host RAM claim. Delta/checkpoint/journal capacities remain256/24/64 and are reused only logically.",
+    "08_产品配置插件与参数管理.md": "Read compiled geofence section3.2 and four CORE/Profile authority; readonly config generated at build.",
+    "09_需求验证实施与发布管理.md": "Read accepted review task/C-REV conditions/A-REV ABI discrepancy; not interpreted as Gate A or current production PASS.",
+    "11_审核问题闭环与变更追踪.md": "Read C01/C02 tracking; historical proposed entries not assumed current field absence; body version/ABI evidence separately checked.",
+    "AGENT.md": "Read revision updated to0x10904 and scope/status discipline; no change to Host algorithm.",
+    "README.md": "Read current schema6.0/Product-Port0x10904 index and scope; synchronize new README input identity."
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "scope": "READ_ONLY_PROJECT_CONFIGURATION_OBSERVATION",
+  "date": "2026-11-05",
+  "observed_at_utc": "2026-11-04T22:17:05.541073+00:00",
+  "flight_root": "D:/STM32Project/FMT-Firmware-1.2.0/Flight",
+  "facts": {
+    "config_BSP_FLIGHT_GNSS": false,
+    "rtconfig_BSP_FLIGHT_GNSS": false,
+    "Kconfig_GNSS_default": "n",
+    "feature_couples_UART4_and_PPS": true,
+    "ioc_UART4_baud": "460800",
+    "ioc_PPS_pin_signal": "S_TIM2_CH3",
+    "ioc_IMU_DRDY_pin_signal": "S_TIM2_CH4",
+    "sensor_alignment_native_backend": "DISABLED",
+    "M2_accepts_decoded_PVT": true,
+    "M2_UART_parser_implemented": false,
+    "physical_hardware_installation": "NOT_VERIFIED",
+    "firmware_built_or_flashed_by_this_task": false,
+    "model_implementation": "NOT_STARTED"
+  },
+  "source_sha256": {
+    ".config": "9d9dfedb820605dafc76910770c13e4be22cbd1a7df2ba20049840599eabcb37",
+    "rtconfig.h": "3511c84480858d18c930da8aa584b708b33d502f964a666af155c6f27b71bad0",
+    "board/Kconfig": "50d82948e5d636b1a00d39e18dfb901e5ef3a478b4a78b73d31562e8a4d99d3b",
+    "board/CubeMX_Config/Flight.ioc": "a9baca686a7ab5dd7fc37190f8e53af2d23b408c0728d59d769223560071703e",
+    "board/ports/fc_board_links.c": "6d0fb24a3901a322fec35b44353df014754754c69715a53b0b14f0dfb23c704e",
+    "board/fc_board_platform.c": "6bcf427111c257b0fd245ed938cbd242c10af70ce06789f548f9c0005205ee9f",
+    "board/ports/fc_board_runtime.c": "d5b3cd5f9bfd737e2ed871447868af34a79c6b2f4df66127055526a184ade8c6",
+    "board/ports/README.md": "c4be27d50293c067e8b93ed7d72f453a0465d54c59244ba376bd252c0b92dbe4",
+    "applications/config/QUAD_X4/sensor_alignment.yaml": "6823b4761a1045ab908e3365a39e1588c4ecacf3904225963053c6d9d56d3ba3",
+    "applications/core/m2/include/m2_sensors.h": "f1be145464f9fe07e6c081a8ca2a0ccf625cc7f8c8b1d09c4dba91764e8d1a61",
+    "applications/contracts/fc_common_base.h": "5ea5eec31af37237abfe4332def04c09da5399cb8439d64e8a50f13c25803596"
+  },
+  "interpretation": "Build feature, receiver transport, admitted GNSS PVT backend, estimator aiding, PPS discipline and UTC validity are separate facts. IOC pin configuration alone does not enable the feature or establish a parser/receiver acceptance."
+}

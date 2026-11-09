@@ -1,0 +1,260 @@
+{
+  "scope": "READ_ONLY_OBSERVATION",
+  "parent_writes_by_this_task": false,
+  "original_inventory_preserved": true,
+  "reviewed_input_changes": {
+    "00_工程基线与唯一权威规范.md": "Read QUAD0x10904, H723 fixed-matrix selection and flags; update Host dependency/compatibility boundary. Additional impact read: Read current94.5KiB DTCM summary and0x10904 synchronization; no Host hardware resource PASS inferred. Current-session impact read: Read explicit M45-01 override: QUAD Product/Port0x00010905, Schema6.0 retained; targets/shared mass-gravity view, NONE-only H723 scope and synthetic Host helper. Historical04 summary is not current. GNSS correction impact read: Read CR-V191-GNSS-REQUIRED-01: required UM982/UART4 DMA/PPS, runtime outage/recovery, obsolete optional/default-off withdrawn; no schema/layout/revision change.",
+    "02_接口契约与公共数据规范.md": "Read Mission epoch valid_mask bit8, ProductGeofenceConfig/Profile ownership and Schema6.0/QUAD0x10904; replaced old missing-field scheme. Additional impact read: Read updated C02 text specifying Root private quad_x4_fms_configure_product_geofence before init; public API/schema6.0/Product-Port0x10904 retained. Already synchronized in Host interface/plan. Current-session impact read: Read actual05 macros and M45-01: target mask/position/yaw owned by M4 and directive epoch; shared positive mass/gravity; bounded NONE quintic/24 intervals and Nav-State-Time header; explicit ALTITUDE_AUTOMATIC=5 typed altitude, no Pilot authority, token0, no fictional XYZ, reject unproven fence. Incorporated in interface/M4/M5/M6/tests. Host fixed grid and private two-lane envelopes are explicit conformance differences. GNSS correction impact read: Read fixed GNSS_SUPPORT=1/GNSS_PPS_CAPTURE=1 and mandatory paths; invalid PVT/PPS/UTC distinct; no no-GNSS production profile; same Schema6.0/Port05. Also read M45 geometry copy/consume-on-init geofence clarification and current05 summaries.",
+    "05_传感器采集时间基准与GNSS独立运行.md": "Read body l/nav L Jacobian, pressure and replay/CG clauses; use exact retraction tests. Host N0 alignment remains explicit. GNSS correction impact read: Read primary required UM982/PPS header, deleted optional/no-GNSS production baseline, runtime four-state/time matrix, fixed support/capture and native-parser NOT_READY gap; physical/time/geodesy equations unchanged in inspected affected sections.",
+    "06_FMS通信与系统安全设计.md": "Read Mission epoch command guards and compiled fence init; synchronized transaction tests. Additional impact read: Read exact Root private geofence install hook before init and no runtime/Companion calls; synchronized.",
+    "07_实时调度与板级硬件资源设计.md": "Read B-R08 15KiB per instance/30KiB total and retained 14KiB historical sentence; no Host RAM claim. Delta/checkpoint/journal capacities remain256/24/64 and are reused only logically. Current-session impact read: Read B-R08 active/shadow15KiB each, total DTCM94.5KiB with33.5KiB free; source retains historical14KiB sentence. History256/checkpoint24x2304/journal64x320 unchanged. No target RAM/WCET PASS inferred. GNSS correction impact read: Read required UART4 DMA/PPS owners retained across outage, hardware channels always on. Read M45 static arena48696B/49152B and M5 4672B; no Host target-resource PASS inferred.",
+    "08_产品配置插件与参数管理.md": "Read compiled geofence section3.2 and four CORE/Profile authority; readonly config generated at build. Additional impact read: Read section3.2 private installation order and restriction; readonly Profile binding synchronized. GNSS correction impact read: Read required/enabled/pps_capture manifest fields, mandatory BSP rejection, no removal of devices on signal loss; other aids independently accepted.",
+    "09_需求验证实施与发布管理.md": "Read accepted review task/C-REV conditions/A-REV ABI discrepancy; not interpreted as Gate A or current production PASS. Additional impact read: Read C01 CLOSED/A-REV closure and lock rebuild/D review PASS; C02 SPECIFIED and Gate A separate. Current-session impact read: Read C01/C02 CLOSED with Gate-D/user scope; contract diff20/20/ABI evidence is old04. Gate A/full ABI freeze separate. New M6 prerequisite references C03 with implementation/user approval incomplete. Not new05 ABI or MATLAB evidence. GNSS correction impact read: Read TEST-ACC-050 now required-GNSS build/negative-config/outage evidence scope; existing loss/recovery/no-auto-resume validation remains distinct from this Host documentation. Relocation-session impact read: Read exact appended GNSS-required software validation ledger: required config/standard link/resources,113 GNSS outage Host checks/platform regressions; pre-existing M2 IMU uncertainty assertions FAIL retained. Native UM982 PVT/UTC and target/hardware evidence remain NOT_READY/NOT_RUN. Source metadata only, not MATLAB execution or a relocation change to algorithms.",
+    "11_审核问题闭环与变更追踪.md": "Read C01/C02 tracking; historical proposed entries not assumed current field absence; body version/ABI evidence separately checked. Additional impact read: Read C01 CLOSED/C02 SPECIFIED and retained historical proposal headings; statuses source-attributed, not new MATLAB evidence. Current-session impact read: Read C01/C02 approved table and retained earlier SPECIFIED sentence, resolving current closure with09. C03 selects OSQP1.0.0/mode2/static15variables/190rows and ControlModelPort v1; firmware C-M6/link approval PENDING. No package imported/linked in this Host-spec task. GNSS correction impact read: Read CR-V191-GNSS-REQUIRED-01 user clarification, obsolete optional/default-off historical results revoked, unchanged public ABI/layout and runtime quality rules; no firmware execution by this task.",
+    "AGENT.md": "Read revision updated to0x10904 and scope/status discipline; no change to Host algorithm. Current-session impact read: Read updated05 entry and scope/Owner/time-state-authority rules. This task continues Host spec only; no HANDOFF task or firmware implementation executed. GNSS correction impact read: Read latest required GNSS/PPS and runtime outage entry. Another task has firmware/spec authorization; this task continues the user-requested Flight_Matalab specification scope and does not claim other task outputs.",
+    "README.md": "Read current schema6.0/Product-Port0x10904 index and scope; synchronize new README input identity. Current-session impact read: Read current05 input index and unchanged applications/packages/doc/driver/SCons boundaries. Updated this project source identity without modifying parent. GNSS correction impact read: Read GNSS correction notice: primary mandatory UM982/PPS, runtime outage/recovery, obsolete optional/no-GNSS production clauses revoked.",
+    "01_系统总体架构与设计决议.md": " GNSS correction impact read: Read fixed required GNSS/PPS, local timing/IMU independent of signal availability, navigation/time failures and M4 responsibilities kept separate.",
+    "03_平台软件架构与驱动设计.md": " GNSS correction impact read: Read always-present UART4 GNSS and initialization failure vs no-fix distinction; local clock/IMU unaffected by signal outage.",
+    "04_飞控核心模块与控制系统设计.md": " GNSS correction impact read: Read fixed GNSS queue/health paths, no-fix not not-installed, invalid observation rejection with continuous INS/P and capability-based decisions.",
+    "12_全量审查问题清单与落地边界.md": " GNSS correction impact read: Read correction of historical disabled-backend-to-hardware-off disposition; required transport with native protocol/time/golden acceptance still NOT_READY, historical row retained."
+  },
+  "observed_changes_since_initial": {
+    "00_工程基线与唯一权威规范.md": {
+      "initial": "bcbc76eb56efc42191f48c83af6b500b0f9946fe966c1d41ca2914f3c2ca8907",
+      "current": "61d5a72684e6554580da78e5efb9558c803eba1929a8e294ec4869aee6635316"
+    },
+    "01_系统总体架构与设计决议.md": {
+      "initial": "37441fb42795f8195418653fea8794eaea089b23aec077a70738249ab6b3b409",
+      "current": "a88bed8ad007ce7552c43f870f39412c0c7a9ff739ffd7fa38daf069bbe46217"
+    },
+    "02_接口契约与公共数据规范.md": {
+      "initial": "6ba2f52c14d369884703bde69548e4f274d0ad15d8238f78ad4ea904758c5da1",
+      "current": "6280a7d6cfd55cdddb6e08b4d455a0d71322e7e9dc7f6d5268c96dc993311220"
+    },
+    "03_平台软件架构与驱动设计.md": {
+      "initial": "19ec41e940cfef05f572d200eb24d33642c3ee4e4ac8008a71b3f965eb1fa1af",
+      "current": "dd8de459878cd55e275d179aa08b6c86b003ac85ac30ca89b12242d206630adc"
+    },
+    "04_飞控核心模块与控制系统设计.md": {
+      "initial": "5270517b172179674e390cccc00fcffa8208ea6484d4a315d9995aff4bb34ef2",
+      "current": "94cc71a95982492e5b173fcde2dbdf2109cd32d14052de0c472e2b6bae2fa602"
+    },
+    "05_传感器采集时间基准与GNSS独立运行.md": {
+      "initial": "14cf67a1c701f41605e073616dbd06e13f7977d7e894d4bf90e688cb7b55eea2",
+      "current": "8ac552eee328f8886f1bb3680970f23704bb1814456ba58ebb30fbb68e0ec06c"
+    },
+    "06_FMS通信与系统安全设计.md": {
+      "initial": "3952d3bf30e3a8c3e56e827d586edc68a8685fa7511f2d31b8fd7e6932991bd8",
+      "current": "eca2f1b91386be991f0b340ceb97aeae2a94f6310ac4e9cb995b4323b2636a8b"
+    },
+    "07_实时调度与板级硬件资源设计.md": {
+      "initial": "aacf4ca90fcf71e92ab1934147e35d4f4fa9b1d94d3651040ef507b27e9a47ca",
+      "current": "9dc3ac5a134c58280d823eb886053324373d825b029881f57e053b82e4abf689"
+    },
+    "08_产品配置插件与参数管理.md": {
+      "initial": "c7b85dd94e56f5d91a5ad8dbfd7f3d0fcfab15f8460df626f4978915f5e20f5c",
+      "current": "76ba0561f098691720aa0b556e59b8e369ef6ec0943bc7d734f82d5c660fed03"
+    },
+    "09_需求验证实施与发布管理.md": {
+      "initial": "76ceaf598aa67fcb7296aca443b9aff1149c260c7223875dbf0fee9dd1b7e82a",
+      "current": "62b61bf1ce11525bb9bbde53b18f706a3112748dc881468f3fd32e0d71d433f9"
+    },
+    "11_审核问题闭环与变更追踪.md": {
+      "initial": "e133b6ed7dd2fa8da59c6b23ce9a3ef55f7be9010c1405c6b4a4d621d08aa4c2",
+      "current": "f1bb463b73fe0f3b7aa87442ee6ceef5bdf89b5270edd489994ea167c31e4f0a"
+    },
+    "12_全量审查问题清单与落地边界.md": {
+      "initial": "a161cc7bdedbca33f5d7c554f279e601662ea7b20f01f8533798ff809072e033",
+      "current": "5338fe4074c454b40140e4c71d760f67efc7942bc751f0470bb8c1c36aa92e2d"
+    },
+    "AGENT.md": {
+      "initial": "6e174696573da1706ca22dd187ec57ce13bf3772e981f3f0762cea8ae7e7326b",
+      "current": "eb17b2d30d2bcfd5a45cf013ecaf95c3deba00abcc804f985bcc50f7eb2bf655"
+    },
+    "AGENT_HANDOFF.md": {
+      "initial": "a8c7f13a5ae0a0a39a92717a7a68b41b508467ad15bb8d4a0296ccfb14d959c5",
+      "current": "29f2f852bf5e73b4728b314d09371dec86d22132da6fbf59e76513c4cccb3b72"
+    },
+    "README.md": {
+      "initial": "6ac165f80097a1237db414076616da8bb2d01ca48145db6c38539ea17ba3131b",
+      "current": "98eed2bb4c69e20f01d17488bcfad25129755c663ac3f75cc4a563f939face00"
+    },
+    "validation/T191-D-REVIEW/SHA256SUMS.txt": {
+      "initial": "a73d200865b5ea433875998c39f26dc0a4e3b1dc4f1b22e2c9180da4ba30d683",
+      "current": "1129e8740580bf46cf960bfa53321275c241dd7afec48ce51ce86f24ec9e6dc3"
+    },
+    "validation/T191-D-REVIEW/T191-D-REVIEW_report.md": {
+      "initial": "d1dd78c28a0263ae1392327bc3cf8eb91c2021a08d88e3befafdb16bd73d20aa",
+      "current": "e9e7fdd8d9ac1f7e1d4f611bdec70e8cc8af9f6447505216d5580a6484574009"
+    },
+    "validation/T191-D-REVIEW/commands.log": {
+      "initial": "e692cabc8bfdfb47580fe6d5e46543b91c3f6842b1c256b4bd22f3babab0889b",
+      "current": "f25c152bc939047390d9df5d574cef07a10c9ba5d7d3158890acfe266bbc53de"
+    },
+    "validation/T191-D-REVIEW/make_report.py": {
+      "initial": "23fe06f01520cc3e46a125a0b0cfac9364cc79b1fee2fc9a2e6e398e3cb58c4b",
+      "current": "1353a3c21dd961ca5f7ed8a5ed13fb4bbe2e8f459d1e41ff89baeccd3e6c7b21"
+    },
+    "validation/T191-D-REVIEW/r3_archive/README.md": {
+      "initial": null,
+      "current": "ddd2b6aa99742bfb4a2be314e1f0e5129340a8267e2a9a56111afb2bdd0e972c"
+    },
+    "validation/T191-D-REVIEW/r3_archive/change_summary.json": {
+      "initial": null,
+      "current": "6ec6d7b687a1602d2fdac32b0bcd920417ff40ad41bee85d9800e3d8fb4dbda2"
+    },
+    "validation/T191-D-REVIEW/r3_archive/project_structure_report.json": {
+      "initial": null,
+      "current": "071e6da47eef54d6ceef90c8f6255d9128b117c22c228110f75cf2b5dda618bf"
+    },
+    "validation/T191-D-REVIEW/r3_archive/protected_sources_report.json": {
+      "initial": null,
+      "current": "9bc7dca8fa91eaf0b80d2a32b4901670f72b4725395d208e784ed725df0e667b"
+    },
+    "validation/T191-D-REVIEW/r3_archive/round3_abi_layout.json": {
+      "initial": null,
+      "current": "b787e5800f3e706d2d5241bc6888b28608933c1d6a1f914afd37c7ff18a73705"
+    },
+    "validation/T191-D-REVIEW/r3_archive/round3_report.json": {
+      "initial": null,
+      "current": "a5cb71730171e71fc7b80ffbb26a3d6d661403c37d15abb2d480b07198b233c1"
+    },
+    "validation/T191-D-REVIEW/rebuild_change_summary.py": {
+      "initial": null,
+      "current": "65557fa890ee0b7ef89f9e5d94140ba348154e488ec5f705cb02a8c862e9e139"
+    },
+    "validation/T191-D-REVIEW/review_checks.py": {
+      "initial": "6e33f78fe0ffa4a22253fa46f4b271fddfcd0fb2b37abe96378fb8ffe8e39bb9",
+      "current": "e51b3b1941c4f55a01990a072abbfd6b5c9b926afc70f9d771a1a05f8ce0d105"
+    },
+    "validation/T191-D-REVIEW/review_checks_post.json": {
+      "initial": null,
+      "current": "46c80a6533668b156a7ffc193971869589e67e34915848d3b59cc139c81da42a"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_accept.json": {
+      "initial": null,
+      "current": "ff9c682142fdefc214aba36b520bdf0dc90e6c8b62a14e32e697b748e011f6ad"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_b.json": {
+      "initial": null,
+      "current": "6397b9dc46da08f4a7f730deb4ebf0acf739a976457b6aae5d5165eab436b705"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_c.json": {
+      "initial": null,
+      "current": "3984365b8a05d8a0fee076d0de8d12d6963b69ea63e0be3495f515e70ad2614c"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_d.json": {
+      "initial": null,
+      "current": "2dbf0b7642c0e7d48b898c9554b390deb51379c94ed9de563613fbba108a478e"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_d2.json": {
+      "initial": null,
+      "current": "10579603e86cee0ffb758f3af97858246be1c7718c12859247bc76c9e96160ea"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_d3.json": {
+      "initial": null,
+      "current": "9375f855dd5d5fdb4850bb0ae3888f2b1834f8330dc16894d47a3c1af9cdada1"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_f.json": {
+      "initial": null,
+      "current": "ba5d4b8078c71c4f0966d40d35d34b5084ce4ca6d5e711a11628f6fc9864a632"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_g.json": {
+      "initial": null,
+      "current": "8651ca4cf1eae5dcd50d413ea5ab434f4724259042e2eb4bfb99e4082450f5f2"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_h.json": {
+      "initial": null,
+      "current": "f7a82b644e8a4b3601eec981cdd990d74367ceace6a9c5dc1ad36865ce99b557"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_i.json": {
+      "initial": null,
+      "current": "3fb63e6d269ce6719a21030e702a828ad40fc582aef4e00090e42630ef1342c4"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_j.json": {
+      "initial": null,
+      "current": "c6dc8de5f9c4957d7c9bb3b0704f4ee9a575f57f99e73e6eb80f52079299b240"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_k.json": {
+      "initial": null,
+      "current": "4197c4fe83cbdba0b454b01e293fe0b0d1f4cb8954e9f50f7bb7f0c24d39e6a7"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_l.json": {
+      "initial": null,
+      "current": "bd913f71d0d63662940e26c880f9cda71d524930f9a66e843acd2487ae3cb342"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_m.json": {
+      "initial": null,
+      "current": "accd117df273c8bdab66b3c020133fe3827c2041e520b943c5aa48200e008272"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_n.json": {
+      "initial": null,
+      "current": "accd117df273c8bdab66b3c020133fe3827c2041e520b943c5aa48200e008272"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_o.json": {
+      "initial": null,
+      "current": "fecaeee3ba51c8d8adfc53bf2b31128f52d0486ca3bb0f11b753873fc85253b6"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_p.json": {
+      "initial": null,
+      "current": "1868a938b9d8bd1485281c0cd840787c6ce88e5248abbb381024c53d8e7830d3"
+    },
+    "validation/T191-D-REVIEW/review_checks_post_q.json": {
+      "initial": null,
+      "current": "dc294bc09e27bfacade3295392b3f93573d74fc52ca5657155b956b00c0027eb"
+    },
+    "validation/abi_layout.json": {
+      "initial": "b787e5800f3e706d2d5241bc6888b28608933c1d6a1f914afd37c7ff18a73705",
+      "current": "91e969c27f4f1b61a77c40d7760555516582f06e1d681f06d9df77ca1dcab163"
+    },
+    "validation/change_summary.json": {
+      "initial": "6ec6d7b687a1602d2fdac32b0bcd920417ff40ad41bee85d9800e3d8fb4dbda2",
+      "current": "12e4572adf0b900572ec4395b67da113c5e8595ad8409402af70b04c8a8ab848"
+    },
+    "validation/gnss-required-correction_abi_layout.json": {
+      "initial": null,
+      "current": "91e969c27f4f1b61a77c40d7760555516582f06e1d681f06d9df77ca1dcab163"
+    },
+    "validation/gnss-required-correction_report.json": {
+      "initial": null,
+      "current": "9b629c28a14d5593bf1b72e60a2583be87554421d99b14dc58d03f8af9f3dc6b"
+    },
+    "validation/m4-m5-implementation_abi_layout.json": {
+      "initial": null,
+      "current": "e734f01f8a44a638473b508e924d3e5b513ad926ecc0ff95b3e7edfdf0fdf9a7"
+    },
+    "validation/m4-m5-implementation_report.json": {
+      "initial": null,
+      "current": "d420667d35b29a2283410ab0dcdaf828a4634c04dc4cbfa91fccb320e879b9b5"
+    },
+    "validation/mathematical_reference_report.json": {
+      "initial": "87c85d1b201c08301913d4de9f5c12e627d4c4a5f380b5eeae03ed42e3217d49",
+      "current": "6c6cc66e8d174ca8789b5319ed0511f6b46c6e09a41a6500e6084ec1feb9a87c"
+    },
+    "validation/project_structure_report.json": {
+      "initial": "071e6da47eef54d6ceef90c8f6255d9128b117c22c228110f75cf2b5dda618bf",
+      "current": "e22ba6bf6bd7b486b834c9175d1e345ee28efb79cb4b13600c4f17836ef2fe5a"
+    },
+    "validation/protected_sources_report.json": {
+      "initial": "9bc7dca8fa91eaf0b80d2a32b4901670f72b4725395d208e784ed725df0e667b",
+      "current": "823bbb5733e03caa855f9b366288a494a67e7f515f806ffa544c3efc4139d434"
+    },
+    "validation/round3_abi_layout.json": {
+      "initial": "b787e5800f3e706d2d5241bc6888b28608933c1d6a1f914afd37c7ff18a73705",
+      "current": "f3f10e452f9b029886387bda6c16a68a0689eac36d5b40ef4a21b7c00c09186e"
+    },
+    "validation/round3_report.json": {
+      "initial": "a5cb71730171e71fc7b80ffbb26a3d6d661403c37d15abb2d480b07198b233c1",
+      "current": "81db8b3ae718e646a8ce5bf2f73263dbdc1cf0e933a9f135b0f0a77d74e974b3"
+    },
+    "validation/t191-d-review-r2_abi_layout.json": {
+      "initial": null,
+      "current": "b787e5800f3e706d2d5241bc6888b28608933c1d6a1f914afd37c7ff18a73705"
+    },
+    "validation/t191-d-review-r2_report.json": {
+      "initial": null,
+      "current": "1e41f0ea3f38bf4646794e524e152c217a1cfd2482d83401380f5b906d8fbb12"
+    }
+  },
+  "unreviewed_changes": []
+}
