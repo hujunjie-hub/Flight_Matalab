@@ -38,3 +38,10 @@
 - 上游测试覆盖单调时间映射、PPS 周期门限/频率锁定/失锁 holdover、UTC observation 必须与 PPS 配对、UTC 映射不确定度、外部时钟映射和 time_epoch 不连续拒绝。
 - 三组回归使用合成 PPS capture event 与确定性 tick source；RECTIME 测试直接调用真实字节解析器，GNSS recovery 测试调用真实 sample normalization/filter。它们验证算法与解析核心，不证明 TIM2 capture ISR、UART/DMA 传输、RTOS 任务调度和 PPS/UTC 在 MILSIM 中端到端运行。当前 Flight/tests/simulation/sil_flight.c 的时间服务接口仍为 STATUS_NOT_READY stub，故 P-10 整体保持 PARTIAL。
 - MATLAB/MEX 编译与执行尚未在本次环境运行；本阶段代码状态不能写成实测 PASS。
+
+
+## 2026-11-09 Plant 传感器采样间隔修正
+
+- 修正 IMU 运动学历史状态：只在配置的 IMU sample epoch 更新上一采样速度/角速度，差分时间使用两个真实 IMU sample epoch 之间的时间，不再误用 500 μs Plant 基步。
+- P-07 增加 2 ms IMU 周期、非恒定线加速度/角加速度与 jerk 的回归夹具，并检查非采样时刻 IMU validity bit 必须关闭。
+- 本次为代码与测试夹具更新；当前环境未执行 MATLAB/Simulink/MEX。必须在 MATLAB 环境重新运行 `run_component_checks`，此前验证证据继续保持 STALE，不能标记为 PASS。

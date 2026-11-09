@@ -14,7 +14,7 @@
 | P-04 | 无推力/无drag自由落体0.1s，无地面 | Δv_D=g*t，Δp_D=.5g*t²，误差≤1e-6m/1e-6m/s |
 | P-05 | 恒定mg向上合力，无扰动2s | v漂移≤1e-6m/s；不得重复加gravity |
 | P-06 | q/-q与非零yaw初值 | 同一C_nb/物理轨迹；q范数误差≤1e-6 |
-| P-07 | 非零 IMU/天线杆臂旋转 | IMU 向心/切向加速度及 GNSS 天线位置/速度符合刚体解析式，误差≤1e-6（double理想层） |
+| P-07 | 非零 IMU/天线杆臂旋转与多速率采样 | IMU CG/角速度差分使用配置的 IMU sample period（不能使用 500 μs Plant 基步代替）；向心/切向加速度及 GNSS 天线位置/速度符合刚体解析式，误差≤1e-6（double理想层） |
 | P-08 | 静止水平IMU | specific force=[0,0,-g]，gyro含固定 N0 Earth-rate 项；不把固定 N0 相对 rate=0 当 gyro 全0 |
 | P-09 | 噪声 seed 重复/独立源 | 同 seed 序列相同；统计 STD 在长样本95%置信检查范围 |
 | P-10 | 多速率事件时序与 GNSS 时间基准 | P-10a 已实现 IMU/GNSS/MAG/Baro sample/capture/arrival/release 队列；P-10b 复用 Flight TimeService、GNSS outage 和真实 Unicore ASCII parser 核心测试，验证 PPS 频率驯服、UTC/PPS 配对、RECTIMEA CRC/GPS-UTC 一致性、UTC mapping、PVT/UTC/PPS 独立失效、holdover 和重捕获；Host MIL 的 TIM2 capture ISR 与 UART/DMA→sensor_gnss_poll 注入链仍未接入 |
@@ -38,7 +38,7 @@ P-04/05/07/08 理想层关闭噪声、地面或电机动态的具体旁路必须
 
 ## 2. 当前脚本覆盖
 
-verify_plant_open_loop 当前代码覆盖 P-01..P-09、P-10a、P-11..P-13、P-15..P-21；P-09 已实现同 seed 可复现、不同 seed 变化、IMU 白噪声 STD 的 95% 卡方区间、轴间独立性及 bias/scale 注入。P-10a 队列子项由 `verify_sensor_event_timing` 独立检查多速率周期、sample/capture/arrival/release、队列释放迟到、计数守恒、缺测序号缺口、非法时间步/掩码和 freshness 边界，并由 `verify_plant_open_loop` 调用；P-10b TimeService 与 GNSS outage 核心分别由 `verify_time_service_sync`、`verify_gnss_time_recovery` 编译真实 Flight 源并运行上游测试，且均纳入 `run_component_checks`；但物理 PPS capture ISR、UM982 RECTIME→PPS 配对和 Host MIL 时间域映射链尚未接通，故 P-10 整体仍为 PARTIAL。P-14 truth 依赖图检查由 `verify_truth_isolation` 独立实现，并由 `run_component_checks` 调用。Plant 报告必须为 PARTIAL，且必须在 MATLAB/Simulink 环境实际执行；静态代码审查不算测试通过。
+verify_plant_open_loop 当前代码覆盖 P-01..P-09、P-10a、P-11..P-13、P-15..P-21；P-07 另以 2 ms IMU 周期、非恒定线/角加速度验证传感器历史仅在真实 IMU sample epoch 更新，差分窗口不受 500 μs Plant 基步影响；P-09 已实现同 seed 可复现、不同 seed 变化、IMU 白噪声 STD 的 95% 卡方区间、轴间独立性及 bias/scale 注入。P-10a 队列子项由 `verify_sensor_event_timing` 独立检查多速率周期、sample/capture/arrival/release、队列释放迟到、计数守恒、缺测序号缺口、非法时间步/掩码和 freshness 边界，并由 `verify_plant_open_loop` 调用；P-10b TimeService 与 GNSS outage 核心分别由 `verify_time_service_sync`、`verify_gnss_time_recovery` 编译真实 Flight 源并运行上游测试，且均纳入 `run_component_checks`；但物理 PPS capture ISR、UM982 RECTIME→PPS 配对和 Host MIL 时间域映射链尚未接通，故 P-10 整体仍为 PARTIAL。P-14 truth 依赖图检查由 `verify_truth_isolation` 独立实现，并由 `run_component_checks` 调用。Plant 报告必须为 PARTIAL，且必须在 MATLAB/Simulink 环境实际执行；静态代码审查不算测试通过。
 
 ## 3. 系统闭环评价
 

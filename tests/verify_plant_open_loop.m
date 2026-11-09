@@ -116,6 +116,66 @@ assert(norm(sensorFrame(4:6)'-[expectedImuAcceleration(1);expectedImuAcceleratio
     'Flight:P07','IMU/antenna lever-arm kinematics differ from rigid-body reference.');
 results{end+1}=passed('P-07','IMU acceleration and GNSS antenna position/velocity lever arms');
 
+% P-07 sample timing: IMU history/differences advance at the configured sensor
+% period, not at each 500-us Plant step. Nonzero jerk makes a wrong interval visible.
+sampleTimingParameters=cfg.derived.SensorTimingParameters;
+sampleTimingParameters(1)=2000;
+sampleTimes=(0:0.0005:0.002)';
+sampleInitial=initial;
+sampleInitial(1:6)=0;
+sampleInitial(7:10)=[1;0;0;0];
+sampleInitial(4:6)=sensorParameters(8:10);
+sampleInitial(11:13)=sensorParameters(11:13);
+sampleStates=repmat(sampleInitial',numel(sampleTimes),1);
+sampleAcceleration0=[0.3;-0.2;0.1];
+sampleJerk=[1000;-500;250];
+sampleAngularAcceleration0=[0;0;200];
+sampleAngularJerk=[0;0;1000];
+velocity0=sensorParameters(8:10);
+omega0=sensorParameters(11:13);
+for k=1:numel(sampleTimes)
+    sampleTime=sampleTimes(k);
+    sampleStates(k,1:3)=(velocity0*sampleTime+ ...
+        0.5*sampleAcceleration0*sampleTime^2+ ...
+        (1/6)*sampleJerk*sampleTime^3)';
+    sampleStates(k,4:6)=(velocity0+sampleAcceleration0*sampleTime+ ...
+        0.5*sampleJerk*sampleTime^2)';
+    sampleStates(k,11:13)=(omega0+sampleAngularAcceleration0*sampleTime+ ...
+        0.5*sampleAngularJerk*sampleTime^2)';
+    yaw=omega0(3)*sampleTime+0.5*sampleAngularAcceleration0(3)*sampleTime^2+ ...
+        (1/6)*sampleAngularJerk(3)*sampleTime^3;
+    sampleStates(k,7:10)=[cos(yaw/2),0,0,sin(yaw/2)];
+end
+sampleRun=run_profile('FMT_PlantSensors',{sampleStates,ones(size(sampleTimes))}, ...
+    sampleTimes,sampleTimes(end),struct('SensorParameters',sensorParameters, ...
+    'SensorModelParameters',quietSensorModelParameters, ...
+    'SensorTimingParameters',sampleTimingParameters),0.0005);
+sampleData=sampleRun.yout{1}.Values.Data;
+sampleMask=uint32(sampleData(:,17));
+assert(all(bitand(sampleMask(2:4),uint32(1))==0) && ...
+       bitand(sampleMask(5),uint32(1))==1, ...
+    'Flight:P07','IMU validity did not follow the configured 2-ms sample epoch.');
+
+samplePeriod=sampleTimingParameters(1)*1e-6;
+expectedAverageAcceleration=sampleAcceleration0+0.5*sampleJerk*samplePeriod;
+expectedAverageAngularAcceleration=sampleAngularAcceleration0+ ...
+    0.5*sampleAngularJerk*samplePeriod;
+omegaAtSample=omega0+sampleAngularAcceleration0*samplePeriod+ ...
+    0.5*sampleAngularJerk*samplePeriod^2;
+velocityAtSample=velocity0+sampleAcceleration0*samplePeriod+ ...
+    0.5*sampleJerk*samplePeriod^2;
+rotationAtSample=reference_rotation(sampleStates(end,7:10));
+leverImu=-sensorParameters(14:16);
+leverAccelerationBody=cross(expectedAverageAngularAcceleration,leverImu)+ ...
+    cross(omegaAtSample,cross(omegaAtSample,leverImu));
+velocityImuNed=velocityAtSample+rotationAtSample*cross(omegaAtSample,leverImu);
+accelerationImuNed=expectedAverageAcceleration+rotationAtSample*leverAccelerationBody;
+specificForceNed=accelerationImuNed+2*cross(sensorParameters(5:7),velocityImuNed);
+specificForceNed(3)=specificForceNed(3)-g;
+expectedSpecificForceBody=rotationAtSample'*specificForceNed;
+assert(norm(sampleData(end,4:6)'-expectedSpecificForceBody,inf)<1e-6, ...
+    'Flight:P07','IMU acceleration used the Plant step instead of the configured IMU sample interval.');
+
 % P-08: a stationary level IMU reports specific force -g on body Z and Earth rate.
 staticState=initial;
 staticState(1:6)=0;

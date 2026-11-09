@@ -25,7 +25,7 @@
 enum {
     SENSOR_PARAMETER_COUNT = 19,
     SENSOR_MODEL_PARAMETER_COUNT = 54,
-    SENSOR_STATE_COUNT = 7,
+    SENSOR_STATE_COUNT = 8,
     PARAM_GRAVITY = 0,
     PARAM_MAGNETIC_NED = 1,
     PARAM_EARTH_RATE_NED = 4,
@@ -94,6 +94,24 @@ static uint64_t fmt_sample_index(double time_s, double rate_hz)
     const double index = floor(time_s * rate_hz + 1e-9);
     if (!isfinite(index) || index <= 0.0) return 0;
     return (uint64_t)index;
+}
+
+/* True only on a configured IMU sample boundary (time and period are in SI/us).
+ * The Plant advances every 500 us, but the sensor history must advance only
+ * when a new physical IMU sample is produced. */
+static int fmt_is_imu_sample_epoch(double time_s, double period_us)
+{
+    double time_us, sample_index;
+
+    if (!isfinite(time_s) || time_s < 0.0 ||
+        !isfinite(period_us) || period_us < 1.0)
+        return 0;
+
+    time_us = time_s * 1000000.0;
+    if (!isfinite(time_us)) return 0;
+    sample_index = floor(time_us / period_us + 0.5);
+    return sample_index >= 1.0 &&
+           fabs(time_us - sample_index * period_us) <= 1e-2;
 }
 
 static int fmt_rotation_matrix_valid(const double *m)
@@ -246,7 +264,10 @@ static void mdlInitializeConditions(SimStruct *S)
 
     memcpy(state, p + PARAM_INITIAL_VELOCITY, 3 * sizeof(double));
     memcpy(state + 3, p + PARAM_INITIAL_RATE, 3 * sizeof(double));
-    state[6] = 0.0;
+    /* SensorParameters are generated from PlantState0, so t=0 is a valid
+     * previous sample for the first configured IMU epoch. */
+    state[6] = 1.0;
+    state[7] = 0.0;
 }
 
 static void mdlOutputs(SimStruct *S, int_T tid)
@@ -261,7 +282,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     const double *x = ssGetInputPortRealSignal(S, 0);
     const double *previous = ssGetRealDiscStates(S);
     const double gap = *ssGetInputPortRealSignal(S, 1);
-    const double dt = ssGetSampleTime(S, 0);
+    const double current_time_s = ssGetT(S);
     const double *field_ned_ut;
     const double *earth_rate_ned;
     double gravity, rotation[9], omega_cross_imu[3], omega_cross_ant[3];
@@ -271,6 +292,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     double gyro_ideal_body[3], accel_ideal_body[3], mag_ideal_body[3];
     double gyro_measured_body[3], accel_measured_body[3], mag_measured_body[3];
     double *sensor = ssGetOutputPortRealSignal(S, 0);
+    double imu_interval_s;
     uint64_t seed, imu_index, slow_index, gnss_index, baro_index;
     int imu_derivative_valid;
 
@@ -292,7 +314,8 @@ static void mdlOutputs(SimStruct *S, int_T tid)
         ssSetErrorStatus(S, "Sensor parameter vectors are invalid.");
         return;
     }
-    if (!(parameter[PARAM_GRAVITY] > 0.0) || !isfinite(dt) || dt <= 0.0 || !isfinite(gap) ||
+    if (!(parameter[PARAM_GRAVITY] > 0.0) || !isfinite(current_time_s) ||
+        current_time_s < 0.0 || !isfinite(gap) ||
         !fmt_finite_vector(previous, SENSOR_STATE_COUNT)) {
         ssSetErrorStatus(S, "Invalid sensor sample interval or ground gap.");
         return;
@@ -311,13 +334,17 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     slow_index = fmt_sample_index(ssGetT(S), 1000000.0 / timingParameter[FMT_TIMING_MAG_PERIOD]);
     gnss_index = fmt_sample_index(ssGetT(S), 1000000.0 / timingParameter[FMT_TIMING_GNSS_PERIOD]);
     baro_index = fmt_sample_index(ssGetT(S), 1000000.0 / timingParameter[FMT_TIMING_BARO_PERIOD]);
-    imu_derivative_valid = previous[6] > 0.5;
+    imu_interval_s = current_time_s - previous[7];
+    imu_derivative_valid = previous[6] > 0.5 &&
+        fmt_is_imu_sample_epoch(current_time_s,
+            timingParameter[FMT_TIMING_IMU_PERIOD]) &&
+        isfinite(imu_interval_s) && imu_interval_s > 0.0;
 
     for (int i = 0; i < 3; ++i) {
         lever_imu[i] = -parameter[PARAM_IMU_TO_CG + i];
         lever_ant[i] = lever_imu[i] + parameter[PARAM_ANTENNA_FROM_IMU + i];
         accel_cg_ned[i] = imu_derivative_valid
-            ? (x[3 + i] - previous[i]) / dt : 0.0;
+            ? (x[3 + i] - previous[i]) / imu_interval_s : 0.0;
     }
 
     /* Rigid-body point kinematics at the IMU and GNSS antenna. */
@@ -327,7 +354,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
         double alpha_body[3];
         for (int i = 0; i < 3; ++i) {
             alpha_body[i] = imu_derivative_valid
-                ? (x[10 + i] - previous[3 + i]) / dt : 0.0;
+                ? (x[10 + i] - previous[3 + i]) / imu_interval_s : 0.0;
         }
         fmt_cross(alpha_body, lever_imu, alpha_cross_imu);
     }
@@ -402,11 +429,32 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 #define MDL_UPDATE
 static void mdlUpdate(SimStruct *S, int_T tid)
 {
-    (void)tid;
+    const mxArray *timingArray = ssGetSFcnParam(S, 2);
+    const double *timing;
     double *state = ssGetRealDiscStates(S);
     const double *x = ssGetInputPortRealSignal(S, 0);
+    const double current_time_s = ssGetT(S);
+
+    (void)tid;
+    if (!mxIsDouble(timingArray) || mxIsComplex(timingArray) ||
+        mxIsSparse(timingArray) ||
+        mxGetNumberOfElements(timingArray) != FMT_SENSOR_SIM_PARAMETER_COUNT ||
+        !(timing = mxGetPr(timingArray)) ||
+        !fmt_sensor_timing_parameters_valid(timing)) {
+        ssSetErrorStatus(S, "SensorTimingParameters are invalid during sensor history update.");
+        return;
+    }
+
+    /* Keep the derivative baseline at the previous physical IMU sample,
+     * not at every 500-us Plant integration step. */
+    if (!fmt_is_imu_sample_epoch(current_time_s,
+            timing[FMT_TIMING_IMU_PERIOD]) ||
+        current_time_s <= state[7])
+        return;
+
     memcpy(state, x + 3, 3 * sizeof(double));
     memcpy(state + 3, x + 10, 3 * sizeof(double));
+    state[7] = current_time_s;
     state[6] = 1.0;
 }
 
