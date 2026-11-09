@@ -39,11 +39,11 @@ GroundContact fixture 用有符号间隙 gap=ground_D-p_contact_D 判定：gap�
 
 ## 4. 传感器与 M2 入口
 
-设 l_I 为 CG→IMU，v_I=v_CG+C*(ω×l_I)，a_I=a_CG+C*(α×l_I+ω×(ω×l_I))，其中 ω=ω_b/N0、α为同刻局部角加速度。原始 gyro=ω+C'*ω_ie^0，比力 f_I=C'*(a_I-g0+2*ω_ie^0×v_I)。当前 SIM sensor adapter 已加入固定 N0 Earth-rate/Coriolis 项、CG→IMU 杆臂角加速度与向心加速度、IMU→GNSS 天线位置/速度杆臂，并用初始速度/角速度初始化差分器、屏蔽首个无差分 IMU 样本。P07/P08 对应的杆臂与静止 IMU 物理检查已有脚本。P09 已在 M2 标准样本出口实现安装矩阵、残余 bias/scale 与多源高斯噪声；随机流按 seed/source/sample-index/axis 派生，不依赖 RK4 调用次数，回归脚本验证 seed 重复性、轴间独立性和 IMU STD。P10 的独立采样队列及 sample/capture/arrival 延迟仍未完成。
+设 l_I 为 CG→IMU，v_I=v_CG+C*(ω×l_I)，a_I=a_CG+C*(α×l_I+ω×(ω×l_I))，其中 ω=ω_b/N0、α为同刻局部角加速度。原始 gyro=ω+C'*ω_ie^0，比力 f_I=C'*(a_I-g0+2*ω_ie^0×v_I)。当前 SIM sensor adapter 已加入固定 N0 Earth-rate/Coriolis 项、CG→IMU 杆臂角加速度与向心加速度、IMU→GNSS 天线位置/速度杆臂，并用初始速度/角速度初始化差分器、屏蔽首个无差分 IMU 样本。P07/P08 对应的杆臂与静止 IMU 物理检查已有脚本。P09 已在 M2 标准样本出口实现安装矩阵、残余 bias/scale 与多源高斯噪声；随机流按 seed/source/sample-index/axis 派生，不依赖 RK4 调用次数，回归脚本验证 seed 重复性、轴间独立性和 IMU STD。P10a 的独立多速率采样/传输队列已接入 MIL Host SIL，sample/capture/arrival 与 generated/suppressed/released/accepted 计数可验证；P10b 的 PPS raw capture、UTC observation 和 GNSS↔FCU epoch mapping 尚未接入。
 
 GNSS 点按天线 LLH/速度合成，Mag N0 场[25,0,40]uT；Baro 以合成压力高度基准100m和 Up 位移生成，再用 M2 同一压力转换函数的逆生成 pressure。该100m压力基准是明确合成假设，不把椭球高等同实测压力高度；h_baro0 由 M3 锁存。
 
-UM982/PPS 为固定主要器件，不建“可选GNSS”名义 Variant。GNSS PVT、PPS边沿、时间历元分别走 SIM_PVT/SIM_PPS_EPOCH 适配；PVT失锁不伪造新数据或清配置，PPS是否仍可靠由该故障场景明确给证据。真实 RAW_CAPTURE 中的 UM982 串口解码仍需正式后端；不能把合成 PVT 通过当成已验收原生解析器。
+UM982/PPS 为目标系统固定器件，不建“可选GNSS”名义 Variant。目标接口要求 GNSS PVT、PPS 边沿和时间历元分别建模；当前 Host SIL 仅注入 SIM_PVT 本地 monotonic 时间，`pps_backend=DISABLED_LOCAL_MONOTONIC`，PPS/UTC 映射列为 P10b 未完成项。PVT失锁不伪造新数据或清配置，PPS是否仍可靠应由后续同一硬件配置故障场景给证据。真实 RAW_CAPTURE 中的 UM982 串口解码仍需正式后端；不能把合成 PVT 通过当成已验收原生解析器。
 
 SensorFrontend 默认 SIM_RAW_ENGINEERING 子格式：生成 sensor 轴系工程量/捕获时间/质量，私有虚拟采集适配进入 M2 校准/安装/时间处理，M2 出口才是公共标准样本。该模式验证处理数学，不验证 ADIS 二进制解码或驱动。RAW_CAPTURE 另用于真实字节解码 fixture。M2_STANDARD 回放则只验证转发，禁止再做校准或扣 pipeline；input_level/subformat 必须写 manifest。
 
@@ -77,4 +77,4 @@ Truth 只有 SensorFrontend 和只读 Evaluator 可动态读取；初始化来�
 
 ## SensorParameters 合同
 
-SensorParameters 为 19 doubles：[gravity, magnetic_field_NED(3), earth_rate_NED(3), initial_velocity_NED(3), initial_rate_FRD(3), imu_to_cg_FRD(3), antenna_from_imu_FRD(3)]。SensorModelParameters 为 54 doubles，携带随机种子、IMU/MAG 安装矩阵、残余 bias/scale、IMU/MAG/GNSS/Baro 噪声 STD。IMU 杆臂按 CG→IMU = -imu_to_cg 解释，GNSS 天线杆臂为 CG→IMU + IMU→antenna。P-07/P-08 已有组件测试；P-09 的可复现噪声和残余误差注入已实现，P-10 多速率采样/传输延迟仍待实现。
+SensorParameters 为 19 doubles：[gravity, magnetic_field_NED(3), earth_rate_NED(3), initial_velocity_NED(3), initial_rate_FRD(3), imu_to_cg_FRD(3), antenna_from_imu_FRD(3)]。SensorModelParameters 为 54 doubles，携带随机种子、IMU/MAG 安装矩阵、残余 bias/scale、IMU/MAG/GNSS/Baro 噪声 STD。IMU 杆臂按 CG→IMU = -imu_to_cg 解释，GNSS 天线杆臂为 CG→IMU + IMU→antenna。P-07/P-08 已有组件测试；P-09 的可复现噪声和残余误差注入已实现；P-10a 多速率采样/传输队列已实现并由 `verify_sensor_event_timing` 检查，P-10b PPS raw capture/UTC epoch mapping 仍待实现。
