@@ -73,6 +73,23 @@ end
 assert(rejected,'Flight:SensorTimingQueueBound', ...
     'The timing engine accepted a delay that can overflow its bounded queue.');
 
+% A zero-delay fixture must release at the same sample epoch, not one 500-us
+% scheduler step later.
+zeroDelay=timing;
+zeroDelay(5:9)=0;
+shortTimes=(epochUs:500:epochUs+200000)';
+shortTruth=truth(1:numel(shortTimes),:);
+[~,zeroEvents]=fmt_sensor_sim_probe(shortTruth,zeroDelay,shortTimes,epochUs);
+for channel=1:4
+    rows=find(zeroEvents(:,validColumns(channel))==1);
+    sample=zeroEvents(rows,sampleColumns(channel));
+    capture=zeroEvents(rows,captureColumns(channel));
+    arrival=zeroEvents(rows,arrivalColumns(channel));
+    assert(all(sample==capture) && all(capture==arrival) && ...
+           all(shortTimes(rows)==arrival), ...
+        'Flight:SensorZeroDelay','%s zero-delay events were not released at the sample epoch.',names{channel});
+end
+
 report=struct('scope','SENSOR_SAMPLE_CAPTURE_ARRIVAL_TIMING','status','PASS', ...
     'channels',{names},'sample_period_us',periods, ...
     'pipeline_delay_us',pipeline,'transport_delay_us',transports, ...
