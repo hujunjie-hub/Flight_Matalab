@@ -14,7 +14,7 @@
 - GitHub Issue 创建后，按编号生成项目问题 ID：`FMAT-0001` 对应 GitHub Issue `#1`，`FMAT-0027` 对应 `#27`。编号不复用。
 - Issue 标题格式：`[FMAT-0001][S1][PLANT] 电机动态响应偏差`。创建前可暂用 `[MATLAB]`，创建后补齐正式 ID。
 - Issue 正文中的 **Current status** 是当前状态；每次状态变化必须追加一条评论，记录日期、原状态、新状态、原因和证据。GitHub 原生 Open/Closed 只表示是否结案，不替代下面的细分状态。
-- 当前仓库尚无已登记的问题 Issue；第一条新建问题将从 GitHub Issue #1 / `FMAT-0001` 开始。
+- 当前 GitHub Issue 查询未发现已登记的问题；仓库已有 Pull Request #1。GitHub Issue 与 Pull Request 共用编号序列，因此新建问题的编号以 GitHub 实际分配为准，不预设从 #1 开始；例如新 Issue 分配为 #2，则项目 ID 为 `FMAT-0002`。
 
 ## 2. 问题类型与严重级别
 

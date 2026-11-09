@@ -5,7 +5,7 @@ title: "[MATLAB] "
 assignees: ""
 ---
 
-> 创建后按 GitHub Issue 编号补齐项目 ID：Issue #1 = FMAT-0001。
+> 创建后按 GitHub 实际分配的 Issue 编号补齐项目 ID（Issue #2 = FMAT-0002）。GitHub Issue 与 PR 共用编号序列，不要预设首个 Issue 一定是 #1。
 
 **Issue ID：** 待创建后填写  
 **Current status：** NEW  
