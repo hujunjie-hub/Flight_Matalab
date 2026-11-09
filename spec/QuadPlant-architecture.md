@@ -33,7 +33,7 @@ Sample 相位在 PlantStep 之前，只读 x_k，不能输出 x_next 冒充同�
 
 N0 是绑定 Origin 的固定局部 NED，C_0b 将 FRD 转到 N0；Plant 的 p/v/q/rate 都在固定局部框架。Origin 位于初始 CG，p0=[0,0,0]，地面 D=0.15 m，CG→接地点 FRD=[0,0,0.15] m。WGS 锚点为明确合成 45°N/0°E/100 m 椭球高。Home 从 M4 捕获，不改变 Origin。
 
-omega 表示 body 相对固定 N0 的角速度，并表达在 FRD。刚体方程使用 J*omega 和 omega × J*omega。当前内核只支持对角 J；参数生成器会拒绝非对角项，不能悄悄忽略惯性耦合。
+omega 表示 body 相对固定 N0 的角速度，并表达在 FRD。刚体方程使用完整 J*omega 和 omega × J*omega；J 必须是对称正定 3×3 矩阵，角加速度由完整矩阵求解，不能只使用对角项。
 
 位置是点，速度/力是向量：位置需要 ECEF 平移后转换，速度/力只旋转。当前地理 NED 的 transport 项留在 KF 内部；Plant 的固定 N0 角速度定义不能和当前地理导航系角速度混用。
 
@@ -50,7 +50,7 @@ Environment 是固定 15 维 double：
 | 11 | drag_enable | 0/1 |
 | 12:15 | rotor_effectiveness | 每个电机 0..1 |
 
-Environment 中任何非有限值、非法布尔值或超界电机效能都必须 fail closed。PlantState 17 个元素必须有限，四元数不能为零，电机转速不能为负。Plant 参数向量固定 20 个 double，质量、惯量、电机推力系数、电机时间常数、重力和地面刚度必须为正；阻尼、摩擦和半跨距不能为负。
+Environment 中任何非有限值、非法布尔值或超界电机效能都必须 fail closed。PlantState 17 个元素必须有限，四元数不能为零，电机转速不能为负。Plant 参数向量固定 26 个 double：`[mass; J(:); k_f; tau; drag(3); rateDamping; groundK; groundC; groundDown; contactLever(3); gravity; skidHalfSpan(2); friction]`。质量、惯量正定性、电机推力系数、电机时间常数、重力和地面刚度必须满足物理约束；阻尼、摩擦和半跨距不能为负。
 
 电机顺序沿用 Flight：前左、前右、后右、后左。当前位置分别为 (+0.18,-0.18)、(+0.18,+0.18)、(-0.18,+0.18)、(-0.18,-0.18) m。径向力臂由坐标推导为 0.254558 m；偏航系数为 [-0.02,+0.02,-0.02,+0.02] m。
 
