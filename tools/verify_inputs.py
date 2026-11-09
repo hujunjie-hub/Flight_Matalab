@@ -58,6 +58,21 @@ def validate_spd_inertia(flat):
         'Inertia tensor must be positive definite'
 
 
+def validate_rotation(flat, label):
+    m = matrix3(flat)
+    for row in range(3):
+        for column in range(3):
+            dot = sum(m[k][row] * m[k][column] for k in range(3))
+            assert abs(dot - (1.0 if row == column else 0.0)) <= 1e-6, \\
+                f'{label} must be orthonormal'
+    determinant = (
+        m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+        - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+        + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0])
+    )
+    assert abs(determinant - 1.0) <= 1e-6, f'{label} must be a proper rotation'
+
+
 def main():
     report_path = ROOT / 'work/validation/input_preflight.json'
     report = {'scope': 'LOCKED_INPUT_PREFLIGHT', 'status': 'IN_PROGRESS'}
@@ -126,7 +141,20 @@ def main():
         assert math.sqrt(sum(value * value for value in v['plant_state0'][6:10])) > 1e-12
         assert all(value >= 0 for value in v['plant_state0'][13:17])
         assert len(v['origin_llh_rad_m']) == 3
-        assert len(config['sensor_alignment']['magnetic_field_ned_ut']) == 3
+        sensor = config['sensor_alignment']
+        for field in ('magnetic_field_ned_ut', 'imu_to_cg_frd_m',
+                      'antenna_from_imu_frd_m', 'static_gyro_bias_radps',
+                      'static_accel_bias_mps2', 'scale_error'):
+            assert len(sensor[field]) == 3, f'{field} must be a 3-vector'
+        validate_rotation(sensor['imu_installation'], 'IMU installation')
+        validate_rotation(sensor['mag_installation'], 'magnetometer installation')
+        for field in ('imu_pipeline_delay_us', 'imu_transport_delay_us',
+                      'gnss_transport_delay_us', 'baro_transport_delay_us',
+                      'mag_transport_delay_us'):
+            assert isinstance(sensor[field], int) and sensor[field] >= 0, \\
+                f'{field} must be a nonnegative integer microsecond delay'
+        assert sensor['gnss_backend'] == 'SIM_PVT'
+        assert sensor['pps_backend'] == 'SIM_PPS_EPOCH'
 
         e = config['estimator_tuning']
         assert (e['error_state_rank'], e['noise_rank']) == (22, 19)
@@ -135,7 +163,7 @@ def main():
                       osqp_files_verified=len(runtime['files']),
                       kf_files_verified=len(lock['kf_gins_matlab']['files']),
                       flight_vehicle_source='Flight/config/vehicle_model.yaml',
-                      plant_parameter_contract='FULL_3X3_INERTIA_26',
+                      plant_parameter_contract='FULL_3X3_INERTIA_26',\n                      sensor_parameter_contract='SENSOR_19_IMU_ANTENNA_LEVERS',
                       config_hashes=hashes,
                       config_content_sha256=hashlib.sha256(json.dumps(config, sort_keys=True, separators=(',', ':')).encode()).hexdigest())
     except Exception as error:
