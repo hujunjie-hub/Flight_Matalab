@@ -173,7 +173,14 @@ derivative=out.yout{1}.Values.Data(end,:);
 expectedDownAcceleration=g-sum([2.5 5 5 5])/cfg.vehicle_model.mass_kg;
 assert(abs(derivative(6)-expectedDownAcceleration)<1e-9, ...
     'Flight:P13','Rotor loss-of-effectiveness was not reflected in Plant acceleration.');
-results{end+1}=passed('P-13','Rotor loss-of-effectiveness enters physical dynamics');
+externalForceEnvironment=environment;
+externalForceEnvironment(4)=1.25; % NED north force in newtons.
+out=run('FMT_RigidBodyRHS',{initial,zeros(1,6),zeros(1,6),externalForceEnvironment}, ...
+    0.001,struct,0.0005);
+derivative=out.yout{1}.Values.Data(end,:);
+assert(abs(derivative(4)-1.25/cfg.vehicle_model.mass_kg)<1e-10, ...
+    'Flight:P13','External NED force did not enter rigid-body translation.');
+results{end+1}=passed('P-13','Rotor effectiveness and external force enter physical dynamics');
 
 % P-15: a contact point 1 cm above ground has no spring/damper force,
 % even while descending at 1 m/s.
