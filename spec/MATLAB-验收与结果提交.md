@@ -120,7 +120,7 @@ P-14 不在上述 Plant 开环脚本中执行，由 `tests/verify_truth_isolatio
 | 验收范围 | 执行入口/报告 | 当前分支接纳要求 |
 |---|---|---|
 | 构建和依赖 | `component_checks.json` | 所有构建步骤完成；异常必须 FAIL，不能继续使用旧产物 |
-| Flight 三入口及回放 | `flight_entries.json`，并嵌入 `component_checks.json` | 报告 PASS；26 s MIL 完成任务，DataSIM/ExtINS 对比一致，缺测禁止推力 |
+| Flight 三入口及回放 | `flight_entries.json`、`mil_diagnostics.json`，并嵌入 `component_checks.json` | 报告 PASS；26 s MIL 完成任务，DataSIM/ExtINS 对比一致，缺测禁止推力；MIL 失败时必须保留逐命令 ACK 与 PreArm 诊断 |
 | 参数一致性 | `parameter_view_report.json` | PASS；26 项 Plant、19 项 Sensor、54 项 SensorModel、10 项 SensorTiming 参数合同正确 |
 | Plant 开环 | `plant_open_loop_report.json` | `implemented_gate_status=PASS`，但整体 `status=PARTIAL` 是当前预期 |
 | 传感器事件队列 | `sensor_event_timing_report.json` | PASS；计数守恒、sequence gap 和时间因果关系正确 |
@@ -136,6 +136,8 @@ P-14 不在上述 Plant 开环脚本中执行，由 `tests/verify_truth_isolatio
 | 输入与模型数据指纹 | `current_source_fingerprint.json` | 必须存在；必须包含 `simulation/`、`scenarios/`、`.mat` 数据集及本分支测试/配置的 SHA-256 |
 
 所有必需报告必须来自同一次验收运行。报告缺失、时间戳/Hash 不一致、输入在测试期间改变或运行中断，都不能按 PASS 验收。
+
+Flight 入口诊断约定：`verify_flight_entries` 在 MIL 断言之前写出 `mil_diagnostics.json`，记录每条命令的 command code、request ID、ACK state/reason，以及对应时刻的 arm/mode/failsafe、PreArm state、failed mask、primary reason、failed count、check epoch 和 authority。Host SIL 状态帧宽度为 32；第 25～32 列依次为 PreArm failed mask、primary reason、failed count、warning count、check epoch、FMS authority、mission state、最近命令码。不得使用最后一条 DISARM ACK 代替 ARM ACK 诊断。
 
 ## 5. Plant 数值验收阈值
 

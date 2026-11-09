@@ -65,7 +65,35 @@
           "meaning": "lock request"
         }
       ],
-      "acceptance": "26 s MIL completes takeoff/landing/disarm; no nonzero thrust without valid commit."
+      "acceptance": "26 s MIL completes takeoff/landing/disarm; no nonzero thrust without valid commit.",
+      "diagnostics": {
+        "report": "work/validation/mil_diagnostics.json",
+        "status_width": 32,
+        "status_columns": {
+          "prearm_failed_mask": 25,
+          "prearm_primary_reason": 26,
+          "prearm_failed_count": 27,
+          "prearm_warning_count": 28,
+          "prearm_check_epoch": 29,
+          "fms_authority": 30,
+          "mission_state": 31,
+          "last_command_code": 32
+        },
+        "command_history_fields": [
+          "request_id",
+          "command_code",
+          "ack_state",
+          "reason_code",
+          "arm_state",
+          "flight_mode",
+          "failsafe_level",
+          "prearm_state",
+          "prearm_failed_mask",
+          "prearm_primary_reason",
+          "prearm_failed_count",
+          "prearm_check_epoch"
+        ]
+      }
     },
     {
       "id": "D-FLIGHT-REPLAY-MAT",
@@ -156,6 +184,7 @@
     "work/validation/component_checks.json",
     "work/validation/current_source_fingerprint.json",
     "work/validation/flight_entries.json",
+    "work/validation/mil_diagnostics.json",
     "work/validation/parameter_view_report.json",
     "work/validation/osqp_mex_report.json",
     "work/validation/g1_execution_report.json",
