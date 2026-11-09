@@ -148,7 +148,7 @@ if isfile(modelFile)
     sensorBlock=[model '/RigidBodySensorKinematics'];
     assert(getSimulinkBlockHandle(sensorBlock)>0,'Flight:SensorModelBlock', ...
         'Existing FMT_PlantSensors is missing RigidBodySensorKinematics.');
-    set_param(sensorBlock,'Parameters','SensorParameters,SensorModelParameters');
+    set_param(sensorBlock,'Parameters','SensorParameters,SensorModelParameters,SensorTimingParameters');
 else
     make(model,folder);
     fmt_edit(model,'root',{
