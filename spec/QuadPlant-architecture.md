@@ -27,7 +27,9 @@ GeodesyAdapter 严格区分点和向量：r_e=r0_e+C_e0*p0，v_e=C_e0*v0，R_0b=
 
 ## 3. 电机、载荷和接地
 
-电机顺序、FRD 坐标、偏航符号、质量、惯量、推力上下限和一阶时间常数由同级 Flight/config/vehicle_model.yaml 提供。当前 Flight 合成配置的四个位置为 [0.18,-0.18,0]、[0.18,0.18,0]、[-0.18,0.18,0]、[-0.18,-0.18,0] m，偏航系数为 [-.02,+.02,-.02,+.02] m；这组参数没有硬件辨识证据。当前刚体内核只支持对角惯量，参数生成会拒绝非对角惯量，不能静默丢弃惯量积。
+电机顺序、FRD 坐标、偏航符号、质量、惯量、推力上下限和一阶时间常数由同级 Flight/config/vehicle_model.yaml 提供。当前 Flight 合成配置的四个位置为 [0.18,-0.18,0]、[0.18,0.18,0]、[-0.18,0.18,0]、[-0.18,-0.18,0] m，偏航系数为 [-.02,+.02,-.02,+.02] m；这组参数没有硬件辨识证据。刚体内核支持完整对称正定 3×3 惯量矩阵，使用完整 J*omega、omega×J*omega 和 J⁻¹ 求解，不静默丢弃惯量积。
+
+PlantParameters 固定为 25 个 double：[mass; J(:); k_f; tau; drag(3); rateDamping; groundK; groundC; groundDown; contactLever_FRD(3); gravity; skidHalfSpan(2)]，其中 J(:) 按 MATLAB 列优先顺序展开，并在参数生成和 S-Function 入口验证对称正定性。
 
 SIM_ONLY 专属参数包括转速到推力系数、空气阻力、转动阻尼和地面接触。ω_cmd=sqrt(max(f_cmd,0)/k_f)，motorω_dot=(ω_cmd-motorω)/tau，f_actual=k_f*motorω²。Plant 物理电机上限跟随 Flight vehicle config；当前 M7 DShot 虚拟量化曲线仍限制命令为0..10N。F_i=[0,0,-f_i]，τ_i=r_i×F_i+[0,0,gamma_i*f_i]。loss-of-effectiveness 是 Plant 内部物理故障，不把该真值直接写 M6/M7 能力 mask。
 
