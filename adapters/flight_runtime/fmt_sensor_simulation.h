@@ -64,6 +64,11 @@ typedef struct {
 int fmt_sensor_sim_init(FmtSensorSimState *state, const double *parameters, uint64_t epoch_us);
 int fmt_sensor_sim_step(FmtSensorSimState *state, const double truth_frame[18],
                         uint64_t now_us, FmtSensorSimEvent due_events[4]);
+/* Runtime clock may be ahead of the physical sample epoch by a fixed pipeline offset.
+ * Event arrival/release use now_us; sample/capture timestamps use now_us-offset. */
+int fmt_sensor_sim_step_offset(FmtSensorSimState *state, const double truth_frame[18],
+                               uint64_t now_us, uint64_t sample_time_offset_us,
+                               FmtSensorSimEvent due_events[4]);
 /* Call only after the downstream firmware injection/measurement sink accepts an event. */
 int fmt_sensor_sim_mark_accepted(FmtSensorSimState *state, unsigned channel);
 

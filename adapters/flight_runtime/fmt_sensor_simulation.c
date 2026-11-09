@@ -86,8 +86,9 @@ int fmt_sensor_sim_init(FmtSensorSimState *state, const double *parameters, uint
     return 0;
 }
 
-int fmt_sensor_sim_step(FmtSensorSimState *state, const double truth[18],
-                        uint64_t now_us, FmtSensorSimEvent due_events[4])
+int fmt_sensor_sim_step_offset(FmtSensorSimState *state, const double truth[18],
+                               uint64_t now_us, uint64_t sample_time_offset_us,
+                               FmtSensorSimEvent due_events[4])
 {
     const double *p;
     uint64_t elapsed;
@@ -110,7 +111,7 @@ int fmt_sensor_sim_step(FmtSensorSimState *state, const double truth[18],
     const unsigned width[4] = {6, 6, 3, 1};
 
     if (!state || !truth || !due_events || now_us < state->epoch_us ||
-        !finite_values(truth, 18))
+        sample_time_offset_us > now_us || !finite_values(truth, 18))
         return -1;
     if (state->has_stepped) {
         if (now_us <= state->last_step_us ||
@@ -137,6 +138,7 @@ int fmt_sensor_sim_step(FmtSensorSimState *state, const double truth[18],
             const uint64_t pipeline = channel == FMT_SENSOR_SIM_IMU
                 ? (uint64_t)p[FMT_TIMING_IMU_PIPELINE_DELAY] : 0u;
             const uint64_t transport = (uint64_t)p[transport_index[channel]];
+            const uint64_t sample_time_us = now_us - sample_time_offset_us;
             FmtSensorSimEvent event;
 
             if ((elapsed % period) != 0u) continue;
@@ -146,13 +148,13 @@ int fmt_sensor_sim_step(FmtSensorSimState *state, const double truth[18],
                 ++state->stats[channel].suppressed;
                 continue;
             }
-            if (UINT64_MAX - now_us < pipeline ||
-                UINT64_MAX - (now_us + pipeline) < transport)
+            if (UINT64_MAX - sample_time_us < pipeline ||
+                UINT64_MAX - (sample_time_us + pipeline) < transport)
                 return -1;
 
             memset(&event, 0, sizeof(event));
-            event.sample_us = now_us;
-            event.capture_us = now_us + pipeline;
+            event.sample_us = sample_time_us;
+            event.capture_us = sample_time_us + pipeline;
             event.arrival_us = event.capture_us + transport;
             event.sequence = state->sequence[channel];
             if (channel == FMT_SENSOR_SIM_IMU) {
@@ -190,6 +192,12 @@ int fmt_sensor_sim_step(FmtSensorSimState *state, const double truth[18],
         }
     }
     return 0;
+}
+
+int fmt_sensor_sim_step(FmtSensorSimState *state, const double truth[18],
+                        uint64_t now_us, FmtSensorSimEvent due_events[4])
+{
+    return fmt_sensor_sim_step_offset(state, truth, now_us, 0u, due_events);
 }
 
 int fmt_sensor_sim_mark_accepted(FmtSensorSimState *state, unsigned channel)

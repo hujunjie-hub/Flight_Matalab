@@ -14,23 +14,26 @@ static int is_real_dense_double(const mxArray *value)
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
     const mxArray *truth_array, *parameter_array, *time_array, *epoch_array;
-    const double *truth, *parameters, *times, *epoch_value;
+    const mxArray *offset_array = NULL;
+    const double *truth, *parameters, *times, *epoch_value, *offset_value = NULL;
     double *frames, *events, *statistics = NULL;
     mwSize rows, columns;
-    uint64_t epoch_us;
+    uint64_t epoch_us, sample_time_offset_us = 0u;
     FmtSensorSimState state;
 
-    if (nrhs != 4 || nlhs < 2 || nlhs > 3)
+    if ((nrhs != 4 && nrhs != 5) || nlhs < 2 || nlhs > 3)
         mexErrMsgIdAndTxt("Flight:SensorProbeArguments",
-            "Usage: [frames,events,stats]=fmt_sensor_sim_probe(truth18,parameters10,times_us,epoch_us).");
+            "Usage: [frames,events,stats]=fmt_sensor_sim_probe(truth18,parameters10,times_us,epoch_us[,sample_time_offset_us]).");
     truth_array = prhs[0];
     parameter_array = prhs[1];
     time_array = prhs[2];
     epoch_array = prhs[3];
+    if (nrhs == 5) offset_array = prhs[4];
     if (!is_real_dense_double(truth_array) ||
         !is_real_dense_double(parameter_array) ||
         !is_real_dense_double(time_array) ||
-        !is_real_dense_double(epoch_array))
+        !is_real_dense_double(epoch_array) ||
+        (offset_array && !is_real_dense_double(offset_array)))
         mexErrMsgIdAndTxt("Flight:SensorProbeType","All inputs must be real, dense doubles.");
 
     rows = mxGetM(truth_array);
@@ -38,7 +41,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     if (columns != 18 || rows == 0 ||
         mxGetNumberOfElements(parameter_array) != FMT_SENSOR_SIM_PARAMETER_COUNT ||
         mxGetNumberOfElements(time_array) != rows ||
-        mxGetNumberOfElements(epoch_array) != 1)
+        mxGetNumberOfElements(epoch_array) != 1 ||
+        (offset_array && mxGetNumberOfElements(offset_array) != 1))
         mexErrMsgIdAndTxt("Flight:SensorProbeShape",
             "Expected truth N-by-18, 10 parameters, N times and one epoch.");
 
@@ -46,10 +50,17 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
     parameters = mxGetPr(parameter_array);
     times = mxGetPr(time_array);
     epoch_value = mxGetPr(epoch_array);
+    if (offset_array) offset_value = mxGetPr(offset_array);
     if (!isfinite(*epoch_value) || *epoch_value < 0.0 ||
         floor(*epoch_value) != *epoch_value || *epoch_value > 9.0e15)
         mexErrMsgIdAndTxt("Flight:SensorProbeEpoch","Epoch must be an integer microsecond timestamp.");
     epoch_us = (uint64_t)*epoch_value;
+    if (offset_value) {
+        if (!isfinite(*offset_value) || *offset_value < 0.0 ||
+            floor(*offset_value) != *offset_value || *offset_value > 9.0e15)
+            mexErrMsgIdAndTxt("Flight:SensorProbeOffset","Sample-time offset must be an integer microsecond value.");
+        sample_time_offset_us = (uint64_t)*offset_value;
+    }
     if (fmt_sensor_sim_init(&state, parameters, epoch_us) != 0)
         mexErrMsgIdAndTxt("Flight:SensorProbeParameters","Sensor timing parameters are invalid.");
 
@@ -72,7 +83,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
             mexErrMsgIdAndTxt("Flight:SensorProbeTime","Times must be integer microseconds.");
         for (unsigned column = 0; column < 18; ++column)
             input[column] = truth[row + rows * column];
-        if (fmt_sensor_sim_step(&state, input, (uint64_t)time_value, due) != 0)
+        if (fmt_sensor_sim_step_offset(&state, input, (uint64_t)time_value,
+                                       sample_time_offset_us, due) != 0)
             mexErrMsgIdAndTxt("Flight:SensorProbeStep","Sensor event queue rejected time, mask, or queue state.");
 
         frame[FMT_SENSOR_CONTACT] = input[FMT_SENSOR_CONTACT];

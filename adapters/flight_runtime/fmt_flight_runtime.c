@@ -323,7 +323,8 @@ static int feed_simulated_sensor_events(const double *sensor_frame,
         return -1;
     }
 
-    if (fmt_sensor_sim_step(&sensor_simulation, sensor_frame, now_us, due) != 0) {
+    if (fmt_sensor_sim_step_offset(&sensor_simulation, sensor_frame, now_us,
+                                   FMT_SENSOR_SIM_FIXED_STEP_US, due) != 0) {
         ++failures;
         return -1;
     }
@@ -375,7 +376,10 @@ __declspec(dllexport) int fmt_flight_start(int mode)
     memset(&sensor_simulation, 0, sizeof(sensor_simulation));
     memset(sensor_model_parameters, 0, sizeof(sensor_model_parameters));
     memset(sensor_timing_parameters, 0, sizeof(sensor_timing_parameters));
-    sensor_simulation_epoch_us = test_clock.monotonic_us;
+    /* mdlUpdate advances the runtime clock before processing the Plant sample.
+     * Start event opportunities one tick ahead, then subtract that same fixed
+     * offset when stamping the physical sample/capture epochs. */
+    sensor_simulation_epoch_us = test_clock.monotonic_us + FMT_SENSOR_SIM_FIXED_STEP_US;
     last_ack = last_reason = 0;
     memset(&external_frame, 0, sizeof(external_frame));
     memset(&fmt_origin, 0, sizeof(fmt_origin));
