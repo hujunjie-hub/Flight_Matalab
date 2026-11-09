@@ -16,11 +16,12 @@ truth(:,17)=15; % IMU | GNSS | MAG | BARO valid.
 truth(:,18)=1;
 
 [frames,events,stats]=fmt_sensor_sim_probe(truth,timing,timesUs,epochUs);
-validColumns=[1 6 11 16];
-sampleColumns=[2 7 12 17];
-captureColumns=[3 8 13 18];
-arrivalColumns=[4 9 14 19];
-sequenceColumns=[5 10 15 20];
+validColumns=[1 7 13 19];
+sampleColumns=[2 8 14 20];
+captureColumns=[3 9 15 21];
+arrivalColumns=[4 10 16 22];
+releaseColumns=[5 11 17 23];
+sequenceColumns=[6 12 18 24];
 % The queue's channel order is IMU, GNSS, MAG, BARO; the parameter vector
 % stores periods as IMU, MAG, BARO, GNSS and transports in the same order.
 periods=timing([1 4 2 3])';
@@ -36,7 +37,9 @@ for channel=1:4
     sample=events(rows,sampleColumns(channel));
     capture=events(rows,captureColumns(channel));
     arrival=events(rows,arrivalColumns(channel));
-    delivery=timesUs(rows);
+    delivery=events(rows,releaseColumns(channel));
+    assert(all(delivery==timesUs(rows)), ...
+        'Flight:SensorReleaseEpoch','%s release timestamps do not match the fixed-step delivery time.',names{channel});
     assert(sample(1)==epochUs+periods(channel) && ...
            all(diff(sample)==periods(channel)), ...
         'Flight:SensorSamplePeriod','%s sample epochs do not follow the configured period.',names{channel});
@@ -131,7 +134,7 @@ report=struct('scope','SENSOR_SAMPLE_CAPTURE_ARRIVAL_QUEUE','status','PASS', ...
     'generated_suppressed_released_accepted',stats(:,1:5), ...
     'suppression_gap_sequence_test','PASS', ...
     'counter_conservation','PASS','fixed_step_us',500, ...
-    'event_time_order','sample <= capture <= arrival <= delivery', ...
+    'event_time_order','sample <= capture <= arrival <= release', ...
     'queue_overflow_policy','FAIL_CLOSED','consumer_rate_gate','PASS', ...
     'pps_capture_and_utc_epoch_mapping','NOT_IMPLEMENTED');
 file=fullfile(root,'work','validation','sensor_event_timing_report.json');
