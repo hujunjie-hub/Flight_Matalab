@@ -1,6 +1,6 @@
 function report=verify_parameter_view
 %VERIFY_PARAMETER_VIEW Check generated values against Flight-owned source data.
-root=fileparts(fileparts(mfilename('fullpath')));
+root=flight_startup;
 cfg=generate_parameters;
 runtime=fileread(fullfile(root,'..','Flight','applications','runtime','runtime.c'));
 token=regexp(runtime,'out->guidance\.payload\.gravity_mps2\s*=\s*([0-9.]+)f','tokens','once');
