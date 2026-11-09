@@ -85,3 +85,16 @@
   - FMAT-0002：`tools/build_flight_runtime.ps1` 的 include 集增加 `middleware/param`，与 `Flight/tests/simulation/run_sil.ps1` 一致。
   - FMAT-0010：`config/flight_baseline.json` 不再手工维护，改由 `build_flight_runtime.ps1` 每次构建调用 `record_flight_baseline.py` 全量重生成；本次为 482 项 `sources_sha256`（含 `applications/tasks/` 下 13 项新子目录路径），`product_contract_revision=0x00010906`、`navigation_frame_bytes=360`。
 - 仍未闭合：FMAT-0003（当前唯一阻断）、FMAT-0005（3 处 `max(...,'all')` 未改）、FMAT-0007（块名已改但比较串仍为 `/modelparams`、`/timingparams`）、FMAT-0008/0009（需构建阻断解除后复现）。
+
+
+## 2026-11-09 23:59 MATLAB 验收运行记录（构建链全通过，MIL 不起飞）
+
+- 仓库/分支：`hujunjie-hub/Flight_Matalab` · `optimize/sil-physical-parameter-alignment` · HEAD `f00f610`，运行前工作区干净；运行后仅构建产物（模型 `.slx`、`.sldd`）变化。
+- 执行方式：`openProject('Flight_Matalab.prj')` → `flight_startup` →（Diary）`run_component_checks`，与验收文档一致。
+- 结果：**FAIL**，但已越过全部构建与模型环节。
+  - Host SIL DLL 构建通过；`verify_inputs` PASS（headers 10、OSQP 47、KF-GINS 54）。
+  - `build_native_kernels`（全部 MEX 含 OSQP）、`generate_parameters`、`build_plant_models(8)`、`build_flight_models`（四个入口）、`build_actuation_components`、`build_pid_allocation_probe` 全部完成。
+  - 停在 `verify_flight_entries(true)`：26 s MIL 跑满，`arm` 全程 0、提交有效 0 次、推力恒 0、最大高度 0.000 m，`Flight:MILTakeoff` 断言失败。
+- 证据归档：`work/validation/archives/20261109T160227108Z_f00f610.zip`，SHA-256 `c76d955f507bb7415ae58efd808e5a0074e8aa3971491e9c77fa1be68787bd91`，7 个文件（含 `component_checks.json`、`input_preflight.json`、Diary、`firmware_sil.log`、`run_manifest.json` 和回放 MAT 副本）。
+- 问题台账变化：FMAT-0002/0003/0004/0006/0010/0011 → VERIFIED；FMAT-0005/0007 → FIXED_WAITING_RETEST（本轮未执行到）；FMAT-0008 → REPRODUCED（干净树正式复现）；FMAT-0009 仍为 NEW（未执行到 Plant P-07）。
+- 结论：当前唯一阻断是 FMAT-0008（MIL 未解锁、导航有效位恒 0），不是构建问题。
