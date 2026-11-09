@@ -13,17 +13,17 @@ static void mdlInitializeSizes(SimStruct *S)
     ssSetSFcnParamTunable(S, 0, 0);
 
     if (!ssSetNumInputPorts(S, 2)) return;
-    ssSetInputPortWidth(S, 0, 17); /* PlantState */
-    ssSetInputPortWidth(S, 1, 15); /* Environment */
+    ssSetInputPortWidth(S, 0, 17);
+    ssSetInputPortWidth(S, 1, 15);
     ssSetInputPortDirectFeedThrough(S, 0, 1);
     ssSetInputPortDirectFeedThrough(S, 1, 1);
     ssSetInputPortRequiredContiguous(S, 0, 1);
     ssSetInputPortRequiredContiguous(S, 1, 1);
 
     if (!ssSetNumOutputPorts(S, 3)) return;
-    ssSetOutputPortWidth(S, 0, 6); /* GroundWrench_FRD */
-    ssSetOutputPortWidth(S, 1, 1); /* SignedGapM */
-    ssSetOutputPortWidth(S, 2, 1); /* NormalForceN */
+    ssSetOutputPortWidth(S, 0, 6);
+    ssSetOutputPortWidth(S, 1, 1);
+    ssSetOutputPortWidth(S, 2, 1);
     ssSetNumSampleTimes(S, 1);
     ssSetOptions(S, SS_OPTION_EXCEPTION_FREE_CODE);
 }
@@ -60,12 +60,8 @@ static void mdlOutputs(SimStruct *S, int_T tid)
         ssSetErrorStatus(S, "Invalid PlantParameters for GroundContact.");
         return;
     }
-    if (!fmt_plant_state_valid(x)) {
-        ssSetErrorStatus(S, "Invalid PlantState for GroundContact.");
-        return;
-    }
-    if (!fmt_plant_environment_valid(env)) {
-        ssSetErrorStatus(S, "Invalid Plant Environment for GroundContact.");
+    if (!fmt_plant_state_valid(x) || !fmt_plant_environment_valid(env)) {
+        ssSetErrorStatus(S, "Invalid PlantState or Environment for GroundContact.");
         return;
     }
     if (!fmt_rotation(x + 6, r)) {
@@ -79,9 +75,9 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 
     for (corner = 0; corner < 4; ++corner) {
         const double lever[3] = {
-            p[13] + ((corner & 1) ? p[17] : -p[17]),
-            p[14] + ((corner & 2) ? p[18] : -p[18]),
-            p[15]
+            p[19] + ((corner & 1) ? p[23] : -p[23]),
+            p[20] + ((corner & 2) ? p[24] : -p[24]),
+            p[21]
         };
         double velocity_body[3], velocity_ned[3], force_body[3], torque_body[3];
         double contact_down = x[2];
@@ -91,9 +87,8 @@ static void mdlOutputs(SimStruct *S, int_T tid)
             contact_down += r[6 + i] * lever[i];
         }
 
-        /* Positive clearance means above the ground; no air damping force. */
         {
-            const double clearance = p[12] - contact_down;
+            const double clearance = p[18] - contact_down;
             *gap = fmin(*gap, clearance);
             if (env[9] == 0.0 || clearance > 0.0) continue;
 
@@ -104,13 +99,12 @@ static void mdlOutputs(SimStruct *S, int_T tid)
                 }
             }
 
-            /* Down-positive NED: spring/damper force acts upward. */
             {
                 const double normal_force =
-                    0.25 * fmax(0.0, -p[10] * clearance + p[11] * velocity_ned[2]);
+                    0.25 * fmax(0.0, -p[16] * clearance + p[17] * velocity_ned[2]);
                 const double slip = hypot(velocity_ned[0], velocity_ned[1]);
                 const double friction_scale =
-                    -p[19] * normal_force / fmax(slip, 0.05);
+                    -p[25] * normal_force / fmax(slip, 0.05);
                 const double force_ned[3] = {
                     friction_scale * velocity_ned[0],
                     friction_scale * velocity_ned[1],
