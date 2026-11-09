@@ -39,7 +39,7 @@ GroundContact fixture 用有符号间隙 gap=ground_D-p_contact_D 判定：gap�
 
 ## 4. 传感器与 M2 入口
 
-设 l_I 为 CG→IMU，v_I=v_CG+C*(ω×l_I)，a_I=a_CG+C*(α×l_I+ω×(ω×l_I))，其中 ω=ω_b/N0、α为同刻局部角加速度。原始 gyro=ω+C'*ω_ie^0，比力 f_I=C'*(a_I-g0+2*ω_ie^0×v_I)。当前 SIM sensor adapter 已加入固定 N0 Earth-rate 和 Coriolis 项，使用 Plant 初始速度初始化差分器，并屏蔽首个无差分 IMU 样本；非零 IMU 杆臂、安装矩阵、bias、随机噪声、采样队列和 transport delay 仍待 P3 完成。
+设 l_I 为 CG→IMU，v_I=v_CG+C*(ω×l_I)，a_I=a_CG+C*(α×l_I+ω×(ω×l_I))，其中 ω=ω_b/N0、α为同刻局部角加速度。原始 gyro=ω+C'*ω_ie^0，比力 f_I=C'*(a_I-g0+2*ω_ie^0×v_I)。当前 SIM sensor adapter 已加入固定 N0 Earth-rate/Coriolis 项、CG→IMU 杆臂角加速度与向心加速度、IMU→GNSS 天线位置/速度杆臂，并用初始速度/角速度初始化差分器、屏蔽首个无差分 IMU 样本。P07/P08 对应的杆臂与静止 IMU 物理检查已有脚本；安装矩阵的端到端校准、bias/scale 注入、随机噪声、独立采样队列和 sample/capture/arrival 延迟仍未完成。
 
 GNSS 点按天线 LLH/速度合成，Mag N0 场[25,0,40]uT；Baro 以合成压力高度基准100m和 Up 位移生成，再用 M2 同一压力转换函数的逆生成 pressure。该100m压力基准是明确合成假设，不把椭球高等同实测压力高度；h_baro0 由 M3 锁存。
 
