@@ -2,6 +2,7 @@
 #define S_FUNCTION_LEVEL 2
 #include "simstruc.h"
 #include <math.h>
+#include <stdint.h>
 #include <string.h>
 #include "fmt_flight_runtime.h"
 #include "../../models/plant/fmt_rotation.h"
@@ -10,9 +11,20 @@
 /* SensorParameters (19):
  * gravity, magnetic_NED(3), earth_rate_NED(3), initial_velocity_NED(3),
  * initial_rate_FRD(3), imu_to_cg_FRD(3), antenna_from_imu_FRD(3).
- * The configured IMU lever arm is CG->IMU = -imu_to_cg. */
+ *
+ * SensorModelParameters (54):
+ * seed, imu_installation(9 row-major), mag_installation(9 row-major),
+ * gyro_bias(3), accel_bias(3), mag_bias(3), gyro_scale_error(3),
+ * accel_scale_error(3), mag_scale_error(3), gyro_noise_std(3),
+ * accel_noise_std(3), mag_noise_std(3), gnss_position_noise_std(3),
+ * gnss_velocity_noise_std(3), baro_noise_std, baro_bias.
+ *
+ * Bias/scale/noise values are residual errors at the M2 standard-sample exit.
+ * Installation matrices map sensor axes into body FRD. Random samples are
+ * stateless functions of seed/source/sample-index/axis, never RK4 call count. */
 enum {
     SENSOR_PARAMETER_COUNT = 19,
+    SENSOR_MODEL_PARAMETER_COUNT = 54,
     SENSOR_STATE_COUNT = 7,
     PARAM_GRAVITY = 0,
     PARAM_MAGNETIC_NED = 1,
@@ -23,11 +35,144 @@ enum {
     PARAM_ANTENNA_FROM_IMU = 16
 };
 
+enum {
+    MODEL_SEED = 0,
+    MODEL_IMU_INSTALLATION = 1,
+    MODEL_MAG_INSTALLATION = 10,
+    MODEL_GYRO_BIAS = 19,
+    MODEL_ACCEL_BIAS = 22,
+    MODEL_MAG_BIAS = 25,
+    MODEL_GYRO_SCALE = 28,
+    MODEL_ACCEL_SCALE = 31,
+    MODEL_MAG_SCALE = 34,
+    MODEL_GYRO_NOISE = 37,
+    MODEL_ACCEL_NOISE = 40,
+    MODEL_MAG_NOISE = 43,
+    MODEL_GNSS_POSITION_NOISE = 46,
+    MODEL_GNSS_VELOCITY_NOISE = 49,
+    MODEL_BARO_NOISE = 52,
+    MODEL_BARO_BIAS = 53
+};
+
+enum {
+    NOISE_GYRO = 1,
+    NOISE_ACCEL = 2,
+    NOISE_MAG = 3,
+    NOISE_GNSS_POSITION = 4,
+    NOISE_GNSS_VELOCITY = 5,
+    NOISE_BARO = 6
+};
+
+static uint64_t fmt_mix64(uint64_t value)
+{
+    value += UINT64_C(0x9e3779b97f4a7c15);
+    value = (value ^ (value >> 30)) * UINT64_C(0xbf58476d1ce4e5b9);
+    value = (value ^ (value >> 27)) * UINT64_C(0x94d049bb133111eb);
+    return value ^ (value >> 31);
+}
+
+static double fmt_uniform_open(uint64_t key)
+{
+    const uint64_t mantissa = fmt_mix64(key) >> 11;
+    return ((double)mantissa + 0.5) * (1.0 / 9007199254740992.0);
+}
+
+static double fmt_gaussian(uint64_t seed, uint64_t source,
+                           uint64_t sample_index, uint64_t axis)
+{
+    const uint64_t key = seed ^
+        (source * UINT64_C(0xd6e8feb86659fd93)) ^
+        (sample_index * UINT64_C(0xa0761d6478bd642f)) ^
+        (axis * UINT64_C(0xe7037ed1a0b428db));
+    const double u1 = fmt_uniform_open(key);
+    const double u2 = fmt_uniform_open(key ^ UINT64_C(0x8ebc6af09c88c6e3));
+    return sqrt(-2.0 * log(u1)) * cos(6.28318530717958647692 * u2);
+}
+
+static uint64_t fmt_sample_index(double time_s, double rate_hz)
+{
+    const double index = floor(time_s * rate_hz + 1e-9);
+    if (!isfinite(index) || index <= 0.0) return 0;
+    return (uint64_t)index;
+}
+
+static int fmt_rotation_matrix_valid(const double *m)
+{
+    double determinant;
+    for (int row = 0; row < 3; ++row) {
+        for (int column = 0; column < 3; ++column) {
+            double dot = 0.0;
+            for (int k = 0; k < 3; ++k)
+                dot += m[3 * k + row] * m[3 * k + column];
+            if (fabs(dot - (row == column ? 1.0 : 0.0)) > 1e-6)
+                return 0;
+        }
+    }
+    determinant =
+        m[0] * (m[4] * m[8] - m[5] * m[7]) -
+        m[1] * (m[3] * m[8] - m[5] * m[6]) +
+        m[2] * (m[3] * m[7] - m[4] * m[6]);
+    return isfinite(determinant) && fabs(determinant - 1.0) <= 1e-6;
+}
+
+static int fmt_sensor_model_parameters_valid(const double *p)
+{
+    if (!fmt_finite_vector(p, SENSOR_MODEL_PARAMETER_COUNT) ||
+        p[MODEL_SEED] < 1.0 || p[MODEL_SEED] > 4294967295.0 ||
+        floor(p[MODEL_SEED]) != p[MODEL_SEED] ||
+        !fmt_rotation_matrix_valid(p + MODEL_IMU_INSTALLATION) ||
+        !fmt_rotation_matrix_valid(p + MODEL_MAG_INSTALLATION))
+        return 0;
+
+    for (int i = MODEL_GYRO_SCALE; i < MODEL_GYRO_NOISE; ++i) {
+        if (p[i] <= -1.0 || fabs(p[i]) > 0.5) return 0;
+    }
+    for (int i = MODEL_GYRO_NOISE; i <= MODEL_BARO_NOISE; ++i) {
+        if (p[i] < 0.0) return 0;
+    }
+    return 1;
+}
+
+/* R_bi maps sensor-frame vectors into body FRD. */
+static void fmt_body_to_sensor(const double *r_bi, const double *body, double *sensor)
+{
+    for (int axis = 0; axis < 3; ++axis) {
+        sensor[axis] = 0.0;
+        for (int i = 0; i < 3; ++i)
+            sensor[axis] += r_bi[3 * i + axis] * body[i];
+    }
+}
+
+static void fmt_sensor_to_body(const double *r_bi, const double *sensor, double *body)
+{
+    for (int axis = 0; axis < 3; ++axis) {
+        body[axis] = 0.0;
+        for (int i = 0; i < 3; ++i)
+            body[axis] += r_bi[3 * axis + i] * sensor[i];
+    }
+}
+
+static void fmt_measure_vector(const double *ideal_body, const double *installation,
+                               const double *bias, const double *scale_error,
+                               const double *noise_std, uint64_t seed, uint64_t source,
+                               uint64_t sample_index, double *measured_body)
+{
+    double ideal_sensor[3], measured_sensor[3];
+    fmt_body_to_sensor(installation, ideal_body, ideal_sensor);
+    for (int axis = 0; axis < 3; ++axis) {
+        measured_sensor[axis] = ideal_sensor[axis] * (1.0 + scale_error[axis]) +
+            bias[axis] + noise_std[axis] *
+            fmt_gaussian(seed, source, sample_index, (uint64_t)axis);
+    }
+    fmt_sensor_to_body(installation, measured_sensor, measured_body);
+}
+
 static void mdlInitializeSizes(SimStruct *S)
 {
-    ssSetNumSFcnParams(S, 1);
+    ssSetNumSFcnParams(S, 2);
     if (ssGetNumSFcnParams(S) != ssGetSFcnParamsCount(S)) return;
     ssSetSFcnParamTunable(S, 0, 0);
+    ssSetSFcnParamTunable(S, 1, 0);
     if (!ssSetNumInputPorts(S, 2) || !ssSetNumOutputPorts(S, 1)) return;
     ssSetInputPortWidth(S, 0, 17);
     ssSetInputPortWidth(S, 1, 1);
@@ -51,8 +196,10 @@ static void mdlInitializeSampleTimes(SimStruct *S)
 static void mdlInitializeConditions(SimStruct *S)
 {
     const mxArray *parameter = ssGetSFcnParam(S, 0);
+    const mxArray *modelParameter = ssGetSFcnParam(S, 1);
     double *state = ssGetRealDiscStates(S);
     const double *p;
+    const double *m;
 
     if (!mxIsDouble(parameter) || mxIsComplex(parameter) || mxIsSparse(parameter) ||
         mxGetNumberOfElements(parameter) != SENSOR_PARAMETER_COUNT ||
@@ -60,8 +207,15 @@ static void mdlInitializeConditions(SimStruct *S)
         ssSetErrorStatus(S, "SensorParameters must contain exactly 19 doubles.");
         return;
     }
-    if (!fmt_finite_vector(p, SENSOR_PARAMETER_COUNT) || !(p[PARAM_GRAVITY] > 0.0)) {
-        ssSetErrorStatus(S, "SensorParameters contain nonfinite values or invalid gravity.");
+    if (!mxIsDouble(modelParameter) || mxIsComplex(modelParameter) || mxIsSparse(modelParameter) ||
+        mxGetNumberOfElements(modelParameter) != SENSOR_MODEL_PARAMETER_COUNT ||
+        !(m = mxGetPr(modelParameter))) {
+        ssSetErrorStatus(S, "SensorModelParameters must contain exactly 54 doubles.");
+        return;
+    }
+    if (!fmt_finite_vector(p, SENSOR_PARAMETER_COUNT) || !(p[PARAM_GRAVITY] > 0.0) ||
+        !fmt_sensor_model_parameters_valid(m)) {
+        ssSetErrorStatus(S, "Sensor parameters contain nonfinite or physically invalid values.");
         return;
     }
 
@@ -74,7 +228,9 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 {
     (void)tid;
     const mxArray *parameterArray = ssGetSFcnParam(S, 0);
+    const mxArray *modelParameterArray = ssGetSFcnParam(S, 1);
     const double *parameter;
+    const double *modelParameter;
     const double *x = ssGetInputPortRealSignal(S, 0);
     const double *previous = ssGetRealDiscStates(S);
     const double gap = *ssGetInputPortRealSignal(S, 1);
@@ -85,15 +241,23 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     double alpha_cross_imu[3], centripetal_imu[3], accel_imu_body[3];
     double accel_cg_ned[3], velocity_imu_ned[3], accel_imu_ned[3];
     double coriolis[3], specific_force_ned[3], lever_imu[3], lever_ant[3];
+    double gyro_ideal_body[3], accel_ideal_body[3], mag_ideal_body[3];
+    double gyro_measured_body[3], accel_measured_body[3], mag_measured_body[3];
     double *sensor = ssGetOutputPortRealSignal(S, 0);
+    uint64_t seed, imu_index, slow_index, gnss_index;
     int imu_derivative_valid;
 
     if (!mxIsDouble(parameterArray) || mxIsComplex(parameterArray) ||
         mxIsSparse(parameterArray) ||
         mxGetNumberOfElements(parameterArray) != SENSOR_PARAMETER_COUNT ||
         !(parameter = mxGetPr(parameterArray)) ||
-        !fmt_finite_vector(parameter, SENSOR_PARAMETER_COUNT)) {
-        ssSetErrorStatus(S, "SensorParameters must contain exactly 19 finite doubles.");
+        !mxIsDouble(modelParameterArray) || mxIsComplex(modelParameterArray) ||
+        mxIsSparse(modelParameterArray) ||
+        mxGetNumberOfElements(modelParameterArray) != SENSOR_MODEL_PARAMETER_COUNT ||
+        !(modelParameter = mxGetPr(modelParameterArray)) ||
+        !fmt_finite_vector(parameter, SENSOR_PARAMETER_COUNT) ||
+        !fmt_sensor_model_parameters_valid(modelParameter)) {
+        ssSetErrorStatus(S, "Sensor parameter vectors are invalid.");
         return;
     }
     if (!(parameter[PARAM_GRAVITY] > 0.0) || !isfinite(dt) || dt <= 0.0 || !isfinite(gap) ||
@@ -109,6 +273,11 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     gravity = parameter[PARAM_GRAVITY];
     field_ned_ut = parameter + PARAM_MAGNETIC_NED;
     earth_rate_ned = parameter + PARAM_EARTH_RATE_NED;
+    seed = (uint64_t)modelParameter[MODEL_SEED];
+    /* Rates are tied to physical sensor sample periods, not Plant RK4 stages. */
+    imu_index = fmt_sample_index(ssGetT(S), 1000.0);
+    slow_index = fmt_sample_index(ssGetT(S), 100.0);
+    gnss_index = fmt_sample_index(ssGetT(S), 10.0);
     imu_derivative_valid = previous[6] > 0.5;
 
     for (int i = 0; i < 3; ++i) {
@@ -142,33 +311,52 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 
     /* Specific force includes the fixed-N0 Coriolis term and gravity removal. */
     fmt_cross(earth_rate_ned, velocity_imu_ned, coriolis);
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 3; ++i)
         specific_force_ned[i] = accel_imu_ned[i] + 2.0 * coriolis[i];
-    }
     specific_force_ned[2] -= gravity;
 
     for (int axis = 0; axis < 3; ++axis) {
-        double accel_body = 0.0;
-        double gyro_body = x[10 + axis];
-        double mag_body = 0.0;
+        gyro_ideal_body[axis] = x[10 + axis];
+        accel_ideal_body[axis] = 0.0;
+        mag_ideal_body[axis] = 0.0;
+        for (int i = 0; i < 3; ++i) {
+            const double c_body_from_ned = rotation[3 * i + axis];
+            gyro_ideal_body[axis] += c_body_from_ned * earth_rate_ned[i];
+            accel_ideal_body[axis] += c_body_from_ned * specific_force_ned[i];
+            mag_ideal_body[axis] += c_body_from_ned * field_ned_ut[i];
+        }
+    }
+
+    fmt_measure_vector(gyro_ideal_body, modelParameter + MODEL_IMU_INSTALLATION,
+        modelParameter + MODEL_GYRO_BIAS, modelParameter + MODEL_GYRO_SCALE,
+        modelParameter + MODEL_GYRO_NOISE, seed, NOISE_GYRO, imu_index, gyro_measured_body);
+    fmt_measure_vector(accel_ideal_body, modelParameter + MODEL_IMU_INSTALLATION,
+        modelParameter + MODEL_ACCEL_BIAS, modelParameter + MODEL_ACCEL_SCALE,
+        modelParameter + MODEL_ACCEL_NOISE, seed, NOISE_ACCEL, imu_index, accel_measured_body);
+    fmt_measure_vector(mag_ideal_body, modelParameter + MODEL_MAG_INSTALLATION,
+        modelParameter + MODEL_MAG_BIAS, modelParameter + MODEL_MAG_SCALE,
+        modelParameter + MODEL_MAG_NOISE, seed, NOISE_MAG, slow_index, mag_measured_body);
+
+    for (int axis = 0; axis < 3; ++axis) {
         double antenna_position = x[axis];
         double antenna_velocity = x[3 + axis];
         for (int i = 0; i < 3; ++i) {
-            const double c_body_from_ned = rotation[3 * i + axis];
-            accel_body += c_body_from_ned * specific_force_ned[i];
-            gyro_body += c_body_from_ned * earth_rate_ned[i];
-            mag_body += c_body_from_ned * field_ned_ut[i];
             antenna_position += rotation[3 * axis + i] * lever_ant[i];
             antenna_velocity += rotation[3 * axis + i] * omega_cross_ant[i];
         }
-        sensor[FMT_SENSOR_ACCEL + axis] = accel_body;
-        sensor[FMT_SENSOR_GYRO + axis] = gyro_body;
-        sensor[FMT_SENSOR_MAG + axis] = mag_body;
-        sensor[FMT_SENSOR_POSITION + axis] = antenna_position;
-        sensor[FMT_SENSOR_VELOCITY + axis] = antenna_velocity;
+        sensor[FMT_SENSOR_GYRO + axis] = gyro_measured_body[axis];
+        sensor[FMT_SENSOR_ACCEL + axis] = accel_measured_body[axis];
+        sensor[FMT_SENSOR_MAG + axis] = mag_measured_body[axis];
+        sensor[FMT_SENSOR_POSITION + axis] = antenna_position +
+            modelParameter[MODEL_GNSS_POSITION_NOISE + axis] *
+            fmt_gaussian(seed, NOISE_GNSS_POSITION, gnss_index, (uint64_t)axis);
+        sensor[FMT_SENSOR_VELOCITY + axis] = antenna_velocity +
+            modelParameter[MODEL_GNSS_VELOCITY_NOISE + axis] *
+            fmt_gaussian(seed, NOISE_GNSS_VELOCITY, gnss_index, (uint64_t)axis);
     }
 
-    sensor[FMT_SENSOR_BARO] = -x[2];
+    sensor[FMT_SENSOR_BARO] = -x[2] + modelParameter[MODEL_BARO_BIAS] +
+        modelParameter[MODEL_BARO_NOISE] * fmt_gaussian(seed, NOISE_BARO, slow_index, 0);
     sensor[FMT_SENSOR_VALID] = FMT_GNSS_VALID | FMT_MAG_VALID | FMT_BARO_VALID;
     if (imu_derivative_valid) sensor[FMT_SENSOR_VALID] |= FMT_IMU_VALID;
     /* GroundContact: signed gap <= 1 mm and penetration <= 20 mm. */
