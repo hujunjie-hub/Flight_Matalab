@@ -115,6 +115,19 @@ static int fmt_rotation_matrix_valid(const double *m)
     return isfinite(determinant) && fabs(determinant - 1.0) <= 1e-6;
 }
 
+static int fmt_sensor_timing_parameters_valid(const double *p)
+{
+    if (!fmt_finite_vector(p, FMT_SENSOR_SIM_PARAMETER_COUNT)) return 0;
+    for (int i = 0; i < 4; ++i) {
+        if (p[i] < 500.0 || floor(p[i]) != p[i] || fmod(p[i], 500.0) != 0.0)
+            return 0;
+    }
+    for (int i = 4; i < FMT_SENSOR_SIM_PARAMETER_COUNT; ++i) {
+        if (p[i] < 0.0 || floor(p[i]) != p[i]) return 0;
+    }
+    return 1;
+}
+
 static int fmt_sensor_model_parameters_valid(const double *p)
 {
     if (!fmt_finite_vector(p, SENSOR_MODEL_PARAMETER_COUNT) ||
@@ -169,10 +182,11 @@ static void fmt_measure_vector(const double *ideal_body, const double *installat
 
 static void mdlInitializeSizes(SimStruct *S)
 {
-    ssSetNumSFcnParams(S, 2);
+    ssSetNumSFcnParams(S, 3);
     if (ssGetNumSFcnParams(S) != ssGetSFcnParamsCount(S)) return;
     ssSetSFcnParamTunable(S, 0, 0);
     ssSetSFcnParamTunable(S, 1, 0);
+    ssSetSFcnParamTunable(S, 2, 0);
     if (!ssSetNumInputPorts(S, 2) || !ssSetNumOutputPorts(S, 1)) return;
     ssSetInputPortWidth(S, 0, 17);
     ssSetInputPortWidth(S, 1, 1);
@@ -197,9 +211,11 @@ static void mdlInitializeConditions(SimStruct *S)
 {
     const mxArray *parameter = ssGetSFcnParam(S, 0);
     const mxArray *modelParameter = ssGetSFcnParam(S, 1);
+    const mxArray *timingParameter = ssGetSFcnParam(S, 2);
     double *state = ssGetRealDiscStates(S);
     const double *p;
     const double *m;
+    const double *t;
 
     if (!mxIsDouble(parameter) || mxIsComplex(parameter) || mxIsSparse(parameter) ||
         mxGetNumberOfElements(parameter) != SENSOR_PARAMETER_COUNT ||
@@ -211,6 +227,13 @@ static void mdlInitializeConditions(SimStruct *S)
         mxGetNumberOfElements(modelParameter) != SENSOR_MODEL_PARAMETER_COUNT ||
         !(m = mxGetPr(modelParameter))) {
         ssSetErrorStatus(S, "SensorModelParameters must contain exactly 54 doubles.");
+        return;
+    }
+    if (!mxIsDouble(timingParameter) || mxIsComplex(timingParameter) ||
+        mxIsSparse(timingParameter) ||
+        mxGetNumberOfElements(timingParameter) != FMT_SENSOR_SIM_PARAMETER_COUNT ||
+        !(t = mxGetPr(timingParameter)) || !fmt_sensor_timing_parameters_valid(t)) {
+        ssSetErrorStatus(S, "SensorTimingParameters must contain 10 valid timing values.");
         return;
     }
     if (!fmt_finite_vector(p, SENSOR_PARAMETER_COUNT) || !(p[PARAM_GRAVITY] > 0.0) ||
@@ -229,8 +252,10 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     (void)tid;
     const mxArray *parameterArray = ssGetSFcnParam(S, 0);
     const mxArray *modelParameterArray = ssGetSFcnParam(S, 1);
+    const mxArray *timingParameterArray = ssGetSFcnParam(S, 2);
     const double *parameter;
     const double *modelParameter;
+    const double *timingParameter;
     const double *x = ssGetInputPortRealSignal(S, 0);
     const double *previous = ssGetRealDiscStates(S);
     const double gap = *ssGetInputPortRealSignal(S, 1);
@@ -255,8 +280,13 @@ static void mdlOutputs(SimStruct *S, int_T tid)
         mxIsSparse(modelParameterArray) ||
         mxGetNumberOfElements(modelParameterArray) != SENSOR_MODEL_PARAMETER_COUNT ||
         !(modelParameter = mxGetPr(modelParameterArray)) ||
+        !mxIsDouble(timingParameterArray) || mxIsComplex(timingParameterArray) ||
+        mxIsSparse(timingParameterArray) ||
+        mxGetNumberOfElements(timingParameterArray) != FMT_SENSOR_SIM_PARAMETER_COUNT ||
+        !(timingParameter = mxGetPr(timingParameterArray)) ||
         !fmt_finite_vector(parameter, SENSOR_PARAMETER_COUNT) ||
-        !fmt_sensor_model_parameters_valid(modelParameter)) {
+        !fmt_sensor_model_parameters_valid(modelParameter) ||
+        !fmt_sensor_timing_parameters_valid(timingParameter)) {
         ssSetErrorStatus(S, "Sensor parameter vectors are invalid.");
         return;
     }
@@ -275,10 +305,10 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     earth_rate_ned = parameter + PARAM_EARTH_RATE_NED;
     seed = (uint64_t)modelParameter[MODEL_SEED];
     /* Rates are tied to physical sensor sample periods, not Plant RK4 stages. */
-    imu_index = fmt_sample_index(ssGetT(S), 1000.0);
-    slow_index = fmt_sample_index(ssGetT(S), 100.0);
-    gnss_index = fmt_sample_index(ssGetT(S), 10.0);
-    baro_index = fmt_sample_index(ssGetT(S), 50.0);
+    imu_index = fmt_sample_index(ssGetT(S), 1000000.0 / timingParameter[FMT_TIMING_IMU_PERIOD]);
+    slow_index = fmt_sample_index(ssGetT(S), 1000000.0 / timingParameter[FMT_TIMING_MAG_PERIOD]);
+    gnss_index = fmt_sample_index(ssGetT(S), 1000000.0 / timingParameter[FMT_TIMING_GNSS_PERIOD]);
+    baro_index = fmt_sample_index(ssGetT(S), 1000000.0 / timingParameter[FMT_TIMING_BARO_PERIOD]);
     imu_derivative_valid = previous[6] > 0.5;
 
     for (int i = 0; i < 3; ++i) {
