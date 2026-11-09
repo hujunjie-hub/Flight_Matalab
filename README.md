@@ -37,6 +37,13 @@ verify_flight_entries
 - `CommittedThrustN` 顺序沿用 `Flight/config/vehicle_model.yaml` 的左前、右前、右后、左后。只有有效的 M7 提交和匹配许可才产生推力。
 - `FlightStatus` 顺序为固件单调时间 μs、预检、解锁状态、飞行模式、故障保护、许可范围、M7 回执、提交有效、最近请求 ID、应答状态、应答原因、导航有效位、NED 位置三轴、NED 速度三轴、导航状态、控制状态、规划状态、MPC 更新计数、执行器写入计数、主机夹具失败计数。
 
+## Plant 模型边界与验证
+
+- 质量、惯量、电机位置、偏航符号、推力上下限和电机时间常数来自同级 `Flight/config/vehicle_model.yaml`；SIM_ONLY 配置只保留推力系数、阻力、接触和 Origin 等仿真专属参数。
+- 当前 Plant 参数向量固定为 19 项；第一版地面模型不包含水平摩擦。分配器使用从 Flight 电机几何推导的 4×4 effectiveness/inverse 矩阵，不再使用假定电机顺序的单臂长公式。
+- MIL 传感器模型已加入固定 N0 Earth-rate/Coriolis 项，并屏蔽首个无法差分的 IMU 样本；它仍是确定性基础测量模型，非零杆臂、噪声、bias 和采样/传输延迟尚未完整实现。
+- 建议在 MATLAB 执行 `build_flight_models`、`build_actuation_components`、`build_pid_allocation_probe`，再执行 `run_component_checks`。Plant 报告目前为 `PARTIAL_PASS`，不代表 P-01..P-18 全部通过。
+
 ## 基线与边界
 
 `config/firmware_sources.json` 指向当前固件配置、合同和 OSQP 目录，`config/flight_baseline.json` 记录固件输入 SHA-256 和回放 ABI。四旋翼质量、转动惯量、旋翼位置、偏航符号、推力上限和电机时间常数由 `Flight/config/vehicle_model.yaml` 提供。空气阻力、地面接触、转速到推力系数及模拟传感器仍为 SIM_ONLY 参数。固件调度沿用上游 Host SIL 顺序，硬件中断、RTOS 实时性、原始传感器字节、PPS、实体 DShot、实飞和 HIL 链路属于不同的验证范围。现有 `spec/` 保留原生组件设计与验收记录。
