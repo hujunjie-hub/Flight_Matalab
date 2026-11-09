@@ -244,7 +244,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     double gyro_ideal_body[3], accel_ideal_body[3], mag_ideal_body[3];
     double gyro_measured_body[3], accel_measured_body[3], mag_measured_body[3];
     double *sensor = ssGetOutputPortRealSignal(S, 0);
-    uint64_t seed, imu_index, slow_index, gnss_index;
+    uint64_t seed, imu_index, slow_index, gnss_index, baro_index;
     int imu_derivative_valid;
 
     if (!mxIsDouble(parameterArray) || mxIsComplex(parameterArray) ||
@@ -278,6 +278,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     imu_index = fmt_sample_index(ssGetT(S), 1000.0);
     slow_index = fmt_sample_index(ssGetT(S), 100.0);
     gnss_index = fmt_sample_index(ssGetT(S), 10.0);
+    baro_index = fmt_sample_index(ssGetT(S), 50.0);
     imu_derivative_valid = previous[6] > 0.5;
 
     for (int i = 0; i < 3; ++i) {
@@ -356,7 +357,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     }
 
     sensor[FMT_SENSOR_BARO] = -x[2] + modelParameter[MODEL_BARO_BIAS] +
-        modelParameter[MODEL_BARO_NOISE] * fmt_gaussian(seed, NOISE_BARO, slow_index, 0);
+        modelParameter[MODEL_BARO_NOISE] * fmt_gaussian(seed, NOISE_BARO, baro_index, 0);
     sensor[FMT_SENSOR_VALID] = FMT_GNSS_VALID | FMT_MAG_VALID | FMT_BARO_VALID;
     if (imu_derivative_valid) sensor[FMT_SENSOR_VALID] |= FMT_IMU_VALID;
     /* GroundContact: signed gap <= 1 mm and penetration <= 20 mm. */
