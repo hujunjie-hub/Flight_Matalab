@@ -176,6 +176,20 @@ assert(abs(derivative(4)-expectedDrag)<1e-10, ...
     'Flight:P19','Aerodynamic drag does not use air-relative velocity.');
 results{end+1}=passed('P-19','Wind-relative linear drag');
 
+% P-20: a non-diagonal symmetric positive-definite inertia matrix must be used
+% in full, rather than silently reduced to its diagonal.
+customParameters=cfg.derived.PlantParameters;
+Jfull=[.03 .002 .001;.002 .04 .003;.001 .003 .05];
+customParameters(2:10)=Jfull(:);
+testTorque=[.1;-.2;.3];
+out=run('FMT_RigidBodyRHS',{initial, [0 0 0 testTorque'], zeros(1,6),environment}, ...
+    0.001,struct('PlantParameters',customParameters),0.0005);
+derivative=out.yout{1}.Values.Data(end,:);
+expectedAngularAcceleration=(Jfull\\testTorque)';
+assert(norm(derivative(11:13)-expectedAngularAcceleration,inf)<1e-9, ...
+    'Flight:P20','Full non-diagonal inertia matrix was not applied correctly.');
+results{end+1}=passed('P-20','Full non-diagonal inertia matrix');
+
 % P-17: invalid environment flags/effectiveness and nonfinite states fail closed.
 badEnvironment=environment;
 badEnvironment(12)=1.01;
@@ -191,8 +205,8 @@ remaining={'P-07','P-08','P-09','P-10','P-14'};
 report=struct('scope','PLANT_COMPONENT_OPEN_LOOP', ...
     'status','PARTIAL','implemented_gate_status','PASS', ...
     'tests',{results},'remaining_tests',{remaining}, ...
-    'all_P01_P16_accepted',false,'system_closed_loop','NOT_RUN', ...
-    'gravity_mps2',g);
+    'all_P01_P20_accepted',false,'system_closed_loop','NOT_RUN', ...
+    'tests_executed_count',numel(results),'gravity_mps2',g);
 fid=fopen(fullfile(root,'work','validation','plant_open_loop_report.json'),'w');
 cleanup=onCleanup(@()fclose(fid));
 fprintf(fid,'%s\n',jsonencode(report,PrettyPrint=true));
@@ -248,29 +262,30 @@ p=derived.PlantParameters(:);
 motorMin=derived.MotorMinN(:);
 motorMax=derived.MotorMaxN(:);
 target=min(max(command(:),motorMin),motorMax);
-omegaCommand=sqrt(target/p(5));
+omegaCommand=sqrt(target/p(11));
 omega=x(14:17);
-actualForce=p(5)*(omega.^2).*environment(12:15)';
+actualForce=p(11)*(omega.^2).*environment(12:15)';
 wrench=derived.WrenchMatrix*actualForce;
 C=reference_rotation(x(7:10));
 forceNed=environment(4:6)'+C*wrench(1:3);
 if environment(11)==1
-    forceNed=forceNed-p(7:9).*(x(4:6)-environment(1:3)');
+    forceNed=forceNed-p(13:15).*(x(4:6)-environment(1:3)');
 end
 
 dx=zeros(17,1);
 dx(1:3)=x(4:6);
-dx(4:6)=forceNed/p(1)+[0;0;p(17)];
+dx(4:6)=forceNed/p(1)+[0;0;p(23)];
 w=x(7); qx=x(8); qy=x(9); qz=x(10);
 wx=x(11); wy=x(12); wz=x(13);
 dx(7)=-0.5*(qx*wx+qy*wy+qz*wz);
 dx(8)= 0.5*(w*wx+qy*wz-qz*wy);
 dx(9)= 0.5*(w*wy+qz*wx-qx*wz);
 dx(10)=0.5*(w*wz+qx*wy-qy*wx);
-jw=p(2:4).*x(11:13);
+J=reshape(p(2:10),3,3);
+jw=J*x(11:13);
 gyroscopic=cross(x(11:13),jw);
-dx(11:13)=(wrench(4:6)+environment(7:9)'-p(10)*x(11:13)-gyroscopic)./p(2:4);
-dx(14:17)=(omegaCommand-omega)/p(6);
+dx(11:13)=J\\(wrench(4:6)+environment(7:9)'-p(16)*x(11:13)-gyroscopic);
+dx(14:17)=(omegaCommand-omega)/p(12);
 end
 
 function C=reference_rotation(q)
