@@ -42,7 +42,7 @@ verify_flight_entries
 - 质量、惯量、电机位置、偏航符号、推力上下限和电机时间常数来自同级 `Flight/config/vehicle_model.yaml`；SIM_ONLY 配置只保留推力系数、阻力、接触和 Origin 等仿真专属参数。
 - 当前 Plant 参数向量固定为 19 项；第一版地面模型不包含水平摩擦。分配器使用从 Flight 电机几何推导的 4×4 effectiveness/inverse 矩阵，不再使用假定电机顺序的单臂长公式。
 - MIL 传感器模型已加入固定 N0 Earth-rate/Coriolis 项，并屏蔽首个无法差分的 IMU 样本；它仍是确定性基础测量模型，非零杆臂、噪声、bias 和采样/传输延迟尚未完整实现。
-- 建议在 MATLAB 执行 `build_flight_models`、`build_actuation_components`、`build_pid_allocation_probe`，再执行 `run_component_checks`。Plant 验收覆盖目前为部分覆盖，执行报告将明确列出已运行与未运行的 P 项；不代表 P-01..P-18 全部通过。
+- 在 MATLAB 打开项目后先执行 `build_flight_models`；随后执行 `run_component_checks`。该检查入口会自动编译并迁移分配器与 PID 反馈试验模型。若从零重建 Plant 模型，再执行 `build_plant_models`。Plant 验收覆盖目前为部分覆盖，执行报告将明确列出已运行与未运行的 P 项；不代表 P-01..P-18 全部通过。
 
 ## 基线与边界
 
