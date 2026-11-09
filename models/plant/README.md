@@ -41,3 +41,12 @@ J 必须是完整的对称正定 3×3 矩阵。当前 Flight SIM_ONLY 数值恰�
 - 无效输入由 S-Function 报错，不得用 NaN 传播或静默裁剪掩盖。
 
 重建原生内核：在 MATLAB 打开项目后执行 build_native_kernels；运行参数检查执行 generate_parameters 和 verify_parameter_view；运行物理组件检查执行 verify_plant_open_loop。这些命令必须在具备 MATLAB/Simulink 和项目依赖的本机环境运行。
+
+
+## SensorParameters（19 doubles）
+
+[gravity, magnetic_field_NED(3), earth_rate_NED(3), initial_velocity_NED(3), initial_rate_FRD(3), imu_to_cg_FRD(3), antenna_from_imu_FRD(3)]
+
+该向量用于确定性基础传感器模型。IMU 杆臂按 CG→IMU = -imu_to_cg 解释；GNSS 天线杆臂为 CG→IMU + IMU→antenna。IMU 比力包含杆臂切向/向心加速度、固定 N0 Earth-rate 和 Coriolis 项。初始速度/角速度用于初始化差分状态，避免首样本产生人为导数脉冲；首个 IMU 差分尚未有效时，IMU valid 位保持清零。
+
+P-07/P-08 覆盖杆臂运动学、静止比力、Earth-rate gyro 和移动时 Coriolis。当前模型仍是确定性传感器：P-09 随机噪声/bias/scale 与可复现随机流、P-10 多速率采样和 sample/capture/arrival 延迟尚未实现。
