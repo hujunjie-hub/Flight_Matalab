@@ -38,7 +38,7 @@ P-04/05/07/08 理想层关闭噪声、地面或电机动态的具体旁路必须
 
 ## 2. 当前脚本覆盖
 
-verify_plant_open_loop 当前代码覆盖 P-01..P-06、P-11..P-13、P-15..P-21；P-07..P-10（传感器运动学/噪声/时序）和 P-14（truth 依赖图隔离）尚未实现。Plant 报告必须为 PARTIAL，且必须在 MATLAB/Simulink 环境实际执行；静态代码审查不算测试通过。
+verify_plant_open_loop 当前代码覆盖 P-01..P-06、P-11..P-13、P-15..P-21；P-07..P-10（传感器运动学/噪声/时序）尚未实现。P-14 truth 依赖图检查由 verify_truth_isolation 独立实现，并由 run_component_checks 调用。Plant 报告必须为 PARTIAL，且必须在 MATLAB/Simulink 环境实际执行；静态代码审查不算测试通过。
 
 ## 3. 系统闭环评价
 
