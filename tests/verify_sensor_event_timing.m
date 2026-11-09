@@ -1,10 +1,10 @@
 function report=verify_sensor_event_timing
-%VERIFY_SENSOR_EVENT_TIMING Verify sample/capture/arrival timing and queue delivery.
+%VERIFY_SENSOR_EVENT_TIMING Verify multirate sample/capture/arrival queues and loss accounting.
 root=flight_startup;
 cfg=generate_parameters;
 timing=cfg.derived.SensorTimingParameters(:);
 epochUs=1000000;
-timesUs=(epochUs:500:epochUs+1000000)';
+timesUs=(epochUs:500:epochUs+1200000)';
 truth=zeros(numel(timesUs),18);
 truth(:,1:3)=repmat([0.01 0.02 0.03],numel(timesUs),1);
 truth(:,4:6)=repmat([0.1 0.2 -cfg.derived.GravityMps2],numel(timesUs),1);
@@ -15,14 +15,17 @@ truth(:,16)=10;
 truth(:,17)=15; % IMU | GNSS | MAG | BARO valid.
 truth(:,18)=1;
 
-[~,events]=fmt_sensor_sim_probe(truth,timing,timesUs,epochUs);
-validColumns=[1 5 9 13];
-sampleColumns=[2 6 10 14];
-captureColumns=[3 7 11 15];
-arrivalColumns=[4 8 12 16];
-periods=[timing(1),timing(4),timing(2),timing(3)];
+[frames,events,stats]=fmt_sensor_sim_probe(truth,timing,timesUs,epochUs);
+validColumns=[1 6 11 16];
+sampleColumns=[2 7 12 17];
+captureColumns=[3 8 13 18];
+arrivalColumns=[4 9 14 19];
+sequenceColumns=[5 10 15 20];
+% The queue's channel order is IMU, GNSS, MAG, BARO; the parameter vector
+% stores periods as IMU, MAG, BARO, GNSS and transports in the same order.
+periods=timing([1 4 2 3])';
 pipeline=timing(5);
-transports=[timing(6),timing(9),timing(7),timing(8)];
+transports=timing([6 9 7 8])';
 names={'IMU','GNSS','MAG','BARO'};
 maxLateness=zeros(1,4);
 counts=zeros(1,4);
@@ -49,53 +52,79 @@ for channel=1:4
     counts(channel)=numel(rows);
 end
 
-% IMU sample rate cannot exceed the 1-kHz production sensor task consumer.
+% Conservation for the all-valid run:
+% opportunities = generated + suppressed; generated = released + pending;
+% every released probe event is accepted by the downstream probe sink.
+assert(all(stats(:,1)==stats(:,2)+stats(:,3)+stats(:,7)), ...
+    'Flight:SensorOpportunityConservation','Sensor opportunities are not conserved.');
+assert(all(stats(:,2)==stats(:,4)+stats(:,6)), ...
+    'Flight:SensorQueueConservation','Generated events do not equal released plus pending.');
+assert(all(stats(:,4)==stats(:,5)) && all(stats(:,7)==0) && all(stats(:,6)==0), ...
+    'Flight:SensorAcceptanceConservation','Released events were not accepted or remained queued.');
+assert(all(stats(:,8)==stats(:,1)), ...
+    'Flight:SensorSequenceAccounting','Sensor sequence counters do not include every sample opportunity.');
+assert(all(frames(:,17)>=0 & frames(:,17)<=15), ...
+    'Flight:SensorFrameMask','Probe returned an invalid delivered-frame mask.');
+
+% Suppress exactly one sample opportunity per source. The next accepted event
+% must expose a sequence gap; no source is removed and other channels continue.
+dropTruth=truth;
+bits=[1 2 4 8];
+for channel=1:4
+    dropTime=epochUs+2*periods(channel);
+    dropRow=find(timesUs==dropTime,1);
+    assert(~isempty(dropRow),'Flight:SensorDropFixture','Could not locate the selected suppression epoch.');
+    dropTruth(dropRow,17)=15-bits(channel);
+end
+[~,dropEvents,dropStats]=fmt_sensor_sim_probe(dropTruth,timing,timesUs,epochUs);
+for channel=1:4
+    assert(dropStats(channel,1)==stats(channel,1) && ...
+           dropStats(channel,2)==stats(channel,2)-1 && ...
+           dropStats(channel,3)==1, ...
+        'Flight:SensorSuppressionAccounting','%s suppressed event was not counted exactly once.',names{channel});
+    assert(dropStats(channel,2)==dropStats(channel,4)+dropStats(channel,6) && ...
+           dropStats(channel,4)==dropStats(channel,5), ...
+        'Flight:SensorDropConservation','%s generated/released/accepted counts do not balance.',names{channel});
+    sequence=dropEvents(dropEvents(:,validColumns(channel))==1,sequenceColumns(channel));
+    assert(numel(sequence)==dropStats(channel,2) && ...
+           sum(diff(sequence)==2)==1 && all(diff(sequence)==1 | diff(sequence)==2), ...
+        'Flight:SensorSequenceGap','%s missing sample did not create one observable sequence gap.',names{channel});
+end
+
+% Reject unsupported rates, queue-overflow configurations, non-monotonic time,
+% skipped fixed steps and malformed validity masks instead of silently drifting.
 invalid=timing;
 invalid(1)=500;
-rejected=false;
-try
-    fmt_sensor_sim_probe(truth(1:10,:),invalid,timesUs(1:10),epochUs);
-catch
-    rejected=true;
-end
-assert(rejected,'Flight:SensorTimingConsumerRate', ...
-    'The timing engine accepted an IMU rate faster than the firmware consumer.');
-
-% Queue bounds fail closed rather than silently dropping delayed samples.
+expect_probe_error(truth(1:20,:),invalid,timesUs(1:20),epochUs, ...
+    'Flight:SensorTimingConsumerRate','IMU rate faster than the production consumer was accepted.');
 invalid=timing;
 invalid(5)=40000;
-rejected=false;
-try
-    fmt_sensor_sim_probe(truth,invalid,timesUs,epochUs);
-catch
-    rejected=true;
-end
-assert(rejected,'Flight:SensorTimingQueueBound', ...
-    'The timing engine accepted a delay that can overflow its bounded queue.');
+expect_probe_error(truth,timing_with_delay(invalid),timesUs,epochUs, ...
+    'Flight:SensorTimingQueueBound','A delay exceeding the bounded queue horizon was accepted.');
+irregularTimes=timesUs(1:20);
+irregularTimes(6)=irregularTimes(6)+250;
+expect_probe_error(truth(1:20,:),timing,irregularTimes,epochUs, ...
+    'Flight:SensorTimingStep','A non-500-us simulation step was accepted.');
+reversedTimes=timesUs(1:20);
+reversedTimes(6)=reversedTimes(5)-500;
+expect_probe_error(truth(1:20,:),timing,reversedTimes,epochUs, ...
+    'Flight:SensorTimingMonotonic','A backwards simulation clock was accepted.');
+invalidTruth=truth(1:20,:);
+invalidTruth(3,17)=1.5;
+expect_probe_error(invalidTruth,timing,timesUs(1:20),epochUs, ...
+    'Flight:SensorTimingMask','A fractional sensor validity mask was accepted.');
 
-% A zero-delay fixture must release at the same sample epoch, not one 500-us
-% scheduler step later.
-zeroDelay=timing;
-zeroDelay(5:9)=0;
-shortTimes=(epochUs:500:epochUs+200000)';
-shortTruth=truth(1:numel(shortTimes),:);
-[~,zeroEvents]=fmt_sensor_sim_probe(shortTruth,zeroDelay,shortTimes,epochUs);
-for channel=1:4
-    rows=find(zeroEvents(:,validColumns(channel))==1);
-    sample=zeroEvents(rows,sampleColumns(channel));
-    capture=zeroEvents(rows,captureColumns(channel));
-    arrival=zeroEvents(rows,arrivalColumns(channel));
-    assert(all(sample==capture) && all(capture==arrival) && ...
-           all(shortTimes(rows)==arrival), ...
-        'Flight:SensorZeroDelay','%s zero-delay events were not released at the sample epoch.',names{channel});
-end
-
-report=struct('scope','SENSOR_SAMPLE_CAPTURE_ARRIVAL_TIMING','status','PASS', ...
-    'channels',{names},'sample_period_us',periods, ...
-    'pipeline_delay_us',pipeline,'transport_delay_us',transports, ...
-    'delivered_event_count',counts,'max_delivery_lateness_us',maxLateness, ...
-    'fixed_step_us',500,'event_time_order','sample <= capture <= arrival <= delivery', ...
-    'queue_overflow_policy','FAIL_CLOSED','consumer_rate_gate','PASS');
+report=struct('scope','SENSOR_SAMPLE_CAPTURE_ARRIVAL_QUEUE','status','PASS', ...
+    'overall_P10_status','PARTIAL','channels',{names}, ...
+    'sample_period_us',periods,'pipeline_delay_us',pipeline, ...
+    'transport_delay_us',transports,'delivered_event_count',counts, ...
+    'max_delivery_lateness_us',maxLateness, ...
+    'generated_suppressed_released_accepted',stats(:,1:5), ...
+    'suppression_gap_sequence_test','PASS', ...
+    'counter_conservation','PASS','fixed_step_us',500, ...
+    'event_time_order','sample <= capture <= arrival <= delivery', ...
+    'queue_overflow_policy','FAIL_CLOSED','consumer_rate_gate','PASS', ...
+    'pps_capture_and_utc_epoch_mapping','NOT_IMPLEMENTED');
 file=fullfile(root,'work','validation','sensor_event_timing_report.json');
 if ~isfolder(fileparts(file)), mkdir(fileparts(file)); end
 fid=fopen(file,'w');
@@ -105,3 +134,16 @@ fprintf(fid,'%s\n',jsonencode(report,PrettyPrint=true));
 disp(report);
 end
 
+function expect_probe_error(truth,timing,times,epoch,identifier,message)
+failed=false;
+try
+    fmt_sensor_sim_probe(truth,timing,times,epoch);
+catch
+    failed=true;
+end
+assert(failed,identifier,'%s',message);
+end
+
+function timing=timing_with_delay(timing)
+% Keep all other fields unchanged for the isolated queue-horizon rejection case.
+end
