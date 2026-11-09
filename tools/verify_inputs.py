@@ -105,7 +105,7 @@ def main():
                 finite(value)
                 assert value['status'] == 'SIM_ONLY', f'Missing synthetic source tag: {file.name}'
                 config[file.stem] = value
-                hashes[str(file.relative_to(ROOT)).replace('\\\\', '/')] = sha(file)
+                hashes[str(file.relative_to(ROOT)).replace(chr(92), '/')] = sha(file)
         assert set(config) == {'vehicle_model', 'sensor_alignment', 'estimator_tuning',
                                'controller_tuning', 'profile_manifest'}, 'Expected four COREs and readonly Profile'
 
@@ -134,7 +134,8 @@ def main():
         report.update(status='PASS', headers_verified=len(lock['headers']),
                       osqp_files_verified=len(runtime['files']),
                       kf_files_verified=len(lock['kf_gins_matlab']['files']),
-                      flight_vehicle_source='Flight/config/vehicle_model.yaml',\n                      plant_parameter_contract='FULL_3X3_INERTIA_26',
+                      flight_vehicle_source='Flight/config/vehicle_model.yaml',
+                      plant_parameter_contract='FULL_3X3_INERTIA_26',
                       config_hashes=hashes,
                       config_content_sha256=hashlib.sha256(json.dumps(config, sort_keys=True, separators=(',', ':')).encode()).hexdigest())
     except Exception as error:
