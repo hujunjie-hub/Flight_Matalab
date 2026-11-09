@@ -24,7 +24,7 @@ static void mdlInitializeSizes(SimStruct *S)
     }
 
     if (!ssSetNumOutputPorts(S, 1)) return;
-    ssSetOutputPortWidth(S, 0, 13); /* p_dot, v_dot, q_dot, omega_dot */
+    ssSetOutputPortWidth(S, 0, 13);
     ssSetNumSampleTimes(S, 1);
     ssSetOptions(S, SS_OPTION_EXCEPTION_FREE_CODE);
 }
@@ -51,7 +51,8 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     const mxArray *parameter = ssGetSFcnParam(S, 0);
     const double *p = mxGetPr(parameter);
     double *dx = ssGetOutputPortRealSignal(S, 0);
-    double r[9], jw[3], gyroscopic[3];
+    double r[9], inertia[9], inverse_inertia[9], jw[3], gyroscopic[3], rhs[3];
+    double determinant;
     double w, qx, qy, qz, wx, wy, wz;
     int i, j;
 
@@ -59,7 +60,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 
     if (!mxIsDouble(parameter) || mxIsComplex(parameter) || mxIsSparse(parameter) ||
         !p || !fmt_plant_parameters_valid(p, (int)mxGetNumberOfElements(parameter))) {
-        ssSetErrorStatus(S, "Invalid PlantParameters: expected 20 finite values with positive mass, inertia, motor and gravity.");
+        ssSetErrorStatus(S, "Invalid PlantParameters: expected 26 finite values and a symmetric positive-definite 3x3 inertia matrix.");
         return;
     }
     if (!fmt_plant_state_valid(x)) {
@@ -79,6 +80,33 @@ static void mdlOutputs(SimStruct *S, int_T tid)
         return;
     }
 
+    /* Reconstruct MATLAB column-major J(:) into a row-major symmetric matrix. */
+    for (i = 0; i < 3; ++i) {
+        for (j = 0; j < 3; ++j) {
+            inertia[3 * i + j] = p[1 + i + 3 * j];
+        }
+    }
+
+    {
+        const double a = inertia[0], b = inertia[1], c = inertia[2];
+        const double d = inertia[3], e = inertia[4], f = inertia[5];
+        const double g = inertia[6], h = inertia[7], k = inertia[8];
+
+        determinant = a * (e * k - f * h) -
+                      b * (d * k - f * g) +
+                      c * (d * h - e * g);
+
+        inverse_inertia[0] =  (e * k - f * h) / determinant;
+        inverse_inertia[1] =  (c * h - b * k) / determinant;
+        inverse_inertia[2] =  (b * f - c * e) / determinant;
+        inverse_inertia[3] =  (f * g - d * k) / determinant;
+        inverse_inertia[4] =  (a * k - c * g) / determinant;
+        inverse_inertia[5] =  (c * d - a * f) / determinant;
+        inverse_inertia[6] =  (d * h - e * g) / determinant;
+        inverse_inertia[7] =  (b * g - a * h) / determinant;
+        inverse_inertia[8] =  (a * e - b * d) / determinant;
+    }
+
     w = x[6];
     qx = x[7];
     qy = x[8];
@@ -93,12 +121,15 @@ static void mdlOutputs(SimStruct *S, int_T tid)
             force_ned += r[3 * i + j] * (rotor[j] + ground[j]);
         }
         if (env[10] == 1.0) {
-            force_ned -= p[6 + i] * (x[3 + i] - env[i]);
+            force_ned -= p[12 + i] * (x[3 + i] - env[i]);
         }
 
         dx[i] = x[3 + i];
-        dx[3 + i] = force_ned / p[0] + (i == 2 ? p[16] : 0.0);
-        jw[i] = p[1 + i] * x[10 + i];
+        dx[3 + i] = force_ned / p[0] + (i == 2 ? p[22] : 0.0);
+
+        jw[i] = inertia[3 * i] * x[10] +
+                inertia[3 * i + 1] * x[11] +
+                inertia[3 * i + 2] * x[12];
     }
 
     /* q_dot = 0.5 * q (scalar-first) x [0, omega_body/N0]. */
@@ -109,9 +140,13 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 
     fmt_cross(x + 10, jw, gyroscopic);
     for (i = 0; i < 3; ++i) {
-        /* Environment torque is expressed in FRD body axes. */
-        dx[10 + i] = (rotor[3 + i] + ground[3 + i] + env[6 + i] -
-                      p[9] * x[10 + i] - gyroscopic[i]) / p[1 + i];
+        rhs[i] = rotor[3 + i] + ground[3 + i] + env[6 + i] -
+                 p[15] * x[10 + i] - gyroscopic[i];
+    }
+    for (i = 0; i < 3; ++i) {
+        dx[10 + i] = inverse_inertia[3 * i] * rhs[0] +
+                     inverse_inertia[3 * i + 1] * rhs[1] +
+                     inverse_inertia[3 * i + 2] * rhs[2];
     }
 
     if (!fmt_finite_vector(dx, 13)) {
