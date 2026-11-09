@@ -14,3 +14,16 @@
 
 `implementation_manifest.json` 记录模型、录制数据、源码和仿真证据的完整性信息。单点接地在上锁后会倾倒，最终 SIM_ONLY 物理对象采用四点接地与正则化摩擦。ExtINS 的默认录制来源为 MIL 中的固件 KF-GINS。当前证据覆盖主机仿真与合成输入，STM32 时序、HIL 链路、实体执行器和实飞另行验证。
 
+
+
+## Plant 物理模型第二阶段（代码状态）
+
+本阶段在独立优化分支中完成代码修改，尚未在 MATLAB/Simulink 环境执行，因此不计入上表的实测通过结果。
+
+- 完整 3×3 对称正定惯量矩阵：保留 J(:)，计算 J·omega、omega×(J·omega) 和 J⁻¹角加速度。
+- 统一 PlantState（17）、Environment（15）和 PlantParameters（26）接口合同。
+- S-Function 增加参数、状态、wrench、环境和输出有限值校验；非法布尔量、电机效能越界、非对称/非正定惯量拒绝。
+- 地面接触增加静态 mg/k 支撑测试；数值验证增加独立 250 μs RK4 参考。
+- 当前代码覆盖 P-01～P-06、P-11～P-13、P-15～P-20；P-07～P-10 和 P-14 尚未实现。
+
+本阶段的退出条件是：在用户 MATLAB 环境成功执行 build_native_kernels、generate_parameters、verify_parameter_view 和 verify_plant_open_loop，确认报告与当前分支一致。Plant 报告在剩余用例完成前必须保持 PARTIAL，不能解释为完整物理模型验收或实机验证。
