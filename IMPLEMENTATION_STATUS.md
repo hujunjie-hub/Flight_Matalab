@@ -1,6 +1,6 @@
 # 实施状态
 
-当前交付范围为 **Flight 固件 Windows Host SIL**。现行合同为 Schema 6.0、Product/Port `0x00010906`。三个顶层模型和共享飞控模型均已生成，并已注册到 MATLAB Project。
+当前交付范围为 **Flight 固件 Windows Host SIL**。现行合同为 Schema 6.0、Product/Port `0x00010906`。三个顶层模型和共享飞控模型已生成并注册到 MATLAB Project。下表是此前记录的 Host SIL 基线证据；本轮更新了 MIL 传感器事件队列、参数预检和测试脚本，当前分支尚未在 MATLAB/Simulink 重新执行完整验证，相关 manifest 已标记为 STALE_REQUIRES_RERUN。
 
 | 范围 | 实测结果 |
 | --- | --- |
