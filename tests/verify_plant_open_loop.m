@@ -94,7 +94,7 @@ for k=1:numel(profileTimes)
     angle=rotationRate*profileTimes(k);
     profileStates(k,7:10)=[cos(angle/2),0,0,sin(angle/2)];
 end
-profileGap=zeros(size(profileTimes));
+profileGap=ones(size(profileTimes));
 sensorRun=run_profile('FMT_PlantSensors',{profileStates,profileGap},profileTimes, ...
     profileTimes(end),struct('SensorParameters',sensorParameters),0.0005);
 sensorFrame=sensorRun.yout{1}.Values.Data(end,:);
@@ -117,7 +117,7 @@ staticState=initial;
 staticState(1:6)=0;
 staticState(7:10)=[1;0;0;0];
 staticState(11:13)=0;
-staticRun=run('FMT_PlantSensors',{staticState,0},0.001,struct,0.0005);
+staticRun=run('FMT_PlantSensors',{staticState,1},0.001,struct,0.0005);
 staticFrame=staticRun.yout{1}.Values.Data(end,:);
 assert(abs(staticFrame(4))<1e-10 && abs(staticFrame(5))<1e-10 && ...
        abs(staticFrame(6)+g)<1e-10 && ...
@@ -128,7 +128,7 @@ movingParameters=cfg.derived.SensorParameters;
 movingParameters(8:10)=[1;0;0]; % Match the initial NED velocity to avoid a synthetic derivative impulse.
 movingState=staticState;
 movingState(4:6)=[1;0;0];
-movingRun=run('FMT_PlantSensors',{movingState,0},0.001, ...
+movingRun=run('FMT_PlantSensors',{movingState,1},0.001, ...
     struct('SensorParameters',movingParameters),0.0005);
 movingFrame=movingRun.yout{1}.Values.Data(end,:);
 expectedCoriolis=2*cross(cfg.derived.EarthRateNedRadps,[1;0;0]);
