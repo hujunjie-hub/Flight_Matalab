@@ -119,7 +119,9 @@ static int fmt_sensor_timing_parameters_valid(const double *p)
 {
     if (!fmt_finite_vector(p, FMT_SENSOR_SIM_PARAMETER_COUNT)) return 0;
     for (int i = 0; i < 4; ++i) {
-        if (p[i] < 500.0 || floor(p[i]) != p[i] || fmod(p[i], 500.0) != 0.0)
+        const double minimum = i == 0 ? 1000.0 : 500.0;
+        const double alignment = i == 0 ? 1000.0 : 500.0;
+        if (p[i] < minimum || floor(p[i]) != p[i] || fmod(p[i], alignment) != 0.0)
             return 0;
     }
     for (int i = 4; i < FMT_SENSOR_SIM_PARAMETER_COUNT; ++i) {
