@@ -42,6 +42,32 @@ static void mdlSetWorkWidths(SimStruct *S)
     ssSupportsMultipleExecInstances(S, true);
 }
 
+static int fmt_solve_inertia(const double *j, const double *rhs, double *solution)
+{
+    double l00, l10, l20, l11, l21, l22;
+    double y0, y1, y2;
+
+    /* Cholesky solve J*x=rhs for a symmetric positive-definite 3x3 matrix. */
+    l00 = sqrt(j[0]);
+    if (!(l00 > 0.0) || !isfinite(l00)) return 0;
+    l10 = j[3] / l00;
+    l20 = j[6] / l00;
+    l11 = sqrt(j[4] - l10 * l10);
+    if (!(l11 > 0.0) || !isfinite(l11)) return 0;
+    l21 = (j[7] - l20 * l10) / l11;
+    l22 = sqrt(j[8] - l20 * l20 - l21 * l21);
+    if (!(l22 > 0.0) || !isfinite(l22)) return 0;
+
+    y0 = rhs[0] / l00;
+    y1 = (rhs[1] - l10 * y0) / l11;
+    y2 = (rhs[2] - l20 * y0 - l21 * y1) / l22;
+
+    solution[2] = y2 / l22;
+    solution[1] = (y1 - l21 * solution[2]) / l11;
+    solution[0] = (y0 - l10 * solution[1] - l20 * solution[2]) / l00;
+    return fmt_finite_vector(solution, 3);
+}
+
 static void mdlOutputs(SimStruct *S, int_T tid)
 {
     const double *x = ssGetInputPortRealSignal(S, 0);
@@ -51,8 +77,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     const mxArray *parameter = ssGetSFcnParam(S, 0);
     const double *p = mxGetPr(parameter);
     double *dx = ssGetOutputPortRealSignal(S, 0);
-    double r[9], inertia[9], inverse_inertia[9], jw[3], gyroscopic[3], rhs[3];
-    double determinant;
+    double r[9], inertia[9], jw[3], gyroscopic[3], rhs[3];
     double w, qx, qy, qz, wx, wy, wz;
     int i, j;
 
@@ -88,30 +113,6 @@ static void mdlOutputs(SimStruct *S, int_T tid)
             const double value_ji = p[1 + j + 3 * i];
             inertia[3 * i + j] = (i == j) ? value_ij : 0.5 * (value_ij + value_ji);
         }
-    }
-
-    {
-        const double a = inertia[0], b = inertia[1], c = inertia[2];
-        const double d = inertia[3], e = inertia[4], f = inertia[5];
-        const double g = inertia[6], h = inertia[7], k = inertia[8];
-
-        determinant = a * (e * k - f * h) -
-                      b * (d * k - f * g) +
-                      c * (d * h - e * g);
-        if (!(determinant > 0.0) || !isfinite(determinant)) {
-            ssSetErrorStatus(S, "Invalid Plant inertia determinant.");
-            return;
-        }
-
-        inverse_inertia[0] =  (e * k - f * h) / determinant;
-        inverse_inertia[1] =  (c * h - b * k) / determinant;
-        inverse_inertia[2] =  (b * f - c * e) / determinant;
-        inverse_inertia[3] =  (f * g - d * k) / determinant;
-        inverse_inertia[4] =  (a * k - c * g) / determinant;
-        inverse_inertia[5] =  (c * d - a * f) / determinant;
-        inverse_inertia[6] =  (d * h - e * g) / determinant;
-        inverse_inertia[7] =  (b * g - a * h) / determinant;
-        inverse_inertia[8] =  (a * e - b * d) / determinant;
     }
 
     w = x[6];
@@ -150,10 +151,9 @@ static void mdlOutputs(SimStruct *S, int_T tid)
         rhs[i] = rotor[3 + i] + ground[3 + i] + env[6 + i] -
                  p[15] * x[10 + i] - gyroscopic[i];
     }
-    for (i = 0; i < 3; ++i) {
-        dx[10 + i] = inverse_inertia[3 * i] * rhs[0] +
-                     inverse_inertia[3 * i + 1] * rhs[1] +
-                     inverse_inertia[3 * i + 2] * rhs[2];
+    if (!fmt_solve_inertia(inertia, rhs, dx + 10)) {
+        ssSetErrorStatus(S, "Failed to solve Plant inertia system.");
+        return;
     }
 
     if (!fmt_finite_vector(dx, 13)) {
