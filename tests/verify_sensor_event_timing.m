@@ -20,9 +20,9 @@ validColumns=[1 5 9 13];
 sampleColumns=[2 6 10 14];
 captureColumns=[3 7 11 15];
 arrivalColumns=[4 8 12 16];
-periods=timing(1:4)';
+periods=[timing(1),timing(4),timing(2),timing(3)];
 pipeline=timing(5);
-transports=timing(6:9)';
+transports=[timing(6),timing(9),timing(7),timing(8)];
 names={'IMU','GNSS','MAG','BARO'};
 maxLateness=zeros(1,4);
 counts=zeros(1,4);
@@ -66,7 +66,7 @@ invalid=timing;
 invalid(5)=40000;
 rejected=false;
 try
-    fmt_sensor_sim_probe(truth,timing_with_delay(invalid),timesUs,epochUs);
+    fmt_sensor_sim_probe(truth,invalid,timesUs,epochUs);
 catch
     rejected=true;
 end
@@ -88,6 +88,3 @@ fprintf(fid,'%s\n',jsonencode(report,PrettyPrint=true));
 disp(report);
 end
 
-function timing=timing_with_delay(timing)
-% Keep all fields unchanged; the named helper makes the queue-bound case explicit.
-end
