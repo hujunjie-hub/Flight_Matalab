@@ -143,7 +143,7 @@ def main():
         sensor = config['sensor_alignment']
         for field in ('magnetic_field_ned_ut', 'imu_to_cg_frd_m',
                       'antenna_from_imu_frd_m', 'static_gyro_bias_radps',
-                      'static_accel_bias_mps2', 'scale_error',
+                      'static_accel_bias_mps2', 'static_mag_bias_ut', 'scale_error',
                       'gyro_noise_std_radps', 'accel_noise_std_mps2',
                       'mag_noise_std_ut', 'gnss_position_noise_std_m',
                       'gnss_velocity_noise_std_mps'):
@@ -155,6 +155,7 @@ def main():
                       'gnss_velocity_noise_std_mps'):
             assert all(value >= 0.0 for value in sensor[field]), f'{field} cannot be negative'
         assert math.isfinite(sensor['baro_noise_std_m']) and sensor['baro_noise_std_m'] >= 0.0
+        assert math.isfinite(sensor['baro_bias_m']), 'baro_bias_m must be finite'
         validate_rotation(sensor['imu_installation'], 'IMU installation')
         validate_rotation(sensor['mag_installation'], 'magnetometer installation')
         for field in ('imu_pipeline_delay_us', 'imu_transport_delay_us',
@@ -180,7 +181,7 @@ def main():
                       kf_files_verified=len(lock['kf_gins_matlab']['files']),
                       flight_vehicle_source='Flight/config/vehicle_model.yaml',
                       plant_parameter_contract='FULL_3X3_INERTIA_26',
-                      sensor_parameter_contract='SENSOR_19_IMU_ANTENNA_LEVERS',
+                      sensor_parameter_contract='SENSOR_19_IMU_ANTENNA_LEVERS_PLUS_SENSOR_MODEL_54',
                       config_hashes=hashes,
                       config_content_sha256=hashlib.sha256(json.dumps(config, sort_keys=True, separators=(',', ':')).encode()).hexdigest())
     except Exception as error:
