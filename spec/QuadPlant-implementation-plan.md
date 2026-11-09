@@ -1,18 +1,20 @@
 # QuadPlant 实施计划
 
-状态：NOT_STARTED；2026-11-05。本轮不创建或改动模型。
+状态：P0～P2 已实现代码框架并进入验证；P3 传感器、P4 集成和 P5 系统闭环尚未验收。2026-11-09。
 
-| 阶段 | 交付 | 依赖/退出检查 |
+| 阶段 | 交付 | 当前状态/退出检查 |
 |---|---|---|
-| P0 物理接口冻结 | u/w/y/z bus、CG/frame/q/rate约定、参数表 | 系统G0-HOST；明确固定N0/当前地理NED和ω_b/N0/ω_ib语义 |
-| P1 电机/分配载荷 | MotorDynamics、RotorWrench组件 | 单电机/对称推力/一阶响应通过 |
-| P2 刚体/接触 | 17维PlantState/四阶段RK4、Environment、几何门控GroundContact | 自由落体/静态平衡/空中无接触阻尼/固定原点/步长细化通过 |
-| P3 传感器 | 采样、杆臂、Earth项、noise/bias/delay | 静止比力、旋转杆臂和时间戳测试通过 |
-| P4 物理侧集成 | FMT_QuadPlant/FMT_SensorSimulation模型引用 | 开环因果链、无代数环、输出单位正确 |
-| P5 系统闭环 | 仅接M7已提交帧与M2标准入口 | FMS/Control合格后运行MIL；truth无捷径 |
+| P0 物理接口冻结 | u/w/y/z bus、CG/frame/q/rate、参数表 | 已明确 17 维 PlantState 和 15 维 Environment；共享坐标契约进入代码 |
+| P1 电机/载荷 | MotorDynamics、RotorWrench | 模型已存在；参数来源统一，需 MATLAB 运行 P-01～P-03 |
+| P2 刚体/接触 | 17 维 PlantState、RK4、GroundContact | 模型已存在；新增输入校验、静态支撑和步长参考测试；需 MATLAB 运行 P-04～P-06、P-11～P-19 |
+| P3 传感器 | 杆臂、Earth 项、noise/bias/delay | 未完成；P-07～P-10 |
+| P4 物理侧集成 | FMT_QuadPlant/FMT_SensorSimulation | 模型结构已存在；仍需检查开环因果链、采样相位和输出单位 |
+| P5 系统闭环 | M7 已提交帧、M2 标准入口 | 未开始验收；须待 FMS/Control 和传感器合格后运行 MIL |
 
-物理参数来自SIM_ONLY四份CORE，结构/安全参数来自readonly Profile，.sldd为生成视图。不得同时保留旧plant_model_init及新Mask中的独立mass/J/Ct。旧MC-Plant只读参考，未来选定复用的子系统应记录原文件/SID、复制范围、许可证及修改原因。
+共享质量、惯量、电机位置、偏航符号和电机推力限制以同级 Flight/config/vehicle_model.yaml 为准；Flight 文件目前仍是 SIM_ONLY 合成参数。Plant 专有的 k_f、阻力、接触参数和传感器合成参数留在 Flight_Matalab。帧量化 0～10 N 曲线是独立执行器夹具，不得与 Plant 15 N 物理推力上限混为一谈。
 
-建模按最小scope执行model_read→model_edit→model_check；遇partial立即检查并修正。每阶段保存接口/模型Hash和测试输出，不将完整闭环成功当作组件符号正确的唯一证据。
+当前刚体内核只支持对角惯量；参数生成器拒绝非对角惯量。若将来采用完整惯量张量，必须实现 J^-1*(tau-omega×Jomega) 并补充耦合测试。
 
-物理Plant先用double，公开固件兼容bus按single转换；运行精度不同必须写入manifest。每个新增fidelity层重新跑步长/能量/传感器一致性检查。当前所有P阶段均NOT_STARTED，所有Plant测试均NOT_RUN。
+所有 C S-Function 对输入状态、参数、环境、wrench 和输出有限值做 fail-closed 检查。每阶段保存接口/模型 Hash 和测试结果；静态代码审查不能替代 MATLAB 编译、Simulink 运行或 HIL 验收。
+
+物理 Plant 使用 double；公开固件兼容 bus 使用 single。每个新增 fidelity 层都需重新执行步长、能量、符号和传感器一致性检查。
