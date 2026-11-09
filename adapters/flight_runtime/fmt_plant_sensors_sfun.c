@@ -96,7 +96,7 @@ static uint64_t fmt_sample_index(double time_s, double rate_hz)
     return (uint64_t)index;
 }
 
-/* True only on a configured IMU sample boundary (time and period are in SI/us).
+/* True only on a configured IMU sample boundary (time in seconds, period in us).
  * The Plant advances every 500 us, but the sensor history must advance only
  * when a new physical IMU sample is produced. */
 static int fmt_is_imu_sample_epoch(double time_s, double period_us)
@@ -215,7 +215,7 @@ static void mdlInitializeSizes(SimStruct *S)
         ssSetInputPortRequiredContiguous(S, i, 1);
     }
     ssSetOutputPortWidth(S, 0, FMT_SENSOR_WIDTH);
-    /* Previous CG velocity (3), previous body rate (3), first-difference-valid. */
+    /* Previous sample CG velocity (3), body rate (3), valid flag, sample time (s). */
     ssSetNumDiscStates(S, SENSOR_STATE_COUNT);
     ssSetNumSampleTimes(S, 1);
 }
