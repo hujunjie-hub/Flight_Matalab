@@ -121,7 +121,7 @@ def main():
         assert v['motor_thrust_coefficient_n_s2'] > 0
         assert len(v['drag_ned_kgps']) == 3 and all(value >= 0 for value in v['drag_ned_kgps'])
         assert v['ground_stiffness_npm'] > 0 and v['ground_damping_ns_pm'] >= 0
-        assert v['ground_friction'] >= 0
+        assert v['ground_friction'] == 0, 'First-version Plant must not enable unvalidated horizontal ground friction'
         assert len(v['plant_state0']) == 17
         assert math.sqrt(sum(value * value for value in v['plant_state0'][6:10])) > 1e-12
         assert all(value >= 0 for value in v['plant_state0'][13:17])
