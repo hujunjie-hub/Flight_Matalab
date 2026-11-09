@@ -2,6 +2,7 @@
 #define FMT_FLIGHT_RUNTIME_H
 
 #include <stdint.h>
+#include "fmt_sensor_simulation.h"
 
 enum {
     FMT_DATA_SIM = 0, FMT_MIL_SIM = 1, FMT_EXTINS_DATA_SIM = 2,
@@ -15,7 +16,8 @@ enum {
 typedef int (*FmtStart)(int mode);
 typedef void (*FmtStop)(void);
 typedef unsigned (*FmtNavWidth)(void);
-typedef int (*FmtStep)(const double *sensor, const double *command, const uint8_t *external_nav,
-                       double *force, double *status, uint8_t *published_nav);
+typedef int (*FmtStep)(const double *sensor, const double *command, const uint8_t *external_nav, 
+                       const double *sensor_sim_parameters, double *force, double *status,
+                       uint8_t *published_nav);
 
 #endif
