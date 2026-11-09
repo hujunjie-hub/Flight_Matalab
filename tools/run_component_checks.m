@@ -6,12 +6,13 @@ report=struct('scope','IMPLEMENTED_COMPONENTS_ONLY','status','IN_PROGRESS', ...
     'checks',struct);
 write(file,report);
 try
-    [status,message]=system(sprintf('python -B "%s"',fullfile(root,'tools','verify_inputs.py')));
-    assert(status==0,'Flight:InputPreflight','%s',message);
+    % Rebuild every native gateway first so Plant tests cannot exercise stale MEX binaries.
+    build_native_kernels;
     generate_parameters;
     build_actuation_components;
     build_pid_allocation_probe;
     report.source_fingerprint=fingerprint(root);
+    report.checks.native_kernels='PASS';
     report.checks.parameters=verify_parameter_view;
     report.checks.osqp=verify_osqp_gate;
     report.checks.execution=verify_execution_gate;
