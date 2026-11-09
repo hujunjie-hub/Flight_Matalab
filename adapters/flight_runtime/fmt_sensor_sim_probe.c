@@ -22,7 +22,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     if (nrhs != 4 || nlhs != 2)
         mexErrMsgIdAndTxt("Flight:SensorProbeArguments",
-            "Usage: [frames,events]=fmt_sensor_sim_probe(truth18,parameters54,times_us,epoch_us).");
+            "Usage: [frames,events]=fmt_sensor_sim_probe(truth18,parameters10,times_us,epoch_us).");
     truth_array = prhs[0];
     parameter_array = prhs[1];
     time_array = prhs[2];
@@ -40,7 +40,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mxGetNumberOfElements(time_array) != rows ||
         mxGetNumberOfElements(epoch_array) != 1)
         mexErrMsgIdAndTxt("Flight:SensorProbeShape",
-            "Expected truth N-by-18, 54 parameters, N times and one epoch.");
+            "Expected truth N-by-18, 10 parameters, N times and one epoch.");
 
     truth = mxGetPr(truth_array);
     parameters = mxGetPr(parameter_array);
@@ -51,7 +51,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         mexErrMsgIdAndTxt("Flight:SensorProbeEpoch","Epoch must be an integer microsecond timestamp.");
     epoch_us = (uint64_t)*epoch_value;
     if (fmt_sensor_sim_init(&state, parameters, epoch_us) != 0)
-        mexErrMsgIdAndTxt("Flight:SensorProbeParameters","Sensor simulation parameters are invalid.");
+        mexErrMsgIdAndTxt("Flight:SensorProbeParameters","Sensor timing parameters are invalid.");
 
     plhs[0] = mxCreateDoubleMatrix(rows, 18, mxREAL);
     plhs[1] = mxCreateDoubleMatrix(rows, 16, mxREAL);
