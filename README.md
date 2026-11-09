@@ -52,12 +52,12 @@ Plant 侧使用与 Flight 一致的电机编号、旋翼位置、偏航力矩符
 
 在 MATLAB 打开项目并确认依赖已构建后，执行：
 
-\`\`\`matlab
+```matlab
 build_native_kernels
 generate_parameters
 verify_parameter_view
 verify_plant_open_loop
-\`\`\`
+```
 
 build_native_kernels 会先运行 tools/verify_inputs.py，再编译 Plant 和控制侧原生 S-Function。verify_plant_open_loop 当前覆盖电机、刚体、自由落体、悬停、接触、风阻、坐标变换、完整惯量、数值参考和输入拒绝。它会返回 PARTIAL，因为 P-07～P-10 传感器运动学/噪声/时序和 P-14 真值隔离图检查仍未完成。代码覆盖不等于 MATLAB 已运行；每次变更后必须保存实际测试报告和 MATLAB 版本。
 
