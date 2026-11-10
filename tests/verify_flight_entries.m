@@ -11,6 +11,10 @@ milStats = fullfile(root,'work','validation','m6_runtime_stats.json');
 if isfile(milStats)
     copyfile(milStats,fullfile(root,'work','validation','m6_runtime_stats_mil.json'));
 end
+p10bStats = fullfile(root,'work','validation','p10b_time_service.json');
+if isfile(p10bStats)
+    copyfile(p10bStats,fullfile(root,'work','validation','p10b_time_service_mil.json'));
+end
 s = signal(closed,2);
 assert(size(s,2)==113,'Flight:MILStatusABI','Expected the 113-column Host SIL diagnostic ABI.');
 force = signal(closed,1);

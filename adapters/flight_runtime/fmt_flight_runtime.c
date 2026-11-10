@@ -795,10 +795,53 @@ static void write_m6_job_stats(void)
     }
 }
 
+/* FMAT-0014: dump what the firmware time service reports after the MIL, so the
+ * PPS/RECTIMEA injection can be judged by the service state and not only by the
+ * submission status codes. */
+static void write_p10b_time_service(void)
+{
+    TimeServiceStatus service;
+    LocalTimebaseDisciplineStatus discipline;
+    ClockDomainMappingStatus mapping;
+    FILE *file;
+    int service_ok = time_get_status(&service) == STATUS_OK;
+    int discipline_ok = time_get_local_discipline_status(&discipline) == STATUS_OK;
+    int mapping_ok = time_get_mapping_status(0u, &mapping) == STATUS_OK;
+    file = fopen("work/validation/p10b_time_service.json", "w");
+    if (!file) return;
+    fprintf(file,
+            "{\n  \"pps_events\": %u,\n  \"rectime_frames\": %u,\n"
+            "  \"gnss_observations\": %u,\n  \"pps_rejected\": %u,\n"
+            "  \"time_get_status_ok\": %d,\n  \"utc_valid\": %u,\n"
+            "  \"local_clock_valid\": %u,\n  \"time_epoch\": %u,\n"
+            "  \"utc_mapping_epoch\": %u,\n  \"utc_uncertainty_ns\": %llu,\n"
+            "  \"last_valid_pps_us\": %llu,\n  \"monotonic_now_us\": %llu,\n"
+            "  \"discipline_ok\": %d,\n  \"discipline_valid\": %u,\n"
+            "  \"accepted_intervals\": %u,\n  \"rate_correction_ppb\": %d,\n"
+            "  \"mapping_ok\": %d,\n  \"mapping_epoch\": %u,\n"
+            "  \"mapping_state\": %u\n}\n",
+            p10b_stats.pps_ok, p10b_stats.frames, p10b_stats.gnss_ok,
+            p10b_stats.pps_reject,
+            service_ok, service_ok ? (unsigned)service.utc_valid : 0u,
+            service_ok ? (unsigned)service.local_clock_valid : 0u,
+            service_ok ? service.time_epoch : 0u,
+            service_ok ? service.utc_mapping_epoch : 0u,
+            service_ok ? (unsigned long long)service.utc_uncertainty_ns : 0ull,
+            service_ok ? (unsigned long long)service.last_valid_pps_us : 0ull,
+            service_ok ? (unsigned long long)service.monotonic_now_us : 0ull,
+            discipline_ok, discipline_ok ? (unsigned)discipline.valid : 0u,
+            discipline_ok ? (unsigned)discipline.accepted_interval_count : 0u,
+            discipline_ok ? (int)discipline.rate_correction_ppb : 0,
+            mapping_ok, mapping_ok ? mapping.mapping_epoch : 0u,
+            mapping_ok ? (unsigned)mapping.mapping_state : 0u);
+    fclose(file);
+}
+
 __declspec(dllexport) void fmt_flight_stop(void)
 {
     if (attached) {
         write_m6_job_stats();
+        write_p10b_time_service();
         telemetry_link_release_radio();
         runtime_shutdown();
         attached = 0;

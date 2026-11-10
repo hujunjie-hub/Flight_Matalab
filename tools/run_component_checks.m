@@ -45,6 +45,7 @@ try
     report.checks.pid_allocator_feedback=verify_pid_allocator_feedback;
     report.checks.actuation=verify_actuation_components;
     report.checks.p10b=verify_p10b_pps_rectime;
+    report.checks.p10b_utc=verify_p10b_utc_mapping;
     % The MPC job gate runs last: a failure there must not hide the evidence of
     % the other gates, and its numbers belong in the same archive.
     report.checks.m6_jobs=verify_m6_jobs;
