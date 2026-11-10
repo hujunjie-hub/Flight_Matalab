@@ -97,6 +97,7 @@ schema 1.0 只有 `source_fingerprint_sha256` 一个摘要，而 `tools/fingerpr
 
 | 套件 | 覆盖 | 运行方式 |
 |---|---|---|
+| `tools/verify_archive_claims.py` | 把交付文档引用的数字与归档自身对账：manifest commit 一致性、M6 成功率/覆盖率是否等于 `solved/jobs` 与 `covered/duration`、M6 判定是否与阈值一致、阶段计数是否覆盖全部记录、P-10b 顶层结论是否与三份子报告一致、失锁报告是否把测量值与判定分开、Ground Stop 是否带固件证据与预算 | `python tools/verify_archive_claims.py`（默认最新归档）、`--run-id <ID>`、`--all` |
 | `tests/verify_archive_reliability.m`（A-01…A-08） | 同源码确定性、干净工作区、脏工作区、模型重建不污染 source 指纹、重建后重复运行稳定、分类正确、运行前脏且被本轮改写、运行前脏且未被本轮改写 | 已接入 `run_component_checks` 的 `archive_reliability` 门 |
 | `tests/verify_archive_failure_path.ps1`（F-01…F-05） | MATLAB 中途崩溃后 before 快照保留、归档补生成 after 状态、manifest 如实报告缺件、ZIP 内含两份快照、脏工作区被记录 | `pwsh -File .\tests\verify_archive_failure_path.ps1` |
 

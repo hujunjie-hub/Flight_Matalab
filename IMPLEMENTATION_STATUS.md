@@ -144,3 +144,9 @@
 - `m6_report.json` 新增 `coverage_basis`：整轮分母（判定用，不变）与"轨迹模式可用窗口"分母（仅诊断），含 `worker_ticks` / `blocked_mode_ticks` / `trajectory_eligible_ticks`。
 - 实测：整轮 1.538%（400,000 µs / 26 s）vs 可用窗口 2.663%（751 tick = 15.02 s）。最有利分母仍远低于 90%，缺口不是口径造成的。
 - 待裁定：Issue #12 需明确哪个分母是合同口径；Agent 未切换判定分母。
+
+**归档对账工具（2026-11-11）**
+
+- 新增 `tools/verify_archive_claims.py`：把交付文档引用的数字与某一归档的原始 JSON 对账（manifest commit、M6 成功率/覆盖率是否等于 `solved/jobs`、`covered/duration`、阶段计数守恒、P-10b 顶层与子报告一致、失锁测量值与判定分离、Ground Stop 固件证据与预算）。
+- 当前最新归档 `20261110T171823694Z_a837ae0`：22/22 通过。
+- 负向对照：在临时副本里复现 #17 的"顶层 NOT_RUN 与子报告 PASS 冲突"和一条伪造成功率，工具精确报出这两条失败，其余 20 条仍通过——证明它检查的是内容而不是文件存在。
