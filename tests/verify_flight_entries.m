@@ -11,6 +11,12 @@ milStats = fullfile(root,'work','validation','m6_runtime_stats.json');
 if isfile(milStats)
     copyfile(milStats,fullfile(root,'work','validation','m6_runtime_stats_mil.json'));
 end
+% The per-job records are rewritten by every later session too, and the replays
+% never enter the MPC path, so they would arrive at the gate empty.
+milJobs = fullfile(root,'work','validation','m6_jobs.json');
+if isfile(milJobs)
+    copyfile(milJobs,fullfile(root,'work','validation','m6_jobs_mil.json'));
+end
 p10bStats = fullfile(root,'work','validation','p10b_time_service.json');
 if isfile(p10bStats)
     copyfile(p10bStats,fullfile(root,'work','validation','p10b_time_service_mil.json'));
