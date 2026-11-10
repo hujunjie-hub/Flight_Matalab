@@ -263,9 +263,35 @@ dataStatus = signal(data,2);
 extStatus = signal(ext,2);
 assert(isequaln(s,dataStatus) && isequaln(force,signal(data,1)), ...
     'Flight:SensorReplay','Replaying MIL sensors diverged from the closed-loop run.');
-assert(isequaln(dataStatus(:,[3:8 12:18]),extStatus(:,[3:8 12:18])) && ...
-    isequaln(signal(data,1),signal(ext,1)), ...
-    'Flight:ExternalReplay','External navigation replay diverged from the recorded flight.');
+dataMotors = signal(data,1);
+extMotors = signal(ext,1);
+navCols = [3:8 12:18];
+if ~(isequaln(dataStatus(:,navCols),extStatus(:,navCols)) && isequaln(dataMotors,extMotors))
+    a = dataStatus(:,navCols); b = extStatus(:,navCols);
+    sameCells = (a==b) | (isnan(a)&isnan(b));
+    row = find(~all(sameCells,2),1,'first');
+    if isempty(row)
+        sameMotor = (dataMotors==extMotors) | (isnan(dataMotors)&isnan(extMotors));
+        row = find(~all(sameMotor,2),1,'first');
+    end
+    if isempty(row), row = 1; end
+    diffCols = false(1,numel(navCols));
+    for k = 1:numel(navCols)
+        diffCols(k) = ~isequaln(dataStatus(:,navCols(k)),extStatus(:,navCols(k)));
+    end
+    fprintf('ExternalReplay first divergence: row=%d t=%.4f s cols=[%s]\n', ...
+        row, s(row,1)*1e-6, num2str(navCols(diffCols)));
+    for k = find(diffCols)
+        fprintf('  col %d: data=%.6g ext=%.6g\n', navCols(k), dataStatus(row,navCols(k)), extStatus(row,navCols(k)));
+    end
+    sameMotor = (dataMotors==extMotors) | (isnan(dataMotors)&isnan(extMotors));
+    motorRow = find(~all(sameMotor,2),1,'first');
+    if ~isempty(motorRow)
+        fprintf('  motors first differ row=%d t=%.4f s data=[%s] ext=[%s]\n', motorRow, ...
+            s(motorRow,1)*1e-6, num2str(dataMotors(motorRow,:)), num2str(extMotors(motorRow,:)));
+    end
+    assert(false,'Flight:ExternalReplay','External navigation replay diverged from the recorded flight.');
+end
 assert(all(extStatus(:,24)==0),'Flight:ExternalSIL','Flight host fixture checks failed in ExtINS.');
 
 % Invalid samples remain invalid and must not become actuator commands.
