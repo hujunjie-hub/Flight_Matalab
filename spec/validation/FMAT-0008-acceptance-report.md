@@ -59,7 +59,7 @@
 | 10 | DISARM / LOCK | PASS（26.020 s，ack=3，arm=0） | 命令历史 |
 | 11 | DataSIM 回放 | PASS | `Flight:SensorReplay` |
 | 12 | ExtINS 回放 | PASS（本报告前修复） | `Flight:ExternalReplay` |
-| — | 源数据指纹 | 可用 | `275e8374fc8a9de6a17d65e7226142047f47ca5a11dad7f72c1f1c3ec3984f7c` |
+| — | 源数据指纹 | 可用 | `7c514e63032674fb7e299682a2ba5f3e9b96c26cfef902fe33de62512bdc2937` |
 | — | 后续组件门（Plant P-07 之后） | **逐个独立执行后全部 PASS**（见下） |
 
 独立执行结果（绕过 `verify_plant_open_loop` 的 P-07 断言，其余门逐个 `feval`）：
@@ -104,10 +104,10 @@ got=[0.438949 -0.00155877 -9.80665]  expected=[0.4 0 -9.80665]
 | Flight 修复 | `b8ae3ed`（failsafe）、`841478a`/`0851021`（着陆下探）、`b33b58e`（AUTO_LAND 模式） |
 | Draft PR | hujunjie-hub/Flight#3（draft，未合 main） |
 | Flight_Matalab | `139646f`、`a016d48`、`92eb036`、`e4b55e8`、`86c128f`、`53f2a7b`、`292f59b`、`3458546` |
-| RUN_ID | `20261110T073354100Z_292f59b` |
-| ZIP | `work/validation/archives/20261110T073354100Z_292f59b.zip` |
-| ZIP SHA-256 | `6a1104f68992c9019a1d887814c45e6e1231847c75fbfea3a2077c612c839e80` |
-| 源指纹 | `275e8374fc8a9de6a17d65e7226142047f47ca5a11dad7f72c1f1c3ec3984f7c` |
+| RUN_ID | `20261110T081853514Z_324d166` |
+| ZIP | `work/validation/archives/20261110T081853514Z_324d166.zip`（22 个证据文件） |
+| ZIP SHA-256 | `bfd3a522112239396cc60fa95dc9b5e945e35303c6ef4e9b44e128aed2a8e00e` |
+| 源指纹 | `7c514e63032674fb7e299682a2ba5f3e9b96c26cfef902fe33de62512bdc2937`（较早一轮为 `275e8374…`） |
 | FMS 单元测试报告 | Flight `tests/flight_management` 主机套件输出（993 checks / 0 failures） |
 | M5 单测 | Flight `tests/guidance` 主机套件（9515 checks / 0 failures） |
 
