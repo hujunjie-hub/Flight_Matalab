@@ -96,10 +96,10 @@
 ```powershell
 # 同级 Flight 仓库切到 fix/fmat-0008-first-reference-race
 cd E:\Flight\Flight_Matlab_Test
-matlab -batch "cd(pwd); addpath('tools'); addpath('work'); acceptance_batch"
+matlab -batch "cd(pwd); addpath('tools'); addpath('tests'); addpath(fullfile(pwd,'models','plant')); root=flight_startup; d=fullfile(root,'work','validation'); if ~isfolder(d), mkdir(d); end; diary(fullfile(d,'matlab_acceptance_diary.txt')); diary on; rep=run_component_checks; fprintf('COMPONENT_STATUS=%s\n',rep.status); diary off;" *> work\validation\matlab_batch_console.log
 pwsh -File .\tools\archive_validation_run.ps1
 ```
 
-`work/acceptance_batch.m` 按 [验收与结果提交](../MATLAB-验收与结果提交.md) §8 打开 diary 后调用 `run_component_checks`；控制台输出另存 `work/validation/matlab_batch_console.log`。两者随归档进入 ZIP。
+上面的命令即 [验收与结果提交](../MATLAB-验收与结果提交.md) §8 的流程：打开 diary 后调用 `run_component_checks`，控制台输出另存 `work/validation/matlab_batch_console.log`，两者随归档进入 ZIP。
 
 预期：`COMPONENT_STATUS=PARTIAL_PASS`，MIL/DataSIM/ExtINS 回放通过，组件门 13 项中 12 项 PASS、`plant` 为设计内 PARTIAL（20/20 用例通过），产出带源指纹的 ZIP。
