@@ -1,5 +1,39 @@
 # 下一阶段交付清单（截至 RUN_ID `20261110T180223584Z_199e87a`）
 
+## 0. 新会话接管必读（2026-11-11 交接）
+
+旧会话已推进 14 轮并到达上下文上限，按 [AGENT 操作指南](AGENT-操作指南.md) §12 交接。新会话**不要**从聊天摘要续接，按下面顺序核对。
+
+**基线**
+
+| 项 | 值 |
+|---|---|
+| Flight_Matalab | `optimize/sil-physical-parameter-alignment` @ `400eba5`（Draft PR #1） |
+| Flight 上游 | `test/fmat-0012-m6-controller` @ `dfb36a7` |
+| 最后归档 | `work/validation/archives/20261110T180223584Z_199e87a.zip`，SHA-256 `cfb1ab4fef23a60a78c12b370d96909ce2e5a8182cc06debe112629594ec9031`，`source_clean=true` |
+| 归档自对账 | `python tools/verify_archive_claims.py` → 22/22 |
+
+**已完成且有归档证据**：M7 Ground Stop 执行器事务（230 checks、100.5 ms ≤ 105.5 ms、`FIRMWARE_GROUND_STOP_CERTIFICATE`）、P-10b 报告口径（#17）、归档分类（#16）、`controller.c` 越界读（#15）、M6 诊断通道与逐 job 证据。
+
+**未完成**
+
+1. **M6 修复（P0）**——根因链条已成立：MPC 在地上时水平指令比 PD 少 0.2038 m/s²（占空 20%），把飞行器推到 0.58 m/s，越过 `ground_stable` 的 `|v_h| ≤ 0.20`（`fms_safety.c:101-104`），LANDED 不成立，TAKEOFF `reason=5`，场景无法起飞（竖直通道、导航能力、prearm、位置环指令均已排除）。**三个修复选项需要用户选择**，见 §7.1。
+2. **#13 FMS 侧两阶段 DISARM**——执行器侧已 PASS，但 FMS 仍在 `PRODUCT_CMD_DISARM`（`fms.c:599-626`）里把 `ARM_STATE_DISARMING` 立刻跳到 `DISARMED`。改动清单见 §7.4。
+3. **Issue 状态更新**——本环境无 GitHub 写权限，文案见 §6。
+
+**两条已知陷阱（会浪费一整轮）**
+
+- 状态帧**第 75～108 列是 `FAILSAFE_TERMINAL` 的终端锁存值**，不是实时状态；land 状态不起作用时它恒为 0，别拿它做实时判据。
+- `config/flight_baseline.json` 会在重建 Host SIL 时被重写；**先提交它再跑完整回归**，否则 `source_clean=false`，整轮归档只能作废重跑（已发生两次）。
+
+**第一条命令**
+
+```powershell
+git -C E:\Flight\Flight_Matlab_Test status --short; git -C E:\Flight\Flight_Matlab_Test rev-parse HEAD
+python -B tools\verify_archive_claims.py --run-id 20261110T180223584Z_199e87a
+pwsh -NoProfile -File .\tools\build_flight_runtime.ps1 -GccDir 'D:\STM32CubeCLT\mingw64\bin'
+```
+
 本文件汇总本轮的实际产出、证据位置与未闭合项。所有数字均来自同一轮 `run_component_checks`，不是多轮拼接。
 
 > **BLOCKER_STATUS: BLOCKED（2 项）**
