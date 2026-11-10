@@ -85,7 +85,10 @@
           "origin_reset_successes": 37,
           "origin_reset_last_status": 38,
           "origin_reset_last_type": 39,
-          "origin_reset_last_origin_id": 40
+          "origin_reset_last_origin_id": 40,
+          "prearm_reject_state": 3,
+          "prearm_ready_state": 2,
+          "origin_rebuild_reset_type": 2
         },
         "command_history_fields": [
           "request_id",
