@@ -58,6 +58,29 @@ end
 successRate=solved/jobs;
 coverage=min(1,coveredUs/durationUs);
 
+% The acceptance threshold is unchanged: covered_us over the whole run. Issue #12
+% also asks what the denominator should be, because the worker can only solve
+% while guidance is in the trajectory mode. Report both bases so the difference
+% is visible instead of being argued about, but keep judging on the same one.
+eligibleTicks=NaN;
+if isfield(stats,'worker_ticks')
+    eligibleTicks=double(stats.worker_ticks);
+    if isfield(stats,'blocked_mode')
+        eligibleTicks=max(0,eligibleTicks-double(stats.blocked_mode));
+    end
+end
+coverageBasis=struct('duration_s',entries.duration_s, ...
+    'coverage_over_total_run',coverage, ...
+    'gate_denominator','whole run (unchanged)', ...
+    'worker_ticks',double(field_or(stats,'worker_ticks',NaN)), ...
+    'blocked_mode_ticks',double(field_or(stats,'blocked_mode',NaN)), ...
+    'trajectory_eligible_ticks',eligibleTicks, ...
+    'note','coverage_over_eligible_window is informational only; it is never used for the verdict.');
+if ~isnan(eligibleTicks) && eligibleTicks>0
+    coverageBasis.eligible_window_us=eligibleTicks*20000;
+    coverageBasis.coverage_over_eligible_window=min(1,coveredUs/coverageBasis.eligible_window_us);
+end
+
 jobsGate=jobs>=100;
 successGate=successRate>=0.99;
 coverageGate=coverage>=0.90;
@@ -66,6 +89,7 @@ report=struct('scope','M6_MPC_JOBS','status','PASS', ...
     'jobs',jobs,'solved',solved,'rejected',rejected, ...
     'success_rate',successRate,'time_weighted_coverage',coverage, ...
     'duration_s',entries.duration_s, ...
+    'coverage_basis',coverageBasis, ...
     'minimum_jobs_100',ternary(jobsGate,'PASS','FAIL'), ...
     'success_rate_99',ternary(successGate,'PASS','FAIL'), ...
     'coverage_90',ternary(coverageGate,'PASS','FAIL'), ...
@@ -216,6 +240,13 @@ file=fullfile(root,'work','validation','m6_report.json');
 fid=fopen(file,'w'); cleanup=onCleanup(@()fclose(fid));
 fprintf(fid,'%s\n',jsonencode(report,PrettyPrint=true));
 disp(report);
+end
+
+function value=field_or(source,name,default)
+value=default;
+if isstruct(source) && isfield(source,name) && ~isempty(source.(name))
+    value=source.(name);
+end
 end
 
 function value=ternary(condition,whenTrue,whenFalse)
