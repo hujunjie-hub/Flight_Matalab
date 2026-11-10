@@ -5,9 +5,9 @@ function report=verify_m6_jobs
 %   applies the acceptance thresholds, so a fallback window can never be counted
 %   as coverage.
 root=fileparts(fileparts(mfilename('fullpath')));
-statsFile=fullfile(root,'work','validation','m6_runtime_stats.json');
+statsFile=fullfile(root,'work','validation','m6_runtime_stats_mil.json');
 assert(isfile(statsFile),'Flight:M6Jobs', ...
-    'The MIL run did not produce m6_runtime_stats.json; MPC accounting is missing.');
+    'The MIL run did not produce m6_runtime_stats_mil.json; MPC accounting is missing.');
 stats=jsondecode(fileread(statsFile));
 
 entriesFile=fullfile(root,'work','validation','flight_entries.json');

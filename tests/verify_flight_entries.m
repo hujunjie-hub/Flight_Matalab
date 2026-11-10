@@ -5,6 +5,12 @@ root = flight_startup;
 mil = 'FMT_MILSIM';
 commandTape = fmt_default_input(mil);
 closed = run(mil,commandTape);
+% The adapter keeps one statistics file per session, and the replays below
+% overwrite it. Snapshot the MIL numbers while they are still the current run.
+milStats = fullfile(root,'work','validation','m6_runtime_stats.json');
+if isfile(milStats)
+    copyfile(milStats,fullfile(root,'work','validation','m6_runtime_stats_mil.json'));
+end
 s = signal(closed,2);
 assert(size(s,2)==113,'Flight:MILStatusABI','Expected the 113-column Host SIL diagnostic ABI.');
 force = signal(closed,1);

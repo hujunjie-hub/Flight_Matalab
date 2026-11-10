@@ -57,6 +57,9 @@ static double first_terminal_landed_confidence;
 static uint32_t first_terminal_control_health_state, first_terminal_control_dof_mask;
 static uint32_t first_terminal_control_degraded_dof_mask, first_terminal_control_reason;
 static int32_t first_terminal_control_status, first_terminal_runtime_error;
+static uint32_t step_calls;
+static uint64_t last_step_us;
+static uint32_t run_index;
 static uint32_t first_terminal_runtime_control_health, first_terminal_solver_status;
 static uint32_t first_terminal_deadline_miss_count, first_terminal_allocation_failure_count;
 static uint32_t first_terminal_actuator_fault_mask, first_terminal_actuator_available_mask;
@@ -564,6 +567,8 @@ __declspec(dllexport) int fmt_flight_start(int mode)
     if (attached || mode < FMT_DATA_SIM || mode > FMT_EXTINS_DATA_SIM)
         return -1;
     test_clock = (ClockInstant){0x12345678, 1000000, 1, 0};
+    run_index++;
+    step_calls = 0;
     test_imu_pending = 0;
     checks = failures = commits = inhibits = 0;
     test_tx_complete = NULL;
@@ -640,8 +645,6 @@ __declspec(dllexport) int fmt_flight_start(int mode)
  * the job counts and covered time are written once at shutdown. The counters are
  * owned by the real MPC task; this function only serializes them. */
 /* The solver owns the accounting; the adapter only serializes it. */
-static uint32_t step_calls;
-static uint64_t last_step_us;
 typedef struct { uint32_t jobs, solved, rejected; uint64_t covered_us;
     uint32_t blocked_uninitialized, blocked_validation, blocked_mode;
     uint32_t blocked_clock, blocked_stale, blocked_throttle, blocked_lock;
@@ -664,7 +667,7 @@ static void write_m6_job_stats(void)
             "  \"covered_us\": %llu,\n  \"blocked_uninitialized\": %u,\n"
             "  \"blocked_validation\": %u,\n  \"blocked_mode\": %u,\n"
             "  \"blocked_clock\": %u,\n  \"blocked_stale\": %u,\n"
-            "  \"blocked_throttle\": %u,\n  \"blocked_lock\": %u,\n  \"last_validation_status\": %d,\n  \"last_eval_age_us\": %u,\n  \"max_eval_age_us\": %u,\n  \"last_now_us\": %llu,\n  \"last_control_time_us\": %llu,\n  \"worker_ticks\": %u,\n  \"worker_skips\": %u,\n  \"entry_calls\": %u,\n  \"last_worker_us\": %llu,\n  \"step_calls\": %u,\n  \"last_step_us\": %llu\n}\n",
+            "  \"blocked_throttle\": %u,\n  \"blocked_lock\": %u,\n  \"last_validation_status\": %d,\n  \"last_eval_age_us\": %u,\n  \"max_eval_age_us\": %u,\n  \"last_now_us\": %llu,\n  \"last_control_time_us\": %llu,\n  \"worker_ticks\": %u,\n  \"worker_skips\": %u,\n  \"entry_calls\": %u,\n  \"last_worker_us\": %llu,\n  \"step_calls\": %u,\n  \"last_step_us\": %llu,\n  \"run_index\": %u,\n  \"elapsed_ticks\": %llu\n}\n",
             stats.jobs, stats.solved, stats.rejected,
             (unsigned long long)stats.covered_us,
             stats.blocked_uninitialized, stats.blocked_validation,
@@ -674,8 +677,28 @@ static void write_m6_job_stats(void)
             (unsigned long long)stats.last_now_us, (unsigned long long)stats.last_control_time_us,
             stats.worker_ticks, stats.worker_skips, stats.entry_calls,
             (unsigned long long)stats.last_worker_us, step_calls,
-            (unsigned long long)last_step_us);
+            (unsigned long long)last_step_us, run_index,
+            (unsigned long long)elapsed_ticks);
     fclose(file);
+    {
+        char per_run[64];
+        snprintf(per_run, sizeof(per_run),
+                 "work/validation/m6_runtime_stats_run%u.json", (unsigned)run_index);
+        file = fopen(per_run, "w");
+        if (file) {
+            fprintf(file, "{\"run_index\": %u, \"elapsed_ticks\": %llu,"
+                          " \"jobs\": %u, \"solved\": %u, \"rejected\": %u,"
+                          " \"blocked_validation\": %u, \"last_now_us\": %llu,"
+                          " \"last_control_time_us\": %llu, \"entry_calls\": %u}\n",
+                    run_index, (unsigned long long)elapsed_ticks,
+                    stats.jobs, stats.solved, stats.rejected,
+                    stats.blocked_validation,
+                    (unsigned long long)stats.last_now_us,
+                    (unsigned long long)stats.last_control_time_us,
+                    stats.entry_calls);
+            fclose(file);
+        }
+    }
 }
 
 __declspec(dllexport) void fmt_flight_stop(void)
