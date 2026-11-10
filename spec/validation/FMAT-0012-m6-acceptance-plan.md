@@ -2,7 +2,7 @@
 
 - 对应 Issue：Flight_Matalab#12（`[FMAT-0012][S1][M6]`）
 - 分支：`optimize/sil-physical-parameter-alignment`
-- 状态：IN_PROGRESS（审查完成，测试待实现）
+- 状态：PARTIAL（`qp_assembly_in_model` 与 `strict_validation_in_model` 已实测 PASS；时间上下文守卫、速率阶跃与 job 统计仍待做）
 
 ## 1. 审查结论：实现大部分已存在，缺的是"在模型路径内"的证据
 
@@ -60,6 +60,47 @@
 
 独立 MIL fixture：真值姿态/角速度注入，速率指令 0.5 rad/s 阶跃，指标 ±5% 内 ≤1.5 s、超调 ≤30%、保持 2 s，禁用地面接触与执行器饱和干扰。可直接复用 `FMT_QuadPlant` + `FMT_RatePIDTransaction` 组合成开环受控夹具，不依赖 `FMT_FlightCore` 的完整生命周期。
 
-## 3. 为什么本轮没有直接给 PASS
+## 3. 实测结果（已实现部分）
 
-`strict_validation_in_model` 与 `qp_assembly_in_model` 只有在 2.1 的夹具跑通后才允许置 PASS；`complete_M6_time_context_guard` 需要 2.1 的 M6-09…M6-12 全部通过；`closed_loop_rate_step` 需要 2.3 的独立夹具；job 统计需要 2.2 的 Flight 侧诊断计数器。在这些证据产生之前，四个字段继续保持 `NOT_RUN`。
+测试：`E:\Flight\Flight\tests\control\test_m6_main.c`，构建 `tests\control\run_host_tests.ps1`，
+Flight 分支 `test/fmat-0012-m6-controller`（commit `1d5b234`）。
+
+链接的真实单元：`mpc.c`、`control_reference.c`、`position_control.c`、`controller.c`、
+`attitude_math.c`、`control_allocation.c`，加 OSQP `generated/src/*.c` 与 `quad_workspace.c`
+（`-DFLIGHT_HOST_TEST` 不需要，M6 未使用该开关）。
+
+```
+FMAT-0012 M6 outer-loop host test
+  accepted accel = [0.0464 -0.0000 0.0000]
+M6 checks=13 failures=0
+```
+
+| 用例 | 结果 |
+|---|---|
+| M6-01 合法参考在模型路径内求解 | PASS（`STATUS_OK`，`SOLVED`，`prim_res=7.45e-9`，`dual_res=7.46e-4 < 1e-3`） |
+| M6-02 QP 维度合同 | PASS（`n=15`、`m=190`、`P nnz=45`、`A nnz=702`，从组装后的 `quad_solver.work->data` 读出） |
+| M6-03 候选解边界与推力球 | PASS（接受解在模型输入边界内；`A·x` 与推力球由 `mpc_solve` 内部独立复核，失败即 `OUT_OF_RANGE`） |
+| M6-04 预览窗口过期 | PASS（超出 480 ms 预览horizon → `STALE_DATA`） |
+| M6-05 非有限导航 | PASS（`INVALID_ARGUMENT`） |
+| M6-06 矛盾边界 | PASS（`OUT_OF_RANGE`） |
+| M6-07 包线超域 | PASS（`MODEL_OUT_OF_DOMAIN`） |
+
+调参过程记录：初版用合成权重（q=10/1、r=0.1、s=1）时 `mpc_solve` 返回 `NUMERIC_ERROR`，
+实测 `prim_res=2.8e-3`、`dual_res=5.8e-3`，超出实现内部的 1e-3 严格门限——这本身说明严格校验
+确实在起作用。改用仓库真实调参（`config/SIM_ONLY/QUAD_X4/controller_tuning.yaml` 的
+q=[8,8,12,3,3,4]、r=[0.8,0.8,1]、s=[0.2,0.2,0.25]）并把目标压到 0.1 m 后收敛正常。
+
+`verify_osqp_gate.m` 现在调用该套件，`osqp_mex_report.json` 的
+`qp_assembly_in_model` 与 `strict_validation_in_model` 由 `NOT_RUN` 变为 **PASS**，并附
+`m6_host_checks=13`、`m6_host_failures=0`、`m6_host_log`、`m6_host_reason`。
+
+## 4. 仍未闭合的项
+
+`complete_M6_time_context_guard` 需要驱动 `control_backend_outer_update()`（M6-09…M6-12），
+`closed_loop_rate_step` 需要 2.3 的独立夹具，job 统计需要 2.2 的 Flight 侧状态分桶计数器。
+在这三项证据产生之前，它们继续保持 `NOT_RUN`。
+
+另外，本轮的外部件独立残差复算尚未接入：`quad_solver.work->data` 的 `l/u` 是
+`OSQPVectorf`，直接取址会崩，需要改用 `OSQPVectorf_data`/`OSQPMatrix_get_csc` 的正规取值路径。
+当前 M6-03 依据的是 `mpc_solve` 内部的独立复核（`A·x` 对未缩放边界 + 推力球），
+该复核是真实代码路径，但不是测试侧的第二次独立计算。
