@@ -1,4 +1,4 @@
-# 下一阶段交付清单（截至 RUN_ID `20261110T170102013Z_c2b04c6`）
+# 下一阶段交付清单（截至 RUN_ID `20261110T171130944Z_6d14740`）
 
 本文件汇总本轮的实际产出、证据位置与未闭合项。所有数字均来自同一轮 `run_component_checks`，不是多轮拼接。
 
@@ -12,18 +12,18 @@
 
 | 项目 | 值 |
 |---|---|
-| RUN_ID | `20261110T170102013Z_c2b04c6` |
-| ZIP | `work/validation/archives/20261110T170102013Z_c2b04c6.zip`（46 个证据文件） |
-| ZIP SHA-256 | `f53aa6a1001b40b2e92efabab37fc0e8f49e3742b57447a07b3a4b1f8a239c5b` |
+| RUN_ID | `20261110T171130944Z_6d14740` |
+| ZIP | `work/validation/archives/20261110T171130944Z_6d14740.zip`（46 个证据文件） |
+| ZIP SHA-256 | `9343235cee0654854a5bb598696f3bf8fddacfa40163cd20bade8ea3915b7f4e` |
 | `component_status` | **FAIL**（18 PASS、1 PARTIAL、1 FAIL；FAIL 只有 `m6_jobs`） |
-| source 指纹（磁盘） | `68fc81d080685d4bf66ae89b799a9891ff6b89976b5f137290a493b1bb7c8631` |
-| source 指纹（committed） | `5e1bfd45ee4d2f0b46d0e0e32a6cfb9f3cf92645d5a650694ecbb5af3a22edc0` |
-| artifact 指纹 | `ad3f90db2a04b2d2b304b02b13a84359c8130ed6dd8ee4c7b2054cc904a0802a` |
-| `source_clean` | true（Flight_Matalab `c2b04c6`，manifest 的 before/after commit 与之一致） |
-| Flight 上游 | `80bca5e`（分支 `test/fmat-0012-m6-controller`） |
+| source 指纹（磁盘） | `faff114bc8e5e3e882728b9c5e04491f9a332cdd146c1bcf4f9c2902102ff11a` |
+| source 指纹（committed） | `33af2bd60d96c183c7849d9aa5361f37ccf64beb0de8d115c8d83e1bd18e075d` |
+| artifact 指纹 | `7af8c417420c15d79e359c7a29d5cc72e580a2e4acb698c2a13fd113b7a6a1bd` |
+| `source_clean` | true（Flight_Matalab `6d14740`，manifest 的 before/after commit 与之一致） |
+| Flight 上游 | `bef9022`（分支 `test/fmat-0012-m6-controller`） |
 | 生成文件分类 | `pre_existing_local_change_modified_by_run` 5、`pre_existing_local_change` 4、`commit_candidate` 1、`excluded_from_source` 13 |
 | PR 状态 | Flight_Matalab#1 Draft；Flight#3 Draft；Flight#4 Draft；`main` 未改动 |
-| 已被取代的归档 | `20261110T162048653Z_61a90f6`（M6 诊断首轮）、`20261110T165750883Z_c2b04c6`（M7 首轮，运行前文档未提交，`source_clean=false`）；两者均保留不删 |
+| 已被取代的归档 | `…1616`/`…1701`（M6 诊断与 M7 首轮）、`20261110T165750883Z_c2b04c6`（M7 首轮，运行前文档未提交，`source_clean=false`）；全部保留不删 |
 
 ## 2. 本轮实际结果
 
@@ -154,7 +154,14 @@ P-10 整体仍为 `PARTIAL`：物理 TIM2 capture ISR、UM982 UART/DMA、`sensor
 1. **M6 地面段与空中段分离（P0，阻断 #12）**：在 `LANDED` 期间不得让 MPC 快照改变离地判定（例如地面段不采用快照，或采用但把净加速度限幅到不产生升力）。第 2.1 节已证明：不解决这一项，任何提高接受率的修复都会以 `reason=5` 失败。这是需要控制层确认的设计决策，**需要用户决策**。
 2. **M6 快照到期链（P0）**：把 `actuator_capability/status` 的 5 ms 消息 TTL 从计划有效期里移除。计划不消费执行器遥测（两项都不进 QP），5 ms 是消息新鲜度契约；`eps_rel` 修复之前的实验已证明在既有场景下无害。第 1 项完成前不得单独启用。
 3. **M6 门限与求解器一致性（P0）**：1e-3 门限保留，OSQP 改为绝对终止（`eps_rel=0` 或重新生成工作区）。与前两项一起启用并重新验收。
-4. **M7 Ground Stop（已完成，遗留项）**：执行器侧事务与回执已完成（第 2.2 节）。剩余：FMS 侧签发证书的触发逻辑（何时在 LANDED/DISARMING 下签发、与 LandDetector/Mission 的时序约束）尚未实现，属 Issue #13 的后续范围，不得把执行器侧 PASS 当作端到端停止功能完成。
+4. **M7 Ground Stop（执行器侧已完成，FMS 侧待接）**：执行器侧事务与回执已完成（第 2.2 节）。剩余是 FMS 签发证书，按"发布 → 等待零回执 → 才 DISARMED"实现，不能跳过中间态：
+
+   - `middleware/model/fms/quad_x4/flight_state_machine/fms_internal.h`：`FmsInputs` 增加 `const ActuatorCommitReceipt *receipt` 与 `receipt_ok`；`FmsOutput` 增加 `GroundStopCertificate ground_stop`；`FmsPermit` 增加 `ground_stop_pending` 与缓存的证书。
+   - `actuation_permit.c` 的 `fms_permit_ground_disarm()`：改为"先发布证书并进入携带 DISARMING 的中间态"，只有当 `receipt->result_code == ACTUATOR_RECEIPT_ZERO_TARGET_APPLIED` 且回执新鲜时才执行现有的 revoke/DISARMED 主体。
+   - `fms.c:1269` 附近（`fms_permit_fill` 旁）增加 `fms_ground_stop_fill()`，发布路径与 Permit 一致。
+   - 运行时：Mission 把证书放进 bundle，执行器 owner 在帧边界前调用 `actuator_guard_ground_stop()`；执行器回执需沿相反方向进入 `FmsInputs`。
+   - 两个已知陷阱：(a) `ARM_STATE` 是状态帧/ABI 的一部分，新增中间态要同步 `fmt_flight_runtime` 的状态列与验收文档；(b) 执行器的 ground-stop latch 只能由 `actuator_init()` 清除，重新解锁路径必须先确认这一点，否则第二次解锁将无输出。
+   - 完成前 Issue #13 不得关闭：执行器侧 PASS 只证明"给定证书能安全停"，不证明"FMS 会签发证书"。
 5. **P-10b（P1，Issue #14）**：真实 UART/DMA、PPS capture、`sensor_gnss_poll` 端到端；区分 Host 注入证据与物理 TIM2/板级证据。
 6. **覆盖率口径（P2）**：`time_weighted_coverage` 分母是否排除非轨迹模式时段，需按 Issue #12 口径确认。
 
