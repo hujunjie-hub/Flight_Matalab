@@ -290,6 +290,10 @@ if ~(isequaln(dataStatus(:,navCols),extStatus(:,navCols)) && isequaln(dataMotors
         fprintf('  motors first differ row=%d t=%.4f s data=[%s] ext=[%s]\n', motorRow, ...
             s(motorRow,1)*1e-6, num2str(dataMotors(motorRow,:)), num2str(extMotors(motorRow,:)));
     end
+    fprintf('  alignment: ext(2:end)==data(1:end-1) -> %d ; ext(1:end-1)==data(2:end) -> %d\n', ...
+        isequaln(extStatus(2:end,navCols),dataStatus(1:end-1,navCols)), ...
+        isequaln(extStatus(1:end-1,navCols),dataStatus(2:end,navCols)));
+    save(fullfile(root,'work','validation','replay_compare.mat'),'dataStatus','extStatus','s','-v7');
     assert(false,'Flight:ExternalReplay','External navigation replay diverged from the recorded flight.');
 end
 assert(all(extStatus(:,24)==0),'Flight:ExternalSIL','Flight host fixture checks failed in ExtINS.');
