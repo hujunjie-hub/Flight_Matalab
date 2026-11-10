@@ -763,6 +763,10 @@ static void write_m6_job_stats(void)
             "    \"backup_envelope_id\": %u, \"backup_seed_position\": %u,\n"
             "    \"backup_seed_velocity\": %u,\n"
             "    \"limit_rejected\": %u, \"bounds_rejected\": %u,\n"
+            "    \"diff_samples\": %llu,\n"
+            "    \"diff_lo\": [%.9g, %.9g, %.9g],\n"
+            "    \"diff_hi\": [%.9g, %.9g, %.9g],\n"
+            "    \"diff_max_abs\": [%.9g, %.9g, %.9g],\n"
             "    \"life_bucket_origin_us\": %d, \"life_bucket_us\": %d,\n"
             "    \"life_min_us\": %d, \"life_max_us\": %d, \"life_samples\": %u,\n"
             "    \"life_hist\": [%u",
@@ -792,6 +796,13 @@ static void write_m6_job_stats(void)
             consumer.backup_model, consumer.backup_envelope_id,
             consumer.backup_seed_position, consumer.backup_seed_velocity,
             consumer.limit_rejected, consumer.bounds_rejected,
+            (unsigned long long)consumer.diff_samples,
+            (double)consumer.diff_lo[0], (double)consumer.diff_lo[1],
+            (double)consumer.diff_lo[2],
+            (double)consumer.diff_hi[0], (double)consumer.diff_hi[1],
+            (double)consumer.diff_hi[2],
+            (double)consumer.diff_max_abs[0], (double)consumer.diff_max_abs[1],
+            (double)consumer.diff_max_abs[2],
             (int)MPC_LIFE_ORIGIN_US, (int)MPC_LIFE_BUCKET_US,
             (int)consumer.life_min_us, (int)consumer.life_max_us,
             consumer.life_total,
