@@ -43,20 +43,51 @@ static uint32_t origin_poll_last_sequence, origin_poll_last_next_id;
 static uint32_t sensor_turn_count, mission_turn_count, origin_wake_count, candidate_observed_count;
 static uint32_t candidate_last_sequence, candidate_last_next_id;
 static uint64_t candidate_last_sample_us, candidate_last_valid_until_us, candidate_last_age_us;
+static uint32_t mil_gnss_gate_released, mil_gnss_gate_wait_steps;
+static uint32_t mil_gnss_first_fix_sequence;
+static uint64_t mil_gnss_gate_ready_time_us, mil_gnss_first_fix_sample_us;
+static uint32_t gnss_push_not_ready_count, gnss_push_not_permitted_count, gnss_push_other_failures;
+static uint32_t candidate_first_sequence;
+static uint64_t candidate_first_sample_us, candidate_first_age_us;
 
+static int external_mode(void);
+
+Status __real_estimator_init(const ProductEstimatorConfig *);
 Status __real_estimator_push_imu(const ImuSample *);
 Status __real_estimator_update(uint64_t);
 Status __real_estimator_get_snapshot(NavigationSnapshot *);
 Status __real_estimator_get_capability(NavigationCapability *);
+Status __real_estimator_get_origin(NavigationOriginSnapshot *);
 Status __real_ins_get_pending_origin(ContractHeader *, uint32_t *);
 Status __real_estimator_push_measurement(const SensorMeasurement *);
 Status __real_fms_authorize_origin_reset(const ContractHeader *, uint32_t, EstimatorResetRequest *);
 Status __real_estimator_reset(const EstimatorResetRequest *);
 
+Status __wrap_estimator_init(const ProductEstimatorConfig *config)
+{
+    if (!config)
+        return __real_estimator_init(config);
+    ProductEstimatorConfig mil_config = *config;
+    /* Exercise the real late-first-fix/FMS Origin Reset path only in MIL.
+     * DataSIM and ExtINS retain the complete anchored Host SIL bench origin. */
+    if (mode_active == FMT_MIL_SIM)
+        mil_config.payload.initial_origin_valid_mask = 1u;
+    return __real_estimator_init(&mil_config);
+}
+
 Status __wrap_ins_get_pending_origin(ContractHeader *candidate, uint32_t *next_origin_id)
 {
     ++origin_poll_attempts;
-    Status result = __real_ins_get_pending_origin(candidate, next_origin_id);
+    Status result;
+    if (external_mode()) {
+        if (candidate)
+            memset(candidate, 0, sizeof(*candidate));
+        if (next_origin_id)
+            *next_origin_id = 0u;
+        result = STATUS_NOT_READY;
+    } else {
+        result = __real_ins_get_pending_origin(candidate, next_origin_id);
+    }
     origin_poll_last_status = (int)result;
     if (result == STATUS_OK)
         ++origin_poll_successes;
@@ -75,6 +106,12 @@ Status __wrap_estimator_push_measurement(const SensorMeasurement *measurement)
         gnss_push_last_status = (int)result;
         if (result == STATUS_OK)
             ++gnss_push_successes;
+        else if (result == STATUS_NOT_READY)
+            ++gnss_push_not_ready_count;
+        else if (result == STATUS_NOT_PERMITTED)
+            ++gnss_push_not_permitted_count;
+        else
+            ++gnss_push_other_failures;
     }
     return result;
 }
@@ -135,15 +172,6 @@ Status __wrap_estimator_get_capability(NavigationCapability *out)
         return __real_estimator_get_capability(out);
     *out = external_frame.capability;
     return STATUS_OK;
-}
-
-Status __wrap_ins_get_pending_origin(ContractHeader *candidate, uint32_t *next)
-{
-    if (!external_mode())
-        return __real_ins_get_pending_origin(candidate, next);
-    memset(candidate, 0, sizeof(*candidate));
-    *next = 0;
-    return STATUS_NOT_READY;
 }
 
 static void inject_imu(const double *s, unsigned sequence)
@@ -368,6 +396,10 @@ static int inject_simulated_gnss(const FmtSensorSimEvent *event, const double *m
         return -1;
     }
     ++gnss_submit_successes;
+    if (mode_active == FMT_MIL_SIM && mil_gnss_first_fix_sequence == 0u) {
+        mil_gnss_first_fix_sequence = event->sequence;
+        mil_gnss_first_fix_sample_us = event->sample_us;
+    }
     return 0;
 }
 
@@ -377,6 +409,22 @@ static int feed_simulated_sensor_events(const double *sensor_frame,
                                         uint64_t now_us)
 {
     FmtSensorSimEvent due[4];
+    double gated_sensor_frame[FMT_SENSOR_WIDTH];
+    memcpy(gated_sensor_frame, sensor_frame, sizeof(gated_sensor_frame));
+    if (mode_active == FMT_MIL_SIM && !mil_gnss_gate_released) {
+        NavigationSnapshot snapshot = {0};
+        Status nav_status = __real_estimator_get_snapshot(&snapshot);
+        if (nav_status == STATUS_OK &&
+            (snapshot.core.valid_mask & NAV_VALID_ATTITUDE) != 0u &&
+            (snapshot.core.valid_mask & NAV_VALID_HORIZONTAL_POSITION) == 0u) {
+            mil_gnss_gate_released = 1u;
+            mil_gnss_gate_ready_time_us = now_us;
+        } else {
+            const unsigned mask = (unsigned)gated_sensor_frame[FMT_SENSOR_VALID];
+            gated_sensor_frame[FMT_SENSOR_VALID] = (double)(mask & ~FMT_GNSS_VALID);
+            ++mil_gnss_gate_wait_steps;
+        }
+    }
     if (!valid_group(model_parameters, FMT_SENSOR_MODEL_PARAMETER_COUNT)) {
         ++failures;
         return -1;
@@ -399,7 +447,7 @@ static int feed_simulated_sensor_events(const double *sensor_frame,
         return -1;
     }
 
-    if (fmt_sensor_sim_step_offset(&sensor_simulation, sensor_frame, now_us,
+    if (fmt_sensor_sim_step_offset(&sensor_simulation, gated_sensor_frame, now_us,
                                    FMT_SENSOR_SIM_FIXED_STEP_US, due) != 0) {
         ++failures;
         return -1;
@@ -465,6 +513,12 @@ __declspec(dllexport) int fmt_flight_start(int mode)
     origin_auth_last_status = origin_reset_last_status = 0;
     origin_reset_last_type = 0u;
     origin_reset_last_origin_id = 0u;
+    mil_gnss_gate_released = mil_gnss_gate_wait_steps = 0u;
+    mil_gnss_first_fix_sequence = 0u;
+    mil_gnss_gate_ready_time_us = mil_gnss_first_fix_sample_us = 0u;
+    gnss_push_not_ready_count = gnss_push_not_permitted_count = gnss_push_other_failures = 0u;
+    candidate_first_sequence = 0u;
+    candidate_first_sample_us = candidate_first_age_us = 0u;
     gnss_submit_attempts = gnss_submit_successes = 0u;
     gnss_submit_last_status = 0;
     gnss_push_attempts = gnss_push_successes = 0u;
@@ -547,8 +601,14 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
             candidate_last_valid_until_us = candidate.valid_until_us;
             candidate_last_age_us = candidate.timestamp_sample_us && test_clock.monotonic_us >= candidate.timestamp_sample_us ?
                 test_clock.monotonic_us - candidate.timestamp_sample_us : 0u;
-            if (next_origin != 0u && candidate.sequence != 0u)
+            if (next_origin != 0u && candidate.sequence != 0u) {
                 ++candidate_observed_count;
+                if (candidate_first_sequence == 0u) {
+                    candidate_first_sequence = candidate.sequence;
+                    candidate_first_sample_us = candidate.timestamp_sample_us;
+                    candidate_first_age_us = candidate_last_age_us;
+                }
+            }
             if (next_origin == 0u) {
                 last_origin_candidate_sequence = 0u;
                 last_origin_candidate_sample_us = 0u;
@@ -604,6 +664,8 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
     for (unsigned i = 0; i < 4; ++i)
         force[i] = permitted ? runtime_data.receipt.committed_demand.motor_thrust_n[i] : 0.0;
     const NavStateCore *nav = &runtime_data.nav.core;
+    NavigationOriginSnapshot origin_snapshot = {0};
+    Status origin_snapshot_status = estimator_get_origin(&origin_snapshot);
     const double values[FMT_STATUS_WIDTH] = {
         test_clock.monotonic_us, runtime_data.prearm.state, runtime_data.fms.arm_state,
         runtime_data.fms.flight_mode, runtime_data.fms.failsafe_level,
@@ -648,7 +710,21 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
         candidate_last_sample_us,
         candidate_last_valid_until_us,
         candidate_last_next_id,
-        candidate_last_age_us
+        candidate_last_age_us,
+        mil_gnss_gate_released,
+        mil_gnss_gate_ready_time_us,
+        mil_gnss_gate_wait_steps,
+        mil_gnss_first_fix_sequence,
+        mil_gnss_first_fix_sample_us,
+        gnss_push_not_ready_count,
+        gnss_push_not_permitted_count,
+        gnss_push_other_failures,
+        origin_snapshot_status,
+        origin_snapshot.valid_mask,
+        origin_snapshot.origin_id,
+        candidate_first_sequence,
+        candidate_first_sample_us,
+        candidate_first_age_us
     };
     memcpy(status, values, sizeof(values));
     NavFrame published = {0};
