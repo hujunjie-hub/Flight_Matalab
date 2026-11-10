@@ -652,6 +652,10 @@ typedef struct { uint32_t jobs, solved, rejected; uint64_t covered_us;
     uint32_t last_eval_age_us, max_eval_age_us;
     uint64_t last_now_us, last_control_time_us;
     uint32_t worker_ticks, worker_skips, entry_calls;
+    uint32_t rejected_numeric, rejected_range, rejected_stale, rejected_domain;
+    uint32_t solver_inaccurate, solver_max_iter, solver_infeasible, solver_deadline;
+    int32_t last_solver_status;
+    uint32_t max_prim_res_x1e6, max_dual_res_x1e6;
     uint64_t last_worker_us; } MpcRunStats;
 void mpc_get_run_stats(MpcRunStats *out);
 
@@ -667,7 +671,7 @@ static void write_m6_job_stats(void)
             "  \"covered_us\": %llu,\n  \"blocked_uninitialized\": %u,\n"
             "  \"blocked_validation\": %u,\n  \"blocked_mode\": %u,\n"
             "  \"blocked_clock\": %u,\n  \"blocked_stale\": %u,\n"
-            "  \"blocked_throttle\": %u,\n  \"blocked_lock\": %u,\n  \"last_validation_status\": %d,\n  \"last_eval_age_us\": %u,\n  \"max_eval_age_us\": %u,\n  \"last_now_us\": %llu,\n  \"last_control_time_us\": %llu,\n  \"worker_ticks\": %u,\n  \"worker_skips\": %u,\n  \"entry_calls\": %u,\n  \"last_worker_us\": %llu,\n  \"step_calls\": %u,\n  \"last_step_us\": %llu,\n  \"run_index\": %u,\n  \"elapsed_ticks\": %llu\n}\n",
+            "  \"blocked_throttle\": %u,\n  \"blocked_lock\": %u,\n  \"last_validation_status\": %d,\n  \"last_eval_age_us\": %u,\n  \"max_eval_age_us\": %u,\n  \"last_now_us\": %llu,\n  \"last_control_time_us\": %llu,\n  \"worker_ticks\": %u,\n  \"worker_skips\": %u,\n  \"entry_calls\": %u,\n  \"last_worker_us\": %llu,\n  \"step_calls\": %u,\n  \"last_step_us\": %llu,\n  \"run_index\": %u,\n  \"elapsed_ticks\": %llu,\n  \"rejected_numeric\": %u,\n  \"rejected_range\": %u,\n  \"rejected_stale\": %u,\n  \"rejected_domain\": %u,\n  \"solver_inaccurate\": %u,\n  \"solver_max_iter\": %u,\n  \"solver_infeasible\": %u,\n  \"solver_deadline\": %u,\n  \"last_solver_status\": %d,\n  \"max_prim_res_x1e6\": %u,\n  \"max_dual_res_x1e6\": %u\n}\n",
             stats.jobs, stats.solved, stats.rejected,
             (unsigned long long)stats.covered_us,
             stats.blocked_uninitialized, stats.blocked_validation,
@@ -678,7 +682,11 @@ static void write_m6_job_stats(void)
             stats.worker_ticks, stats.worker_skips, stats.entry_calls,
             (unsigned long long)stats.last_worker_us, step_calls,
             (unsigned long long)last_step_us, run_index,
-            (unsigned long long)elapsed_ticks);
+            (unsigned long long)elapsed_ticks,
+            stats.rejected_numeric, stats.rejected_range, stats.rejected_stale,
+            stats.rejected_domain, stats.solver_inaccurate, stats.solver_max_iter,
+            stats.solver_infeasible, stats.solver_deadline, (int)stats.last_solver_status,
+            stats.max_prim_res_x1e6, stats.max_dual_res_x1e6);
     fclose(file);
     {
         char per_run[64];
