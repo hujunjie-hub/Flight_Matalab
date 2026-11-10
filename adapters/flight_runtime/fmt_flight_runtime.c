@@ -33,14 +33,51 @@ static uint32_t origin_reset_attempts, origin_reset_successes;
 static int origin_auth_last_status, origin_reset_last_status;
 static uint16_t origin_reset_last_type;
 static uint32_t origin_reset_last_origin_id;
+static uint32_t gnss_submit_attempts, gnss_submit_successes;
+static int gnss_submit_last_status;
+static uint32_t gnss_push_attempts, gnss_push_successes;
+static int gnss_push_last_status;
+static uint32_t origin_poll_attempts, origin_poll_successes;
+static int origin_poll_last_status;
+static uint32_t origin_poll_last_sequence, origin_poll_last_next_id;
+static uint32_t sensor_turn_count, mission_turn_count, origin_wake_count, candidate_observed_count;
+static uint32_t candidate_last_sequence, candidate_last_next_id;
+static uint64_t candidate_last_sample_us, candidate_last_valid_until_us, candidate_last_age_us;
 
 Status __real_estimator_push_imu(const ImuSample *);
 Status __real_estimator_update(uint64_t);
 Status __real_estimator_get_snapshot(NavigationSnapshot *);
 Status __real_estimator_get_capability(NavigationCapability *);
 Status __real_ins_get_pending_origin(ContractHeader *, uint32_t *);
+Status __real_estimator_push_measurement(const SensorMeasurement *);
 Status __real_fms_authorize_origin_reset(const ContractHeader *, uint32_t, EstimatorResetRequest *);
 Status __real_estimator_reset(const EstimatorResetRequest *);
+
+Status __wrap_ins_get_pending_origin(ContractHeader *candidate, uint32_t *next_origin_id)
+{
+    ++origin_poll_attempts;
+    Status result = __real_ins_get_pending_origin(candidate, next_origin_id);
+    origin_poll_last_status = (int)result;
+    if (result == STATUS_OK)
+        ++origin_poll_successes;
+    if (candidate)
+        origin_poll_last_sequence = candidate->sequence;
+    if (next_origin_id)
+        origin_poll_last_next_id = *next_origin_id;
+    return result;
+}
+
+Status __wrap_estimator_push_measurement(const SensorMeasurement *measurement)
+{
+    Status result = __real_estimator_push_measurement(measurement);
+    if (measurement && measurement->measurement_kind == PRODUCT_MEASUREMENT_GNSS) {
+        ++gnss_push_attempts;
+        gnss_push_last_status = (int)result;
+        if (result == STATUS_OK)
+            ++gnss_push_successes;
+    }
+    return result;
+}
 
 Status __wrap_fms_authorize_origin_reset(const ContractHeader *candidate, uint32_t next_origin_id,
                                          EstimatorResetRequest *request)
@@ -323,10 +360,14 @@ static int inject_simulated_gnss(const FmtSensorSimEvent *event, const double *m
             model_parameters[FMT_MODEL_GNSS_VELOCITY_NOISE + axis] *
             model_parameters[FMT_MODEL_GNSS_VELOCITY_NOISE + axis]);
     }
-    if (runtime_submit_measurement(&measurement) != STATUS_OK) {
+    ++gnss_submit_attempts;
+    Status submit_status = runtime_submit_measurement(&measurement);
+    gnss_submit_last_status = (int)submit_status;
+    if (submit_status != STATUS_OK) {
         ++failures;
         return -1;
     }
+    ++gnss_submit_successes;
     return 0;
 }
 
@@ -424,6 +465,16 @@ __declspec(dllexport) int fmt_flight_start(int mode)
     origin_auth_last_status = origin_reset_last_status = 0;
     origin_reset_last_type = 0u;
     origin_reset_last_origin_id = 0u;
+    gnss_submit_attempts = gnss_submit_successes = 0u;
+    gnss_submit_last_status = 0;
+    gnss_push_attempts = gnss_push_successes = 0u;
+    gnss_push_last_status = 0;
+    origin_poll_attempts = origin_poll_successes = 0u;
+    origin_poll_last_status = 0;
+    origin_poll_last_sequence = origin_poll_last_next_id = 0u;
+    sensor_turn_count = mission_turn_count = origin_wake_count = candidate_observed_count = 0u;
+    candidate_last_sequence = candidate_last_next_id = 0u;
+    candidate_last_sample_us = candidate_last_valid_until_us = candidate_last_age_us = 0u;
     memset(&external_frame, 0, sizeof(external_frame));
     memset(&fmt_origin, 0, sizeof(fmt_origin));
     memset(&fmt_state, 0, sizeof(fmt_state));
@@ -471,6 +522,7 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
         if (mode_active != FMT_MIL_SIM)
             feed_sensors(s, ms);
         feed_contact(s[FMT_SENSOR_CONTACT]);
+        ++sensor_turn_count;
         turn(task_sensor_entry);
         /*
          * The real RTOS wakes Mission immediately when task_sensor publishes a
@@ -489,6 +541,14 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
                 next_origin = runtime_data.next_origin_id;
                 runtime_data_unlock();
             }
+            candidate_last_sequence = candidate.sequence;
+            candidate_last_next_id = next_origin;
+            candidate_last_sample_us = candidate.timestamp_sample_us;
+            candidate_last_valid_until_us = candidate.valid_until_us;
+            candidate_last_age_us = candidate.timestamp_sample_us && test_clock.monotonic_us >= candidate.timestamp_sample_us ?
+                test_clock.monotonic_us - candidate.timestamp_sample_us : 0u;
+            if (next_origin != 0u && candidate.sequence != 0u)
+                ++candidate_observed_count;
             if (next_origin == 0u) {
                 last_origin_candidate_sequence = 0u;
                 last_origin_candidate_sample_us = 0u;
@@ -497,9 +557,12 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
                         candidate.timestamp_sample_us != last_origin_candidate_sample_us)) {
                 last_origin_candidate_sequence = candidate.sequence;
                 last_origin_candidate_sample_us = candidate.timestamp_sample_us;
+                ++origin_wake_count;
+                ++mission_turn_count;
                 turn(task_mission_entry);
                 mission_turned = 1;
                 turn(task_sensor_entry);
+                ++sensor_turn_count;
             }
         }
         if (ms % TASK_COMMUNICATION_PERIOD_MS == 0u)
@@ -509,6 +572,7 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
     if (elapsed_ticks % 5u == 0u)
         (void)actuator_guard_frame_boundary(test_clock.monotonic_us);
     if (elapsed_ticks % (2u * TASK_MISSION_PERIOD_MS) == 0u && !mission_turned) {
+        ++mission_turn_count;
         turn(task_mission_entry);
         mission_turned = 1;
     }
@@ -564,7 +628,27 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
         origin_reset_successes,
         origin_reset_last_status,
         origin_reset_last_type,
-        origin_reset_last_origin_id
+        origin_reset_last_origin_id,
+        gnss_submit_attempts,
+        gnss_submit_successes,
+        gnss_submit_last_status,
+        gnss_push_attempts,
+        gnss_push_successes,
+        gnss_push_last_status,
+        origin_poll_attempts,
+        origin_poll_successes,
+        origin_poll_last_status,
+        origin_poll_last_sequence,
+        origin_poll_last_next_id,
+        sensor_turn_count,
+        mission_turn_count,
+        origin_wake_count,
+        candidate_observed_count,
+        candidate_last_sequence,
+        candidate_last_sample_us,
+        candidate_last_valid_until_us,
+        candidate_last_next_id,
+        candidate_last_age_us
     };
     memcpy(status, values, sizeof(values));
     NavFrame published = {0};
