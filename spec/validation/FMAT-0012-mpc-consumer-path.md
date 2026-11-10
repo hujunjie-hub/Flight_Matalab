@@ -219,6 +219,24 @@ MPC 与 PD 的差值在同一轮里被逐轴记录（1956 个采用点）：x �
 > 在爬升段，MPC 的 z 指令**比 PD 更向上**（少向下 0.06–0.16 m/s²）。如果位置环指令是原因，采用 MPC 应该让爬升**更快**，而实测是慢 10 倍。**因此位置环加速度指令被排除为原因**；剩下的差异必须在位置环之外（姿态/推力方向、竖直速度或高度参考、land 证据链）。
 >
 > 这也意味着：即使把 MPC 的代价权重或门限调到"完全正确"，只要"接受解"这一步本身改变了别的东西（例如 `backup=0` 导致 `control_level`/`health_state` 变化，或求解耗时改变了任务相位），爬升仍会失败。**修复的入口不在 MPC 的数学里**，这一点必须在动任何控制参数之前确认。
+>
+> **第 42 轮：把"未知通路"缩小到一个 4 条件谓词。** 逐条排除后剩下的候选只有 land 判定链：
+>
+> - `control_level` 在 `controller.c:590` 被写入，但**全仓库没有任何读取点**（`middleware/` 仅此一处）——排除；
+> - `health_state` 只被 FMS 的 prearm 第 10 项与 operator authority 读取，而 MIL 里 prearm 由 `verified_input_mask` 位 10 兜底通过——不作为首选；
+> - TAKEOFF 的 `reason=5` 来源已定位到 `fms.c:648`：`e->land.state != LANDED_STATE_LANDED`；
+> - `e->land.state` 由 `fms_safety.c:86-119` 决定，`LANDED` 需要 `ground_contact == CONTACT` **且** `ground_stable`，而 `ground_stable` 是四个数值条件的合取（`fms_safety.c:101-104`）：
+>
+>   | 条件 | 阈值 |
+>   |---|---|
+>   | 水平速度 `hypotf(v0,v1)` | ≤ **0.20 m/s** |
+>   | 竖直速度 `|vz|` | ≤ **0.15 m/s** |
+>   | 竖直加速度 `|a_z|`（`fms_motion_acceleration`） | ≤ **0.50 m/s²** |
+>   | 导航能力掩码与 `NAV_VALID_ACCELERATION` 等位 | 必须齐全 |
+>
+> 并且 LANDED 还必须保持 `landed_dwell_us`（2 s）。因此"MPC 是否让这四个条件之一失效"是一个可判定问题，而不是猜测。
+>
+> **下一项测量（唯一）**：在两种构建上以 50 Hz 记录 `(t, |v_h|, |vz|, |a_z|, ground_contact, land.state, stable_ms)`，覆盖 4.0–6.2 s，并直接标出第一个不满足的阈值。**在此之前不改任何固件、不调任何阈值、不要求用户决策。**
 
 本轮实验已整条回退（`eps_rel` 恢复 1e-3，MIL 回到 2.098 m / TAKEOFF ack=1），只保留诊断通道。
 
