@@ -64,14 +64,25 @@ out=run('FMT_M7_FrameQuantizer',{ones(2,4),zeros(2,4),.000001*ones(2,1)});
 assert(~any(out.yout{4}.Values.Data), ...
     'Flight:QuantizerLSB','Sub-LSB slew configuration was not rejected.');
 
+% Real M7 transaction evidence: run the Flight host suite against actuator_guard.c
+% rather than asserting the guard's behaviour from the MATLAB side.
+m7=run_m7_host_suite(root);
+assert(~strcmp(m7.permit_lifecycle,'FAIL') && ~strcmp(m7.frame_apply_500us,'FAIL'), ...
+    'Flight:M7Host','M7 actuator guard host suite failed (%d failures).',m7.failures);
+
 report=struct('scope','ACTUATION_NUMERICAL_COMPONENTS','status','PASS', ...
     'allocation_exact','PASS','roll_pitch_priority','PASS', ...
     'shared_roll_pitch_scale','PASS','current_residual_sign','PASS', ...
     'flight_effectiveness_matrix','PASS','generic_inverse_contract','PASS', ...
     'integer_force_inverse','PASS','quantized_slew','PASS', ...
     'dshot_checksum','PASS','invalid_physical_range','PASS', ...
-    'sub_lsb_slew_rejection','PASS','permit_lifecycle','NOT_RUN', ...
-    'frame_apply_500us','NOT_RUN','ground_stop_transaction','NOT_RUN');
+    'sub_lsb_slew_rejection','PASS', ...
+    'permit_lifecycle',m7.permit_lifecycle, ...
+    'frame_apply_500us',m7.frame_apply_500us, ...
+    'ground_stop_transaction','NOT_RUN', ...
+    'ground_stop_evidence','NOT_IMPLEMENTED_IN_FIRMWARE', ...
+    'm7_host_checks',m7.checks,'m7_host_failures',m7.failures, ...
+    'm7_host_log',m7.log,'m7_host_reason',m7.reason);
 fid=fopen(fullfile(root,'work','validation','actuation_report.json'),'w');
 cleanup=onCleanup(@()fclose(fid));
 fprintf(fid,'%s\n',jsonencode(report,PrettyPrint=true));
@@ -89,4 +100,36 @@ in=Simulink.SimulationInput(model);
 in=in.setExternalInput(ds);
 in=in.setModelParameter('StopTime',num2str(t(end),17),'FixedStep','0.0005');
 out=sim(in);
+end
+
+function result=run_m7_host_suite(root)
+%RUN_M7_HOST_SUITE Compile and run the Flight M7 actuator guard host test.
+result=struct('permit_lifecycle','NOT_RUN','frame_apply_500us','NOT_RUN', ...
+    'checks',0,'failures',0,'log','','reason','');
+flightRoot=fullfile(fileparts(root),'Flight');
+script=fullfile(flightRoot,'tests','actuation','run_host_tests.ps1');
+if ~isfile(script)
+    result.reason='Flight actuation host suite not found';
+    return;
+end
+[status,message]=system(sprintf('pwsh -NoProfile -File "%s"',script));
+summaryFile=fullfile(flightRoot,'build','validation','m7','actuation_host_summary.json');
+if ~isfile(summaryFile)
+    result.reason=sprintf('no host summary (exit %d): %s',status,strtrim(message));
+    return;
+end
+summary=jsondecode(fileread(summaryFile));
+result.log=summary.log;
+result.checks=summary.checks;
+result.failures=summary.failures;
+switch summary.status
+    case 'PASS'
+        result.permit_lifecycle=summary.permit_lifecycle;
+        result.frame_apply_500us=summary.frame_apply_500us;
+    case 'FAIL'
+        result.permit_lifecycle='FAIL';
+        result.frame_apply_500us='FAIL';
+    otherwise
+        result.reason=sprintf('host suite status %s',summary.status);
+end
 end

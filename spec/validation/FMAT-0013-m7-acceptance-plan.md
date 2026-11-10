@@ -2,7 +2,7 @@
 
 - 对应 Issue：Flight_Matalab#13（`[FMAT-0013][S1][M7]`）
 - 分支：`optimize/sil-physical-parameter-alignment`
-- 状态：IN_PROGRESS（本文件记录审查结论与测试设计，尚未产出 PASS 证据）
+- 状态：PARTIAL（permit_lifecycle 与 frame_apply_500us 已实测 PASS；ground_stop_transaction 因固件缺功能保持 NOT_RUN）
 
 ## 1. 审查范围（真实实现，不新建模拟逻辑）
 
@@ -72,3 +72,28 @@ Issue #13 第 4 条要求"只允许 LANDED/DISARMING 下的有效 `GroundStopCer
 构建：`tests/actuation/run_host_tests.ps1`（照 `tests/health/run_host_tests.ps1` 的形式），加 `-DFLIGHT_HOST_TEST` 以启用 `SIM_CONTROLLED_STOP` 策略；结果落 `build/validation/m7/actuation_host_summary.json`。
 
 MATLAB 侧：`verify_actuation_components.m` 调用该脚本，把 `permit_lifecycle` 与 `frame_apply_500us` 设为 PASS（仅在实测通过时），`ground_stop_transaction` 保持 `NOT_RUN` 并在报告里附 `ground_stop_evidence = "NOT_IMPLEMENTED_IN_FIRMWARE"`。
+
+## 4. 实测结果（已实现）
+
+测试文件：`E:\Flight\Flight\tests\actuation\test_m7_main.c`，构建脚本 `tests\actuation\run_host_tests.ps1`，
+Flight 分支 `test/fmat-0013-m7-actuation`（commit `5eb9e4e`），Draft PR hujunjie-hub/Flight#4。
+
+```
+FMAT-0013 M7 actuator guard host test
+M7-01..04 frame boundary and apply separation
+M7-05..07 permit watermark, revocation and ordering
+M7-08..10 boot/time epoch binding, permit expiry, stale demand
+M7 checks=38 failures=0
+```
+
+| 项 | 结果 |
+|---|---|
+| `permit_lifecycle` | **PASS**（38 checks / 0 failures） |
+| `frame_apply_500us` | **PASS** |
+| `ground_stop_transaction` | `NOT_RUN`（固件无此功能） |
+
+**反向验证**：把 `actuator_update_permit` 里的水位判据改为恒假后重建，恰好 M7-05 与 M7-06 两条失败（2/38），其余 36 条仍通过——说明用例咬住的是实现规则，不是夹具。还原后重新 38/38。
+
+MATLAB 集成：`verify_actuation_components.m` 通过 `run_m7_host_suite` 调用该脚本并解析
+`build/validation/m7/actuation_host_summary.json`；`actuation_report.json` 新增
+`m7_host_checks`、`m7_host_failures`、`m7_host_log`、`m7_host_reason`、`ground_stop_evidence` 字段。
