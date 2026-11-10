@@ -49,10 +49,12 @@ run_component_checks('C:\STM32CubeCLT\mingw64\bin')
 | 入口 | `FMT_MILSIM` |
 | 时间网格 | 0～26 s，500 μs 固定步长 |
 | 命令 | 1=解锁，3=起飞至 2 m，4=降落，2=上锁 |
-| 命令行索引 | MATLAB 1-based 行索引 `[8000, 8200, 24000, 48000]` |
+| 命令行索引 | MATLAB 1-based 行索引 `[8400, 12000, 28000, 46000]`（4.2 s / 6.0 s / 14.0 s / 23.0 s） |
 | 预期任务 | 完成解锁、起飞、降落和上锁；不得在无有效提交许可时输出非零推力 |
 
 命令脉冲由代码生成，不依赖手工编辑的外部 CSV。验收时以当前分支 `fmt_default_input.m` 为准。
+
+命令时刻必须与两条地面证据对齐：ARM 只能在 PreArm READY 之后提交（约 3.25 s），TAKEOFF 必须在 LandDetector 宣告 LANDED 之后、且在该 LANDED 证据仍然成立期间提交（约 5.29 s～10 s）。旧时序 `[8000, 8200, …]` 在 ARM ACK（5.02 s）之前就发出 TAKEOFF（4.1 s），该脉冲被拒绝后再无重发，直到 12 s 的 LAND 脉冲，因此 TAKEOFF 永远落在 LANDED 窗口之外，`reason=5`（`land != LANDED`）。这不是可以靠放宽 FMS 判据解决的问题，而是验收场景自身的时序错误。
 
 **MIL 首次定位场景**：`FMT_MILSIM` 的 Host SIL 适配层仅对该入口把 INS 初始 origin mask 设为 `1`（仅保留 provisional local origin），并在 INS 首次发布 `NAV_VALID_ATTITUDE`、水平位置仍无效之前屏蔽 GNSS 事件。条件满足后才放行 GNSS。这样确定性地覆盖“INS 先完成静态对准、GNSS 后到、Sensor 产生 Origin Candidate、Mission/FMS 授权、INS 执行 ORIGIN_REBUILD”的真实调度链。该改动仅作用于 MATLAB Host SIL 测试夹具，不修改同级 Flight 固件。`FMT_DataSIM` 使用相同的 provisional origin、SensorModelParameters/SensorTimingParameters 和确定性事件队列，重放同一条晚到 GNSS 首次定位链；`FMT_ExtINS_DataSIM` 则消费录制的导航帧，不独立执行估计器 Origin Reset。被屏蔽的 GNSS 采样机会按事件队列规则记入 suppressed/sequence gap，不延长 GNSS TTL、不伪造 GNSS 数据。
 

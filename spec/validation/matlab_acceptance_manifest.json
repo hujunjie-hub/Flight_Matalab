@@ -38,29 +38,29 @@
         "step_us": 500
       },
       "command_rows_matlab_1_based": [
-        8000,
-        8200,
-        24000,
-        48000
+        8400,
+        12000,
+        28000,
+        46000
       ],
       "command_codes": [
         {
-          "row": 8000,
+          "row": 8400,
           "code": 1,
           "meaning": "DISARMED/LOCKED to unlock request"
         },
         {
-          "row": 8200,
+          "row": 12000,
           "code": 3,
           "meaning": "takeoff request, target height 2 m"
         },
         {
-          "row": 24000,
+          "row": 28000,
           "code": 4,
           "meaning": "land request"
         },
         {
-          "row": 48000,
+          "row": 46000,
           "code": 2,
           "meaning": "lock request"
         }

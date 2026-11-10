@@ -5,7 +5,10 @@ if strcmp(entry,'FMT_MILSIM')
     t = (0:0.0005:26)';
     commands = zeros(numel(t),2);
     % Each command is a one-tick pulse. Submit after the same upstream owner turns.
-    ticks = [8000 8200 24000 48000];
+    % ARM completes only after the 2 s ground-confirmation dwell has declared
+    % LANDED, and TAKEOFF must be accepted while that LANDED evidence still
+    % holds; the pulses are spaced so both preconditions are satisfied.
+    ticks = [8400 12000 28000 46000];
     commands(ticks,:) = [1 0; 3 2; 4 0; 2 0];
     ds = Simulink.SimulationData.Dataset;
     ds{1} = sample(t,commands);
