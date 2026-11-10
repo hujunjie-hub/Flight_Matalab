@@ -30,8 +30,18 @@ assert(solved+rejected==jobs,'Flight:M6Jobs', ...
 if jobs==0
     % The MIL scenario never entered the trajectory MPC path, so there is no
     % job set to judge. Report NOT_RUN rather than a fake 0 % success rate.
+    blocked=struct();
+    names={'blocked_uninitialized','blocked_validation','blocked_mode', ...
+        'blocked_clock','blocked_stale','blocked_throttle','blocked_lock'};
+    for k=1:numel(names)
+        if isfield(stats,names{k}), blocked.(names{k})=double(stats.(names{k})); end
+    end
+    if isfield(stats,'last_validation_status')
+        blocked.last_validation_status=double(stats.last_validation_status);
+    end
     report=struct('scope','M6_MPC_JOBS','status','NOT_RUN','jobs',0, ...
-        'reason','MIL scenario never entered the trajectory MPC path');
+        'blocked',blocked, ...
+        'reason','the 50 Hz MPC worker never reached mpc_solve(); see blocked counters');
     file=fullfile(root,'work','validation','m6_report.json');
     fid=fopen(file,'w'); cleanup=onCleanup(@()fclose(fid));
     fprintf(fid,'%s\n',jsonencode(report,PrettyPrint=true));

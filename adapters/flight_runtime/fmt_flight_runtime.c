@@ -640,7 +640,10 @@ __declspec(dllexport) int fmt_flight_start(int mode)
  * the job counts and covered time are written once at shutdown. The counters are
  * owned by the real MPC task; this function only serializes them. */
 /* The solver owns the accounting; the adapter only serializes it. */
-typedef struct { uint32_t jobs, solved, rejected; uint64_t covered_us; } MpcRunStats;
+typedef struct { uint32_t jobs, solved, rejected; uint64_t covered_us;
+    uint32_t blocked_uninitialized, blocked_validation, blocked_mode;
+    uint32_t blocked_clock, blocked_stale, blocked_throttle, blocked_lock;
+    int32_t last_validation_status; } MpcRunStats;
 void mpc_get_run_stats(MpcRunStats *out);
 
 static void write_m6_job_stats(void)
@@ -651,10 +654,16 @@ static void write_m6_job_stats(void)
     file = fopen("work/validation/m6_runtime_stats.json", "w");
     if (!file) return;
     fprintf(file,
-            "{\n  \"mpc_updates\": %u,\n  \"mpc_solved\": %u,\n"
-            "  \"mpc_rejected\": %u,\n  \"mpc_covered_us\": %llu\n}\n",
+            "{\n  \"jobs\": %u,\n  \"solved\": %u,\n  \"rejected\": %u,\n"
+            "  \"covered_us\": %llu,\n  \"blocked_uninitialized\": %u,\n"
+            "  \"blocked_validation\": %u,\n  \"blocked_mode\": %u,\n"
+            "  \"blocked_clock\": %u,\n  \"blocked_stale\": %u,\n"
+            "  \"blocked_throttle\": %u,\n  \"blocked_lock\": %u,\n  \"last_validation_status\": %d\n}\n",
             stats.jobs, stats.solved, stats.rejected,
-            (unsigned long long)stats.covered_us);
+            (unsigned long long)stats.covered_us,
+            stats.blocked_uninitialized, stats.blocked_validation,
+            stats.blocked_mode, stats.blocked_clock, stats.blocked_stale,
+            stats.blocked_throttle, stats.blocked_lock, (int)stats.last_validation_status);
     fclose(file);
 }
 
