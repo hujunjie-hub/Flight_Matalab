@@ -65,10 +65,16 @@
           "meaning": "lock request"
         }
       ],
-      "acceptance": "26 s MIL completes takeoff/landing/disarm; no nonzero thrust without valid commit.",
+      "acceptance": "26 s MIL completes FMS-authorized late-GNSS origin rebuild, takeoff/landing/disarm; no nonzero thrust without valid commit.",
+      "mil_origin_profile": {
+        "initial_origin_valid_mask": 1,
+        "complete_origin_valid_mask": 3,
+        "gnss_release_condition": "Release first GNSS measurement only after INS publishes NAV_VALID_ATTITUDE while horizontal position remains invalid; applies only to FMT_MILSIM.",
+        "other_entry_modes": "FMT_DataSIM and FMT_ExtINS_DataSIM retain the complete anchored Host SIL origin."
+      },
       "diagnostics": {
         "report": "work/validation/mil_diagnostics.json",
-        "status_width": 60,
+        "status_width": 74,
         "status_columns": {
           "prearm_failed_mask": 25,
           "prearm_primary_reason": 26,
@@ -109,6 +115,20 @@
           "candidate_last_valid_until_us": 58,
           "candidate_last_next_id": 59,
           "candidate_last_age_us": 60,
+          "mil_gnss_gate_released": 61,
+          "mil_gnss_gate_ready_time_us": 62,
+          "mil_gnss_gate_wait_steps": 63,
+          "mil_gnss_first_fix_sequence": 64,
+          "mil_gnss_first_fix_sample_us": 65,
+          "gnss_push_not_ready_count": 66,
+          "gnss_push_not_permitted_count": 67,
+          "gnss_push_other_failures": 68,
+          "origin_snapshot_status": 69,
+          "origin_valid_mask": 70,
+          "origin_id": 71,
+          "candidate_first_sequence": 72,
+          "candidate_first_sample_us": 73,
+          "candidate_first_age_us": 74,
           "permit_scope_control_active_flag": 2,
           "permit_flag_revoked": 4,
           "actuator_receipt_committed": 1
