@@ -644,7 +644,8 @@ typedef struct { uint32_t jobs, solved, rejected; uint64_t covered_us;
     uint32_t blocked_uninitialized, blocked_validation, blocked_mode;
     uint32_t blocked_clock, blocked_stale, blocked_throttle, blocked_lock;
     int32_t last_validation_status;
-    uint32_t last_eval_age_us, max_eval_age_us; } MpcRunStats;
+    uint32_t last_eval_age_us, max_eval_age_us;
+    uint64_t last_now_us, last_control_time_us; } MpcRunStats;
 void mpc_get_run_stats(MpcRunStats *out);
 
 static void write_m6_job_stats(void)
@@ -659,13 +660,14 @@ static void write_m6_job_stats(void)
             "  \"covered_us\": %llu,\n  \"blocked_uninitialized\": %u,\n"
             "  \"blocked_validation\": %u,\n  \"blocked_mode\": %u,\n"
             "  \"blocked_clock\": %u,\n  \"blocked_stale\": %u,\n"
-            "  \"blocked_throttle\": %u,\n  \"blocked_lock\": %u,\n  \"last_validation_status\": %d,\n  \"last_eval_age_us\": %u,\n  \"max_eval_age_us\": %u\n}\n",
+            "  \"blocked_throttle\": %u,\n  \"blocked_lock\": %u,\n  \"last_validation_status\": %d,\n  \"last_eval_age_us\": %u,\n  \"max_eval_age_us\": %u,\n  \"last_now_us\": %llu,\n  \"last_control_time_us\": %llu\n}\n",
             stats.jobs, stats.solved, stats.rejected,
             (unsigned long long)stats.covered_us,
             stats.blocked_uninitialized, stats.blocked_validation,
             stats.blocked_mode, stats.blocked_clock, stats.blocked_stale,
             stats.blocked_throttle, stats.blocked_lock, (int)stats.last_validation_status,
-            stats.last_eval_age_us, stats.max_eval_age_us);
+            stats.last_eval_age_us, stats.max_eval_age_us,
+            (unsigned long long)stats.last_now_us, (unsigned long long)stats.last_control_time_us);
     fclose(file);
 }
 
