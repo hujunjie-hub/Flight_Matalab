@@ -57,7 +57,6 @@ Status __real_estimator_push_imu(const ImuSample *);
 Status __real_estimator_update(uint64_t);
 Status __real_estimator_get_snapshot(NavigationSnapshot *);
 Status __real_estimator_get_capability(NavigationCapability *);
-Status __real_estimator_get_origin(NavigationOriginSnapshot *);
 Status __real_ins_get_pending_origin(ContractHeader *, uint32_t *);
 Status __real_estimator_push_measurement(const SensorMeasurement *);
 Status __real_fms_authorize_origin_reset(const ContractHeader *, uint32_t, EstimatorResetRequest *);
@@ -410,6 +409,10 @@ static int feed_simulated_sensor_events(const double *sensor_frame,
 {
     FmtSensorSimEvent due[4];
     double gated_sensor_frame[FMT_SENSOR_WIDTH];
+    if (!valid_group(sensor_frame, FMT_SENSOR_WIDTH) ||
+        !isfinite(sensor_frame[FMT_SENSOR_VALID]) || sensor_frame[FMT_SENSOR_VALID] < 0.0 ||
+        sensor_frame[FMT_SENSOR_VALID] > 15.0 || floor(sensor_frame[FMT_SENSOR_VALID]) != sensor_frame[FMT_SENSOR_VALID])
+        return -1;
     memcpy(gated_sensor_frame, sensor_frame, sizeof(gated_sensor_frame));
     if (mode_active == FMT_MIL_SIM && !mil_gnss_gate_released) {
         NavigationSnapshot snapshot = {0};
