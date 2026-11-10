@@ -6,6 +6,7 @@
 #include "sil_flight.c"
 #undef main
 #include "systime.h"
+#include "unicore_ascii/unicore_ascii.h"
 #include "fmt_flight_runtime.h"
 #include "fmt_sensor_simulation.h"
 #include "calibration/sensor_calibration.h"
@@ -18,6 +19,55 @@ static Status host_tick_source(uint64_t *tick64, uint32_t *time_epoch)
     *tick64 = test_clock.monotonic_us;
     *time_epoch = test_clock.time_epoch;
     return STATUS_OK;
+}
+
+/* FMAT-0014: feed the firmware time service with a real PPS edge and the UTC
+ * that the real UM982 RECTIMEA parser decodes from a recorded sentence. */
+static UnicoreAsciiParser p10b_parser;
+static UnicoreAsciiMessage p10b_message;
+static uint32_t p10b_sequence;
+static uint64_t p10b_last_us;
+static struct { uint32_t pps_ok, pps_reject, gnss_ok, frames; int last_pps, last_utc;
+                 uint32_t last_mapping; } p10b_stats;
+static const char p10b_rectime[] =
+    "#RECTIMEA,97,GPS,FINE,2190,365121000,0,0,18,12;VALID,3.580410506e-04,"
+    "0.000000000e+00,-18.00000000000,2021,12,30,5,25,3000,VALID*7e364e74\r\n";
+
+static void p10b_inject(void)
+{
+    PpsCaptureEvent edge;
+    GnssTimeObservation observation;
+    const char *cursor;
+    int decoded = 0;
+
+    if (test_clock.monotonic_us - p10b_last_us < 1000000u) return;
+    p10b_last_us = test_clock.monotonic_us;
+
+    memset(&edge, 0, sizeof(edge));
+    edge.capture_tick64 = test_clock.monotonic_us;
+    edge.edge_sequence = ++p10b_sequence;
+    edge.time_epoch = test_clock.time_epoch;
+    edge.capture_flags = 1u;
+    if (time_submit_pps(&edge) != STATUS_OK) {
+        p10b_stats.pps_reject++;
+        return;
+    }
+    p10b_stats.pps_ok++;
+
+    for (cursor = p10b_rectime; *cursor && !decoded; ++cursor)
+        decoded = unicore_ascii_feed(&p10b_parser, (uint8_t)*cursor, &p10b_message);
+    if (decoded != 1 || p10b_message.kind != UNICORE_ASCII_RECTIME) return;
+    p10b_stats.frames++;
+
+    memset(&observation, 0, sizeof(observation));
+    observation.utc_time_ns = p10b_message.utc_time_ns;
+    observation.paired_pps_tick64 = edge.capture_tick64;
+    observation.pps_edge_sequence = edge.edge_sequence;
+    observation.time_epoch = edge.time_epoch;
+    observation.receiver_accuracy_ns = p10b_message.receiver_accuracy_ns;
+    observation.time_scale = TIME_SCALE_UTC;
+    observation.validity_flags = GNSS_TIME_UTC_VALID | GNSS_TIME_PPS_PAIRED;
+    if (time_submit_gnss_time(&observation) == STATUS_OK) p10b_stats.gnss_ok++;
 }
 
 typedef struct {
@@ -705,7 +755,7 @@ static void write_m6_job_stats(void)
             "  \"covered_us\": %llu,\n  \"blocked_uninitialized\": %u,\n"
             "  \"blocked_validation\": %u,\n  \"blocked_mode\": %u,\n"
             "  \"blocked_clock\": %u,\n  \"blocked_stale\": %u,\n"
-            "  \"blocked_throttle\": %u,\n  \"blocked_lock\": %u,\n  \"last_validation_status\": %d,\n  \"last_eval_age_us\": %u,\n  \"max_eval_age_us\": %u,\n  \"last_now_us\": %llu,\n  \"last_control_time_us\": %llu,\n  \"worker_ticks\": %u,\n  \"worker_skips\": %u,\n  \"entry_calls\": %u,\n  \"last_worker_us\": %llu,\n  \"step_calls\": %u,\n  \"last_step_us\": %llu,\n  \"run_index\": %u,\n  \"elapsed_ticks\": %llu,\n  \"rejected_numeric\": %u,\n  \"rejected_range\": %u,\n  \"rejected_stale\": %u,\n  \"rejected_domain\": %u,\n  \"solver_inaccurate\": %u,\n  \"solver_max_iter\": %u,\n  \"solver_infeasible\": %u,\n  \"solver_deadline\": %u,\n  \"last_solver_status\": %d,\n  \"max_prim_res_x1e6\": %u,\n  \"max_dual_res_x1e6\": %u\n}\n",
+            "  \"blocked_throttle\": %u,\n  \"blocked_lock\": %u,\n  \"last_validation_status\": %d,\n  \"last_eval_age_us\": %u,\n  \"max_eval_age_us\": %u,\n  \"last_now_us\": %llu,\n  \"last_control_time_us\": %llu,\n  \"worker_ticks\": %u,\n  \"worker_skips\": %u,\n  \"entry_calls\": %u,\n  \"last_worker_us\": %llu,\n  \"step_calls\": %u,\n  \"last_step_us\": %llu,\n  \"run_index\": %u,\n  \"elapsed_ticks\": %llu,\n  \"rejected_numeric\": %u,\n  \"rejected_range\": %u,\n  \"rejected_stale\": %u,\n  \"rejected_domain\": %u,\n  \"solver_inaccurate\": %u,\n  \"solver_max_iter\": %u,\n  \"solver_infeasible\": %u,\n  \"solver_deadline\": %u,\n  \"last_solver_status\": %d,\n  \"max_prim_res_x1e6\": %u,\n  \"max_dual_res_x1e6\": %u,\n  \"p10b_pps_ok\": %u,\n  \"p10b_pps_reject\": %u,\n  \"p10b_rectime_frames\": %u,\n  \"p10b_gnss_ok\": %u\n}\n",
             stats.jobs, stats.solved, stats.rejected,
             (unsigned long long)stats.covered_us,
             stats.blocked_uninitialized, stats.blocked_validation,
@@ -720,7 +770,9 @@ static void write_m6_job_stats(void)
             stats.rejected_numeric, stats.rejected_range, stats.rejected_stale,
             stats.rejected_domain, stats.solver_inaccurate, stats.solver_max_iter,
             stats.solver_infeasible, stats.solver_deadline, (int)stats.last_solver_status,
-            stats.max_prim_res_x1e6, stats.max_dual_res_x1e6);
+            stats.max_prim_res_x1e6, stats.max_dual_res_x1e6,
+            p10b_stats.pps_ok, p10b_stats.pps_reject,
+            p10b_stats.frames, p10b_stats.gnss_ok);
     fclose(file);
     {
         char per_run[64];
@@ -762,6 +814,7 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
         return -1;
     ++elapsed_ticks;
     step_calls++;
+    p10b_inject();
     last_step_us = test_clock.monotonic_us;
     test_clock.monotonic_us += 500u;
     unsigned ms = elapsed_ticks / 2u;
