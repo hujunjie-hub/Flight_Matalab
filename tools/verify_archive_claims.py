@@ -45,9 +45,10 @@ def check_run(run):
     expect('manifest present', manifest is not None)
     if manifest is None:
         return results
+    before = manifest.get('git_state_before') or {}
     expect('manifest commit equals the pre-run snapshot',
-           manifest['project_commit'] == manifest['git_state_before']['commit'],
-           manifest['project_commit'][:7])
+           bool(before) and manifest.get('project_commit') == before.get('commit'),
+           str(manifest.get('project_commit', ''))[:7])
     expect('manifest records whether the source was clean',
            isinstance(manifest.get('source_clean'), bool),
            str(manifest.get('source_clean')))
@@ -180,7 +181,15 @@ def main():
 
     report = {'scope': 'ARCHIVED_RUN_CLAIMS', 'status': 'PASS', 'runs': []}
     for run in run_directories(args.run_id, args.all):
-        results = check_run(run)
+        try:
+            results = check_run(run)
+        except (KeyError, TypeError, ValueError) as problem:
+            # Archives written before schema 1.1 do not carry every field this
+            # check reads. Report that as an explicit result instead of crashing
+            # the whole sweep: a legacy archive is not evidence of a defect in
+            # the current run, but it also must not abort the audit.
+            results = [('archive can be checked by this schema', False,
+                        f'{type(problem).__name__}: {problem}')]
         failures = [name for name, ok, _ in results if not ok]
         report['runs'].append({
             'run_id': run.name,
