@@ -11,6 +11,7 @@
 #include "fmt_sensor_simulation.h"
 #include "calibration/sensor_calibration.h"
 #include "sample_normalization/sensor_sample.h"
+#include "mpc_diagnostics.h"
 
 /* The firmware time service derives monotonic time from this source. */
 static Status host_tick_source(uint64_t *tick64, uint32_t *time_epoch)
@@ -731,27 +732,20 @@ __declspec(dllexport) int fmt_flight_start(int mode)
 
 /* M6 acceptance evidence: the runtime only exposes the current solver status, so
  * the job counts and covered time are written once at shutdown. The counters are
- * owned by the real MPC task; this function only serializes them. */
-/* The solver owns the accounting; the adapter only serializes it. */
-typedef struct { uint32_t jobs, solved, rejected; uint64_t covered_us;
-    uint32_t blocked_uninitialized, blocked_validation, blocked_mode;
-    uint32_t blocked_clock, blocked_stale, blocked_throttle, blocked_lock;
-    int32_t last_validation_status;
-    uint32_t last_eval_age_us, max_eval_age_us;
-    uint64_t last_now_us, last_control_time_us;
-    uint32_t worker_ticks, worker_skips, entry_calls;
-    uint32_t rejected_numeric, rejected_range, rejected_stale, rejected_domain;
-    uint32_t solver_inaccurate, solver_max_iter, solver_infeasible, solver_deadline;
-    int32_t last_solver_status;
-    uint32_t max_prim_res_x1e6, max_dual_res_x1e6;
-    uint64_t last_worker_us; } MpcRunStats;
-void mpc_get_run_stats(MpcRunStats *out);
-
+ * owned by the real MPC task; this function only serializes them.
+ *
+ * MpcRunStats, MpcJobRecord and MpcConsumerStats come from the firmware's own
+ * mpc_diagnostics.h. This adapter used to keep a copy of the struct; the copy
+ * silently misreported every field after one side gained a member. */
 static void write_m6_job_stats(void)
 {
+    static MpcJobRecord chunk[64];
     MpcRunStats stats;
+    MpcConsumerStats consumer;
+    uint32_t index, copied, total = 0, first = 0;
     FILE *file;
     mpc_get_run_stats(&stats);
+    mpc_copy_consumer_stats(&consumer);
     file = fopen("work/validation/m6_runtime_stats.json", "w");
     if (!file) return;
     fprintf(file,
@@ -759,7 +753,19 @@ static void write_m6_job_stats(void)
             "  \"covered_us\": %llu,\n  \"blocked_uninitialized\": %u,\n"
             "  \"blocked_validation\": %u,\n  \"blocked_mode\": %u,\n"
             "  \"blocked_clock\": %u,\n  \"blocked_stale\": %u,\n"
-            "  \"blocked_throttle\": %u,\n  \"blocked_lock\": %u,\n  \"last_validation_status\": %d,\n  \"last_eval_age_us\": %u,\n  \"max_eval_age_us\": %u,\n  \"last_now_us\": %llu,\n  \"last_control_time_us\": %llu,\n  \"worker_ticks\": %u,\n  \"worker_skips\": %u,\n  \"entry_calls\": %u,\n  \"last_worker_us\": %llu,\n  \"step_calls\": %u,\n  \"last_step_us\": %llu,\n  \"run_index\": %u,\n  \"elapsed_ticks\": %llu,\n  \"rejected_numeric\": %u,\n  \"rejected_range\": %u,\n  \"rejected_stale\": %u,\n  \"rejected_domain\": %u,\n  \"solver_inaccurate\": %u,\n  \"solver_max_iter\": %u,\n  \"solver_infeasible\": %u,\n  \"solver_deadline\": %u,\n  \"last_solver_status\": %d,\n  \"max_prim_res_x1e6\": %u,\n  \"max_dual_res_x1e6\": %u,\n  \"p10b_pps_ok\": %u,\n  \"p10b_pps_reject\": %u,\n  \"p10b_rectime_frames\": %u,\n  \"p10b_gnss_ok\": %u\n}\n",
+            "  \"blocked_throttle\": %u,\n  \"blocked_lock\": %u,\n  \"last_validation_status\": %d,\n  \"last_eval_age_us\": %u,\n  \"max_eval_age_us\": %u,\n  \"last_now_us\": %llu,\n  \"last_control_time_us\": %llu,\n  \"worker_ticks\": %u,\n  \"worker_skips\": %u,\n  \"entry_calls\": %u,\n  \"last_worker_us\": %llu,\n  \"step_calls\": %u,\n  \"last_step_us\": %llu,\n  \"run_index\": %u,\n  \"elapsed_ticks\": %llu,\n  \"rejected_numeric\": %u,\n  \"rejected_range\": %u,\n  \"rejected_stale\": %u,\n  \"rejected_domain\": %u,\n  \"solver_inaccurate\": %u,\n  \"solver_max_iter\": %u,\n  \"solver_infeasible\": %u,\n  \"solver_deadline\": %u,\n  \"last_solver_status\": %d,\n  \"max_prim_res_x1e6\": %u,\n  \"max_dual_res_x1e6\": %u,\n  \"p10b_pps_ok\": %u,\n  \"p10b_pps_reject\": %u,\n  \"p10b_rectime_frames\": %u,\n  \"p10b_gnss_ok\": %u,\n"
+            "  \"job_record_count\": %u,\n"
+            "  \"consumer\": {\n"
+            "    \"samples\": %u, \"used\": %u,\n"
+            "    \"backup_expired\": %u, \"backup_clock\": %u, \"backup_state_epoch\": %u,\n"
+            "    \"backup_origin\": %u, \"backup_reference\": %u, \"backup_authority\": %u,\n"
+            "    \"backup_directive\": %u, \"backup_envelope\": %u, \"backup_model\": %u,\n"
+            "    \"backup_envelope_id\": %u, \"backup_seed_position\": %u,\n"
+            "    \"backup_seed_velocity\": %u,\n"
+            "    \"limit_rejected\": %u, \"bounds_rejected\": %u,\n"
+            "    \"life_bucket_origin_us\": %d, \"life_bucket_us\": %d,\n"
+            "    \"life_min_us\": %d, \"life_max_us\": %d, \"life_samples\": %u,\n"
+            "    \"life_hist\": [%u",
             stats.jobs, stats.solved, stats.rejected,
             (unsigned long long)stats.covered_us,
             stats.blocked_uninitialized, stats.blocked_validation,
@@ -776,7 +782,23 @@ static void write_m6_job_stats(void)
             stats.solver_infeasible, stats.solver_deadline, (int)stats.last_solver_status,
             stats.max_prim_res_x1e6, stats.max_dual_res_x1e6,
             p10b_stats.pps_ok, p10b_stats.pps_reject,
-            p10b_stats.frames, p10b_stats.gnss_ok);
+            p10b_stats.frames, p10b_stats.gnss_ok,
+            mpc_job_record_count(),
+            consumer.samples, consumer.used,
+            consumer.backup_expired, consumer.backup_clock,
+            consumer.backup_state_epoch, consumer.backup_origin,
+            consumer.backup_reference, consumer.backup_authority,
+            consumer.backup_directive, consumer.backup_envelope,
+            consumer.backup_model, consumer.backup_envelope_id,
+            consumer.backup_seed_position, consumer.backup_seed_velocity,
+            consumer.limit_rejected, consumer.bounds_rejected,
+            (int)MPC_LIFE_ORIGIN_US, (int)MPC_LIFE_BUCKET_US,
+            (int)consumer.life_min_us, (int)consumer.life_max_us,
+            consumer.life_total,
+            consumer.life_hist[0]);
+    for (index = 1; index < MPC_LIFE_BUCKETS; ++index)
+        fprintf(file, ", %u", consumer.life_hist[index]);
+    fprintf(file, "]\n  }\n}\n");
     fclose(file);
     {
         char per_run[64];
@@ -797,6 +819,43 @@ static void write_m6_job_stats(void)
             fclose(file);
         }
     }
+    /* Per-job records: the distribution gate needs every job's first failing
+     * stage, residuals and timestamps, not the last sample of the run. */
+    file = fopen("work/validation/m6_jobs.json", "w");
+    if (!file) return;
+    copied = mpc_copy_job_records(0, NULL, 0u, &total);
+    (void)copied;
+    fprintf(file, "{\n  \"schema\": \"fmat-m6-jobs/1.0\",\n"
+                  "  \"record_count\": %u,\n  \"records\": [",
+            (unsigned)total);
+    while (first < total) {
+        uint32_t n = mpc_copy_job_records(first, chunk, 64u, &total);
+        if (!n) break;
+        for (index = 0; index < n; ++index) {
+            const MpcJobRecord *r = &chunk[index];
+            fprintf(file,
+                    "%s\n    {\"job\": %u, \"outcome\": %u, \"solver_status\": %u,"
+                    " \"status\": %u, \"prim_res\": %.9g, \"dual_res\": %.9g,"
+                    " \"primal_violation\": %.9g, \"thrust_excess_n\": %.9g,"
+                    " \"accel\": [%.9g, %.9g, %.9g],"
+                    " \"seed\": [%.9g, %.9g, %.9g],"
+                    " \"sample_us\": %llu, \"control_us\": %llu,"
+                    " \"eval_us\": %llu, \"expires_us\": %llu}",
+                    (first + index) ? "," : "", r->job, r->outcome,
+                    r->solver_status, r->status, (double)r->prim_res,
+                    (double)r->dual_res, (double)r->primal_violation,
+                    (double)r->thrust_excess_n, (double)r->accel[0],
+                    (double)r->accel[1], (double)r->accel[2], (double)r->seed[0],
+                    (double)r->seed[1], (double)r->seed[2],
+                    (unsigned long long)r->sample_us,
+                    (unsigned long long)r->control_us,
+                    (unsigned long long)r->eval_us,
+                    (unsigned long long)r->expires_us);
+        }
+        first += n;
+    }
+    fprintf(file, "\n  ]\n}\n");
+    fclose(file);
 }
 
 /* Sampled during the holdover window so the loss and the re-lock can be judged
