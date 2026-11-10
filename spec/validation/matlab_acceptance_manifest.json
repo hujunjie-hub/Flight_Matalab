@@ -69,6 +69,8 @@
       "mil_origin_profile": {
         "initial_origin_valid_mask": 1,
         "complete_origin_valid_mask": 3,
+        "candidate_max_age_us": 20000,
+        "first_fix_sequence_min_exclusive": 1,
         "gnss_release_condition": "Release first GNSS measurement only after INS publishes NAV_VALID_ATTITUDE while horizontal position remains invalid; applies only to FMT_MILSIM.",
         "other_entry_modes": "FMT_DataSIM uses the same provisional origin and deterministic late-GNSS event queue to reproduce MIL; FMT_ExtINS_DataSIM consumes the recorded navigation frame and does not exercise its own estimator origin reset."
       },
