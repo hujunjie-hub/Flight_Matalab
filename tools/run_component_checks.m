@@ -32,7 +32,6 @@ try
     % Prove the evidence pipeline itself: source/artifact separation, classification
     % and the repeated-run determinism the archive manifest relies on.
     report.checks.archive_reliability=verify_archive_reliability;
-    report.checks.m6_jobs=verify_m6_jobs;
     report.checks.time_service=verify_time_service_sync;
     report.checks.gnss_time_recovery=verify_gnss_time_recovery;
     report.checks.rectime_time_mapping=verify_rectime_time_mapping;
@@ -45,6 +44,9 @@ try
     report.checks.pid=verify_rate_pid_transaction;
     report.checks.pid_allocator_feedback=verify_pid_allocator_feedback;
     report.checks.actuation=verify_actuation_components;
+    % The MPC job gate runs last: a failure there must not hide the evidence of
+    % the other gates, and its numbers belong in the same archive.
+    report.checks.m6_jobs=verify_m6_jobs;
     assert(strcmp(report.source_fingerprint,fingerprint(root)),'Flight:InputsChanged','Model/code/configuration changed during the checks.');
     report.post_run=flight_acceptance_snapshot(root,'after');
     report.status='PARTIAL_PASS';
