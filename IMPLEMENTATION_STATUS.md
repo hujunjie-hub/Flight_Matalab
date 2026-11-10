@@ -116,3 +116,10 @@
   - 四条指令 ack_state 均为 0（REJECTED）；解锁、起飞、降落三条 reason=2，上锁 reason=11。
 - 结论：阻断点收敛为「水平位置有效性未发布」，与姿态/IMU/遥控/执行器无关。
 - 证据归档：`work/validation/archives/20261109T222421249Z_3280e6a.zip`，SHA-256 `94c21e0edfa49672bd8b3623fe17ce5b9758d2ee2e84eab9604e91a7875dd69d`。
+## 2026-11-10 09:00 MATLAB 验收运行记录（水平位置断言确认）
+
+- 分支/HEAD：`optimize/sil-physical-parameter-alignment` @ `0dd4515`（5dfca7b 要求 FMS 有效控制许可与 M7 已提交回执，0dd4515 补充联合许可验收文档），运行前工作区干净。
+- 结果：**FAIL**，仍在 `verify_flight_entries`；断言变为 `Flight:MILHorizontalPosition`（第 121 行）：“GNSS-assisted origin reset did not establish valid horizontal position.”
+- `mil_diagnostics.json` 与上轮一致：`prearm_state=3`、`failed_mask=8`（ESTIMATOR_POSITION）、`primary_reason=2`、`max_nav_mask=0xD7`、四条指令 ack=0。
+- 结论：上一轮推断的“水平位置有效性未置位”已由脚本专门断言确认，问题不在姿态/IMU/遥控/执行器，也不在采样历元。
+- 证据归档：`work/validation/archives/20261110T010015204Z_0dd4515.zip`，SHA-256 `9ec6006bf11ec8455603da166f895acbca86484092a1e793695356336b2c5cb2`。
