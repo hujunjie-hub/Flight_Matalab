@@ -306,7 +306,7 @@
     "middleware/model/control/control_interface.h": "8b97efafc8e1f85ee01a74922013c083029bd0ec2afd9a4887e8d006ebaacea7",
     "middleware/model/control/inner_loop/quad_x4/attitude_rate_control/attitude_math.c": "e3098fe11e1f6d278b18534912ef434405650637509b40d6e6e407bed147b9f8",
     "middleware/model/control/inner_loop/quad_x4/attitude_rate_control/controller.c": "8ae5e9e4d3c4567d46ab79fe04dade63a6cd379f7a759e864d129e66e4a8ca5d",
-    "middleware/model/control/inner_loop/quad_x4/attitude_rate_control/controller_internal.h": "64c791b83b1e2c0660f45d5ad888ed110f85adba99bdfb8ef24544b1915863b5",
+    "middleware/model/control/inner_loop/quad_x4/attitude_rate_control/controller_internal.h": "5405343a1e5eff77c154d8576b1ba074e7ac8166ce3e0c6d47a403580ad5b12a",
     "middleware/model/control/inner_loop/quad_x4/control_allocation/control_allocation.c": "2f717884ff6a7d9c1a3c0b4ffe1d7d6ba4b2e1b531ae34c9bb528e34332fdd20",
     "middleware/model/control/inner_loop/quad_x4/simulation_config/quad_x4_controller_sim_config.c": "53551c63bf8d43bbfb166188f00023e368c21bebfc36b96ee4fb72dba174aaad",
     "middleware/model/control/outer_loop/quad_x4/mpc_solver/mpc.c": "bedc16e2ab1023a2957507686908625c58e21a2d4949da1f1d2ef532b259c51c",
