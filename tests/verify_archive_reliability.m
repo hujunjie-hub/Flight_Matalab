@@ -8,6 +8,9 @@ function report=verify_archive_reliability
 %     A-03  a local edit is reported as dirty and never enters the committed digest
 %     A-04  regenerating a Simulink model leaves the source digest untouched
 %     A-05  rebuilding and re-running is stable: the artifact digest is repeatable
+%     A-06  a regenerated tracked model is classified as layout drift
+%     A-07  a file that was dirty before the run and rewritten by it is attributed
+%     A-08  a file that was dirty before the run and left alone is not attributed
 %
 %   The fixture also exercises the classification used by the archive manifest.
 root=flight_startup;
@@ -94,6 +97,33 @@ cases{end+1}=check_case('A-06','classifier separates commit candidates from layo
     strcmp(dispositions('models/plant/FMT_Demo.slx|model_asset'),'regenerated_by_run'), ...
     ['classified=' char(dispositions('models/plant/FMT_Demo.slx|model_asset'))]);
 
+% A dirty worktree is not one category: the run may rewrite a file the user had
+% already modified, and calling that "pre-existing" hides what the run did.
+write_text(fullfile(fixture,'models','plant','FMT_Demo.slx'),'model-v3-dirty-before');
+write_text(fullfile(fixture,'dictionaries','Flight.sldd'),'dictionary-v2-dirty-before');
+dirtyGit=fullfile(validation,'git_state_dirty.json');
+run_python(fixture,'git_state.py',{'before',dirtyGit,'--root=' + string(fixture)});
+artifactBeforeDirtyFile=fullfile(validation,'artifact_before_dirty.json');
+artifactBeforeDirty=artifacts(fixture,artifactBeforeDirtyFile);
+write_text(fullfile(fixture,'models','plant','FMT_Demo.slx'),'model-v4-rewritten-by-run');
+assetsDirty=classify(fixture,artifactBeforeDirtyFile,dirtyGit, ...
+    fullfile(validation,'assets_dirty.json'));
+dirtyDispositions=containers.Map();
+dirtyEntries=assetsDirty.entries;
+for k=1:numel(dirtyEntries)
+    dirtyDispositions([dirtyEntries(k).path '|' dirtyEntries(k).class])=dirtyEntries(k).disposition;
+end
+demoKey='models/plant/FMT_Demo.slx|model_asset';
+dictKey='dictionaries/Flight.sldd|dictionary_asset';
+cases{end+1}=check_case('A-07','a file dirty before the run and rewritten by it is attributed', ...
+    dirtyDispositions.isKey(demoKey) && ...
+    strcmp(dirtyDispositions(demoKey),'pre_existing_local_change_modified_by_run'), ...
+    ['classified=' label(dirtyDispositions,demoKey)]);
+cases{end+1}=check_case('A-08','a file dirty before the run and left alone stays unattributed', ...
+    dirtyDispositions.isKey(dictKey) && ...
+    strcmp(dirtyDispositions(dictKey),'pre_existing_local_change'), ...
+    ['classified=' label(dirtyDispositions,dictKey)]);
+
 passed=sum(cellfun(@(c) strcmp(c.status,'PASS'),cases));
 report=struct('scope','ARCHIVE_FINGERPRINT_RELIABILITY','status','FAIL', ...
     'fixture',fixture,'cases',{cases},'case_count',numel(cases),'passed_count',passed);
@@ -105,6 +135,14 @@ for k=1:numel(cases)
     fprintf('%-5s %s  (%s)\n',cases{k}.id,cases{k}.status,cases{k}.detail);
 end
 assert(strcmp(report.status,'PASS'),'Flight:A06','Archive fingerprint reliability failed.');
+end
+
+function value=label(map,key)
+if map.isKey(key)
+    value=char(map(key));
+else
+    value='absent';
+end
 end
 
 function case_=check_case(id,title,ok,detail)

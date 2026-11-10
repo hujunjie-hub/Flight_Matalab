@@ -50,13 +50,16 @@ schema 1.0 只有 `source_fingerprint_sha256` 一个摘要，而 `tools/fingerpr
 |---|---|---|
 | `commit_candidate` | 运行新生成、尚未被 git 跟踪的模型/字典 | **应提交的正式模型资产**（例如本分支新增的 `models/plant/FMT_PlantSensors.slx`） |
 | `regenerated_by_run` | 运行前干净、运行后被重新生成 | 可恢复的自动布局修改，`git checkout --` 即可还原；不应随证据提交 |
-| `pre_existing_local_change` | 运行前就已修改 | 无法归因到本次运行，需人工确认 |
+| `pre_existing_local_change_modified_by_run` | 运行前就已修改，**且本次运行又改写了它** | 归因明确：该文件既是用户既存修改，也是本轮产物；不得在结论里当作"用户未动过" |
+| `pre_existing_local_change` | 运行前就已修改，本次运行**未**再改变 | 无法归因到本次运行，需人工确认 |
 | `restored_during_run` | 运行前脏、运行后恢复干净 | 记录即可 |
 | `excluded_from_source` | `work/` 下的编译产物（mex/dll/slprj 等） | 临时构建产物，永不进入源码 |
 | `uncommitted_source_change` | 源码文件在运行前就未提交 | 该轮结果的源码基线不是 HEAD，需在结论中说明 |
 | `documentation_change` | `.md`/`.txt` 改动 | 不影响指纹 |
 
 局限必须写明：**无法仅凭字节判断一个 `.slx` 是否只是自动布局差异**。因此分类只声称"该文件在运行前是干净的、运行结束后字节变了"，而不声称"语义未变"。要证明语义，需要模型级比较，这不在本模型的范围内。
+
+脏工作区不能只用一个类别概括：运行前已修改的文件，本次运行可能又把它改写了（例如 MIL 重新生成的录制 MAT），也可能完全没碰。`generated_assets.json` 用运行前后的 artifact 摘要区分这两种情况，分别记为 `pre_existing_local_change_modified_by_run` 和 `pre_existing_local_change`。分类**只描述归因**，不会清除任何用户已有的模型、字典或录制文件。
 
 ## 4. 运行前后快照
 
@@ -94,7 +97,7 @@ schema 1.0 只有 `source_fingerprint_sha256` 一个摘要，而 `tools/fingerpr
 
 | 套件 | 覆盖 | 运行方式 |
 |---|---|---|
-| `tests/verify_archive_reliability.m`（A-01…A-06） | 同源码确定性、干净工作区、脏工作区、模型重建不污染 source 指纹、重建后重复运行稳定、分类正确 | 已接入 `run_component_checks` 的 `archive_reliability` 门 |
+| `tests/verify_archive_reliability.m`（A-01…A-08） | 同源码确定性、干净工作区、脏工作区、模型重建不污染 source 指纹、重建后重复运行稳定、分类正确、运行前脏且被本轮改写、运行前脏且未被本轮改写 | 已接入 `run_component_checks` 的 `archive_reliability` 门 |
 | `tests/verify_archive_failure_path.ps1`（F-01…F-05） | MATLAB 中途崩溃后 before 快照保留、归档补生成 after 状态、manifest 如实报告缺件、ZIP 内含两份快照、脏工作区被记录 | `pwsh -File .\tests\verify_archive_failure_path.ps1` |
 
 两者都在临时 git 夹具上运行，不依赖真实工作区的未提交状态，单次执行均在秒级到一分钟之间。

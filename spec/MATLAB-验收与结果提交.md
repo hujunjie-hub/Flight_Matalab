@@ -231,7 +231,7 @@ pwsh -File .\\tools\\archive_validation_run.ps1
 
 `run_component_checks` 的第一步就写 `git_state_before.json`、`source_fingerprint_before.json` 和 `artifact_fingerprint_before.json`，结束或异常时写对应的 after 版本。归档脚本在打包前补齐缺失的 after 快照，因此 MATLAB 崩溃或被中断的运行仍然产出完整 ZIP。
 
-两组自测：`tests/verify_archive_reliability.m`（A-01…A-06，已接入组件门）覆盖同源码确定性、干净/脏工作区、模型重建不污染 source 指纹与分类正确性；`tests/verify_archive_failure_path.ps1`（F-01…F-05）覆盖 MATLAB 中途失败后的补归档与 manifest 如实报告。
+两组自测：`tests/verify_archive_reliability.m`（A-01…A-08，已接入组件门）覆盖同源码确定性、干净/脏工作区、模型重建不污染 source 指纹、分类正确性，以及"运行前已脏"的两种归因（本轮改写 / 本轮未动）；`tests/verify_archive_failure_path.ps1`（F-01…F-05）覆盖 MATLAB 中途失败后的补归档与 manifest 如实报告。
 
 `work/` 已由 `.gitignore` 排除，因此原始 MAT、日志和每轮报告不直接提交到 Git。把 ZIP 附加到对应 GitHub Issue；若附件不可用或过大，就把 ZIP 发给验收方，并在 Issue 中登记文件名、SHA-256 和提交日期。不要只发截图或最后一行报错。
 

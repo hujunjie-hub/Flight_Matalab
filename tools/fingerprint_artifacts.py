@@ -69,10 +69,17 @@ def disposition_for(entry_class, code, dirty_before, changed):
             return 'commit_candidate'
         if dirty_before and not code:
             return 'restored_during_run'
+        # A file that was already dirty may still be rewritten by this run.  The
+        # old classifier reported both cases as pre_existing_local_change, so a
+        # model or recording the run itself regenerated looked like an
+        # untouchable user edit.  Compare the before/after digests to separate
+        # them: only the untouched case is actually unattributable.
+        if code and dirty_before:
+            if changed:
+                return 'pre_existing_local_change_modified_by_run'
+            return 'pre_existing_local_change'
         if code and not dirty_before:
             return 'regenerated_by_run'
-        if code and dirty_before:
-            return 'pre_existing_local_change'
         if changed:
             return 'regenerated_by_run'
         return 'unchanged_asset'
