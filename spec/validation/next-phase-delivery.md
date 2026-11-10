@@ -17,7 +17,7 @@
 
 **未完成**
 
-1. **M6 修复（P0）**——根因链条已成立：MPC 在地上时水平指令比 PD 少 0.2038 m/s²（占空 20%），把飞行器推到 0.58 m/s，越过 `ground_stable` 的 `|v_h| ≤ 0.20`（`fms_safety.c:101-104`），LANDED 不成立，TAKEOFF `reason=5`，场景无法起飞（竖直通道、导航能力、prearm、位置环指令均已排除）。**三个修复选项需要用户选择**，见 §7.1。
+1. **M6 修复（P0）**——根因链条已成立：MPC 在地上时水平指令比 PD 少 0.2038 m/s²（占空 20%），把飞行器推到 0.58 m/s，越过 `ground_stable` 的 `|v_h| ≤ 0.20`（`fms_safety.c:101-104`），LANDED 不成立，TAKEOFF `reason=5`，场景无法起飞（竖直通道、导航能力、prearm、位置环指令均已排除）。**三个修复选项需要用户选择**；第 47 轮核对后修正：控制模块**没有任何 landed/ground 信号**，所以选项 1/2 实际需要扩展契约，最省的是选项 3（改 Plant 摩擦），但它推翻 P-17 既有结论。详见 FMAT-0012 §4.5.2。
 2. **#13 FMS 侧两阶段 DISARM**——执行器侧已 PASS，但 FMS 仍在 `PRODUCT_CMD_DISARM`（`fms.c:599-626`）里把 `ARM_STATE_DISARMING` 立刻跳到 `DISARMED`。改动清单见 §7.4。
 3. **Issue 状态更新**——本环境无 GitHub 写权限，文案见 §6。
 
