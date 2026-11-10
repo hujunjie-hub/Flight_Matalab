@@ -2,7 +2,7 @@
 
 - 对应 Issue：Flight_Matalab#12（`[FMAT-0012][S1][M6]`）
 - 分支：`optimize/sil-physical-parameter-alignment`
-- 状态：PARTIAL（`qp_assembly_in_model` 与 `strict_validation_in_model` 已实测 PASS；时间上下文守卫、速率阶跃与 job 统计仍待做）
+- 状态：PARTIAL（`qp_assembly_in_model`、`strict_validation_in_model`、`complete_M6_time_context_guard` 已实测 PASS；速率阶跃与 job 统计仍待做）
 
 ## 1. 审查结论：实现大部分已存在，缺的是"在模型路径内"的证据
 
@@ -93,6 +93,36 @@ q=[8,8,12,3,3,4]、r=[0.8,0.8,1]、s=[0.2,0.2,0.25]）并把目标压到 0.1 m �
 `verify_osqp_gate.m` 现在调用该套件，`osqp_mex_report.json` 的
 `qp_assembly_in_model` 与 `strict_validation_in_model` 由 `NOT_RUN` 变为 **PASS**，并附
 `m6_host_checks=13`、`m6_host_failures=0`、`m6_host_log`、`m6_host_reason`。
+
+### 3.1 时间上下文守卫（新增）
+
+`tests/control/test_m6_guard_main.c` 构造一个**完整合法**的控制器上下文（导航、指令、包线、授权、Permit、执行器状态与能力、制导、参考，以及控制器绑定的固定双积分器模型视图），
+然后每次只破坏一个绑定：
+
+| 用例 | 破坏项 | 期望 |
+|---|---|---|
+| 基线 | 无 | `STATUS_OK`，回填 epoch=7、mode=TRAJECTORY |
+| M6-08 | 控制时刻老化 6 ms | `STALE_DATA` |
+| M6-09 | 导航采样时刻 ≠ 控制时刻 | `STALE_DATA` |
+| M6-10 | Permit 来自另一个 boot | `STALE_DATA` |
+| M6-11 | 导航头来自另一个 time epoch | `STALE_DATA` |
+| M6-12 | Permit 已过期 | `NOT_PERMITTED` |
+| M6-13 | Permit 非 `CONTROL_ACTIVE` | `NOT_PERMITTED` |
+| M6-14 | guidance 与 permit 的 reference epoch 不一致 | `NOT_PERMITTED` |
+| M6-15 | reference_id 不一致 | `NOT_PERMITTED` |
+| M6-16 | 执行器能力只有 3 通道 | `OUT_OF_RANGE` |
+
+`M6 guard checks=11 failures=0`。`rate_pid_report.json` 的 `complete_M6_time_context_guard`
+已由 `NOT_RUN` 变为 **PASS**，并附 `m6_guard_checks`、`m6_guard_failures`、`m6_guard_log`。
+
+调试记录：首版缺少 `control_model_view`，TRAJECTORY 分支在 `controller.c:233` 直接返回
+`STATUS_NOT_READY`；模型视图还必须与实现绑定的固定双积分器逐元素一致（A 对角 1、A[0..2][3..5]=0.02，
+B 前 3 行 0.0002、后 3 行 0.02，c=0），否则返回 `PROFILE_MISMATCH`。
+
+顺带记录一个固件侧的既有越界读（未修改）：`controller.c` 用
+`finite_array(n->core.position_ned_m, 6)` 检查 6 个 float，而 `NavStateCore.position_ned_m`
+只有 3 个元素，实际会读到紧随其后的 `velocity_ned_mps`。当前两者都是有限值所以不致命，
+但属于真实的数组越界读，建议单独立项。
 
 ## 4. 仍未闭合的项
 
