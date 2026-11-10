@@ -40,6 +40,10 @@ static void p10b_inject(void)
     const char *cursor;
     int decoded = 0;
 
+    /* FMAT-0014 holdover window: no PPS and no UTC for four seconds so the
+     * service has to fall back to holdover and then re-lock. */
+    if (test_clock.monotonic_us >= 10000000u && test_clock.monotonic_us < 14000000u)
+        return;
     if (test_clock.monotonic_us - p10b_last_us < 1000000u) return;
     p10b_last_us = test_clock.monotonic_us;
 
@@ -795,6 +799,24 @@ static void write_m6_job_stats(void)
     }
 }
 
+/* Sampled during the holdover window so the loss and the re-lock can be judged
+ * against the locked state. */
+static struct { int captured; uint8_t utc_valid; uint32_t mapping_epoch;
+                uint64_t holdover_us, uncertainty_ns, last_pps_us; } p10b_loss;
+static void p10b_capture_loss(void)
+{
+    TimeServiceStatus service;
+    if (p10b_loss.captured) return;
+    if (test_clock.monotonic_us < 13500000u) return;
+    if (time_get_status(&service) != STATUS_OK) return;
+    p10b_loss.captured = 1;
+    p10b_loss.utc_valid = service.utc_valid;
+    p10b_loss.mapping_epoch = service.utc_mapping_epoch;
+    p10b_loss.holdover_us = service.holdover_duration_us;
+    p10b_loss.uncertainty_ns = service.utc_uncertainty_ns;
+    p10b_loss.last_pps_us = service.last_valid_pps_us;
+}
+
 /* FMAT-0014: dump what the firmware time service reports after the MIL, so the
  * PPS/RECTIMEA injection can be judged by the service state and not only by the
  * submission status codes. */
@@ -835,6 +857,26 @@ static void write_p10b_time_service(void)
             mapping_ok, mapping_ok ? mapping.mapping_epoch : 0u,
             mapping_ok ? (unsigned)mapping.mapping_state : 0u);
     fclose(file);
+    file = fopen("work/validation/p10b_holdover.json", "w");
+    if (!file) return;
+    fprintf(file,
+            "{\n  \"loss_captured\": %d,\n  \"loss_utc_valid\": %u,\n"
+            "  \"loss_mapping_epoch\": %u,\n  \"loss_holdover_us\": %llu,\n"
+            "  \"loss_uncertainty_ns\": %llu,\n  \"loss_last_pps_us\": %llu,\n"
+            "  \"recover_utc_valid\": %u,\n  \"recover_uncertainty_ns\": %llu,\n"
+            "  \"recover_last_pps_us\": %llu,\n  \"recover_intervals\": %u,\n"
+            "  \"pps_events\": %u\n}\n",
+            p10b_loss.captured, (unsigned)p10b_loss.utc_valid,
+            p10b_loss.mapping_epoch,
+            (unsigned long long)p10b_loss.holdover_us,
+            (unsigned long long)p10b_loss.uncertainty_ns,
+            (unsigned long long)p10b_loss.last_pps_us,
+            service_ok ? (unsigned)service.utc_valid : 0u,
+            service_ok ? (unsigned long long)service.utc_uncertainty_ns : 0ull,
+            service_ok ? (unsigned long long)service.last_valid_pps_us : 0ull,
+            discipline_ok ? (unsigned)discipline.accepted_interval_count : 0u,
+            p10b_stats.pps_ok);
+    fclose(file);
 }
 
 __declspec(dllexport) void fmt_flight_stop(void)
@@ -858,6 +900,7 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
     ++elapsed_ticks;
     step_calls++;
     p10b_inject();
+    p10b_capture_loss();
     last_step_us = test_clock.monotonic_us;
     test_clock.monotonic_us += 500u;
     unsigned ms = elapsed_ticks / 2u;
