@@ -99,7 +99,15 @@
           "prearm_failed_mask",
           "prearm_primary_reason",
           "prearm_failed_count",
-          "prearm_check_epoch"
+          "prearm_check_epoch",
+          "origin_auth_attempts",
+          "origin_auth_successes",
+          "origin_auth_last_status",
+          "origin_reset_attempts",
+          "origin_reset_successes",
+          "origin_reset_last_status",
+          "origin_reset_last_type",
+          "origin_reset_last_origin_id"
         ]
       }
     },
