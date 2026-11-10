@@ -1,15 +1,72 @@
 param(
-    [string]$RunId = ""
+    [string]$RunId = "",
+    [string]$RepoRoot = ""
 )
 
 $ErrorActionPreference = "Stop"
 
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+if ([string]::IsNullOrWhiteSpace($RepoRoot)) { $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path } else { $repoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path }
 $validationRoot = Join-Path $repoRoot "work/validation"
 $archiveRoot = Join-Path $validationRoot "archives"
 $componentReportPath = Join-Path $validationRoot "component_checks.json"
 $fingerprintPath = Join-Path $validationRoot "current_source_fingerprint.json"
 $scenarioPath = Join-Path $repoRoot "scenarios/flight_sil_recording.mat"
+
+$gitBeforePath = Join-Path $validationRoot "git_state_before.json"
+$gitAfterPath = Join-Path $validationRoot "git_state_after.json"
+$artifactReportPath = Join-Path $validationRoot "current_artifact_fingerprint.json"
+$generatedAssetsPath = Join-Path $validationRoot "generated_assets.json"
+
+# A run can die before it writes its own post-run snapshot - a MATLAB crash, a
+# killed build, an assertion in the middle of the checks. The archive must still
+# describe the tree it is archiving, so fill the gaps from the current state
+# rather than refusing to produce evidence.
+if (-not (Test-Path -LiteralPath $gitAfterPath)) {
+    & python -B (Join-Path $repoRoot "tools/git_state.py") "after" $gitAfterPath 2>&1 | Out-Null
+}
+if (-not (Test-Path -LiteralPath $artifactReportPath)) {
+    & python -B (Join-Path $repoRoot "tools/fingerprint_artifacts.py") "--output" $artifactReportPath 2>&1 | Out-Null
+}
+
+function Read-ReportField {
+    param([string]$Path, [string]$Field, $Default)
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $Default }
+    try {
+        $report = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+        $value = $report.$Field
+        if ($null -eq $value) { return $Default }
+        return $value
+    }
+    catch { return $Default }
+}
+
+$sourceCommitted = Read-ReportField $fingerprintPath "committed_sha256" "UNAVAILABLE"
+$sourceClean = Read-ReportField $fingerprintPath "clean" "UNKNOWN"
+$sourceDirty = @(Read-ReportField $fingerprintPath "dirty_files" @())
+$artifactFingerprint = Read-ReportField $artifactReportPath "sha256" "UNAVAILABLE"
+$artifactFiles = Read-ReportField $artifactReportPath "file_count" 0
+$generatedSummary = Read-ReportField $generatedAssetsPath "summary" @{}
+
+$gitBefore = [ordered]@{
+    branch = Read-ReportField $gitBeforePath "branch" "UNAVAILABLE"
+    commit = Read-ReportField $gitBeforePath "commit" "UNAVAILABLE"
+    clean = Read-ReportField $gitBeforePath "worktree_clean" "UNKNOWN"
+    entry_count = Read-ReportField $gitBeforePath "entry_count" 0
+}
+$gitAfter = [ordered]@{
+    branch = Read-ReportField $gitAfterPath "branch" "UNAVAILABLE"
+    commit = Read-ReportField $gitAfterPath "commit" "UNAVAILABLE"
+    clean = Read-ReportField $gitAfterPath "worktree_clean" "UNKNOWN"
+    entry_count = Read-ReportField $gitAfterPath "entry_count" 0
+}
+$completeness = [ordered]@{
+    component_report = (Test-Path -LiteralPath $componentReportPath -PathType Leaf)
+    source_fingerprint = (Test-Path -LiteralPath $fingerprintPath -PathType Leaf)
+    artifact_fingerprint = (Test-Path -LiteralPath $artifactReportPath -PathType Leaf)
+    git_before = (Test-Path -LiteralPath $gitBeforePath -PathType Leaf)
+    git_after = (Test-Path -LiteralPath $gitAfterPath -PathType Leaf)
+    generated_assets = (Test-Path -LiteralPath $generatedAssetsPath -PathType Leaf)
+}
 
 if (-not (Test-Path -LiteralPath $validationRoot -PathType Container)) {
     throw "Validation directory does not exist: $validationRoot"
@@ -96,7 +153,7 @@ $artifactHashes = @(
 )
 
 $manifest = [ordered]@{
-    schema = "flight-matalab-run-archive/1.0"
+    schema = "flight-matalab-run-archive/1.1"
     run_id = $RunId
     archived_at_utc = (Get-Date).ToUniversalTime().ToString("o")
     project_branch = $projectBranch
@@ -104,7 +161,19 @@ $manifest = [ordered]@{
     project_worktree_status = $projectDirty
     flight_commit = $flightCommit
     component_status = $componentStatus
+    # Source and artifacts are reported separately from 1.1 on: the source
+    # digest only covers committed-style inputs, while models, dictionaries,
+    # MEX kernels and recordings are build output with their own digest.
     source_fingerprint_sha256 = $sourceFingerprint
+    source_fingerprint_committed_sha256 = $sourceCommitted
+    source_clean = $sourceClean
+    source_dirty_files = $sourceDirty
+    artifact_fingerprint_sha256 = $artifactFingerprint
+    artifact_file_count = $artifactFiles
+    generated_assets_summary = $generatedSummary
+    git_state_before = $gitBefore
+    git_state_after = $gitAfter
+    archive_completeness = $completeness
     artifact_count = $artifactHashes.Count
     artifacts = $artifactHashes
 }
@@ -132,4 +201,8 @@ foreach ($item in $payloadItems) {
     checksum_file = $checksumPath
     artifact_count = $artifactHashes.Count
     source_fingerprint_sha256 = $sourceFingerprint
+    source_fingerprint_committed_sha256 = $sourceCommitted
+    source_clean = $sourceClean
+    artifact_fingerprint_sha256 = $artifactFingerprint
+    archive_completeness = $completeness
 }

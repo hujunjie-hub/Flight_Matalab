@@ -10,6 +10,10 @@ report.environment=struct('matlab_version',version, ...
     'matlab_release',version('-release'),'computer',computer);
 write(file,report);
 try
+    % Record the pre-run tree: committed source digest, worktree digest and the
+    % artifact hashes of the previous build, so the archive can separate what
+    % was under test from what this run regenerated.
+    report.pre_run=flight_acceptance_snapshot(root,'before');
     % Rebuild the upstream Host SIL DLL and every affected Simulink/MEX ABI.
     runtimeScript=fullfile(root,'tools','build_flight_runtime.ps1');
     [runtimeStatus,runtimeMessage]=system(sprintf('pwsh -File "%s" -GccDir "%s"', ...
@@ -25,6 +29,9 @@ try
     report.checks.flight_entries=verify_flight_entries(true);
     report.source_fingerprint=fingerprint(root);
     report.checks.native_kernels='PASS';
+    % Prove the evidence pipeline itself: source/artifact separation, classification
+    % and the repeated-run determinism the archive manifest relies on.
+    report.checks.archive_reliability=verify_archive_reliability;
     report.checks.time_service=verify_time_service_sync;
     report.checks.gnss_time_recovery=verify_gnss_time_recovery;
     report.checks.rectime_time_mapping=verify_rectime_time_mapping;
@@ -38,11 +45,19 @@ try
     report.checks.pid_allocator_feedback=verify_pid_allocator_feedback;
     report.checks.actuation=verify_actuation_components;
     assert(strcmp(report.source_fingerprint,fingerprint(root)),'Flight:InputsChanged','Model/code/configuration changed during the checks.');
+    report.post_run=flight_acceptance_snapshot(root,'after');
     report.status='PARTIAL_PASS';
     report.plant_coverage=report.checks.plant.coverage;
 catch exception
     report.status='FAIL';
     report.error=struct('identifier',exception.identifier,'message',exception.message);
+    % A failing run must still explain what it changed, otherwise the archive
+    % cannot distinguish a broken build from a dirty worktree.
+    try
+        report.post_run=flight_acceptance_snapshot(root,'after');
+    catch snapshotException
+        report.post_run=struct('stage','after','error',snapshotException.message);
+    end
     write(file,report);
     rethrow(exception);
 end
