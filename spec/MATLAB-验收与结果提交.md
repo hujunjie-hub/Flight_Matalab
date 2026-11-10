@@ -215,6 +215,23 @@ pwsh -File .\\tools\\archive_validation_run.ps1
 ```
 
 归档脚本会生成唯一 `RUN_ID`，把本轮所有 JSON 报告、Diary、源数据指纹和本次 `flight_sil_recording.mat` 副本放入 `work/validation/archives/<RUN_ID>/`，生成 `<RUN_ID>.zip`，并记录 Flight_Matalab/Flight commit、运行状态及各证据文件的 SHA-256；ZIP 自身的 SHA-256 写入同名 `.sha256` 校验文件。归档成功后只清空当前工作区顶层临时文件，历史 `archives/` 不会被删除。每个 RUN_ID 不可覆盖；失败或中断的运行也要归档，状态保留为 FAIL/INCOMPLETE。
+### 归档证据模型（manifest schema 1.1）
+
+`run_manifest.json` 从 1.1 起把"源码输入"和"生成产物"分开记录，详见 [验收归档证据模型](validation/archive-evidence-model.md)：
+
+| 字段 | 含义 |
+|---|---|
+| `source_fingerprint_committed_sha256` | `git ls-tree HEAD` 中源码 blob 的摘要，工作区再脏也不变 |
+| `source_fingerprint_sha256` | 磁盘上同一批源码文件的摘要，代表实际被加载的那份 |
+| `source_clean` / `source_dirty_files` | 本轮是否在未提交源码上运行，以及具体文件 |
+| `artifact_fingerprint_sha256` / `artifact_file_count` | 模型、字典、MEX、录制文件的摘要 |
+| `generated_assets_summary` | 运行触及文件的分类计数（应提交资产 / 临时产物 / 自动布局漂移） |
+| `git_state_before` / `git_state_after` | 运行前后的分支、commit 与工作区条目数 |
+| `archive_completeness` | 缺件清单；失败运行据此如实标记，而不是省略 |
+
+`run_component_checks` 的第一步就写 `git_state_before.json`、`source_fingerprint_before.json` 和 `artifact_fingerprint_before.json`，结束或异常时写对应的 after 版本。归档脚本在打包前补齐缺失的 after 快照，因此 MATLAB 崩溃或被中断的运行仍然产出完整 ZIP。
+
+两组自测：`tests/verify_archive_reliability.m`（A-01…A-06，已接入组件门）覆盖同源码确定性、干净/脏工作区、模型重建不污染 source 指纹与分类正确性；`tests/verify_archive_failure_path.ps1`（F-01…F-05）覆盖 MATLAB 中途失败后的补归档与 manifest 如实报告。
 
 `work/` 已由 `.gitignore` 排除，因此原始 MAT、日志和每轮报告不直接提交到 Git。把 ZIP 附加到对应 GitHub Issue；若附件不可用或过大，就把 ZIP 发给验收方，并在 Issue 中登记文件名、SHA-256 和提交日期。不要只发截图或最后一行报错。
 
