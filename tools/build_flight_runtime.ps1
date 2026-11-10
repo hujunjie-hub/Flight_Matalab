@@ -32,6 +32,9 @@ $sensorSimulationObject = Join-Path $buildDir 'fmt_sensor_simulation.o'
 & (Join-Path $GccDir 'gcc.exe') -std=c99 -O2 -Wall -Wextra -Werror -fno-short-enums `
     -DFLIGHT_HOST_TEST -DFLIGHT_HOST_SIL @includes -c $sensorSimulation -o $sensorSimulationObject
 if ($LASTEXITCODE) { throw 'Deterministic sensor simulation compilation failed' }
+$timeService = Join-Path $buildDir 'systime_host.o'
+& (Join-Path $GccDir 'gcc.exe') -std=c99 -O2 -Wall -Wextra -Werror -fno-short-enums -DFLIGHT_HOST_TEST -DFLIGHT_HOST_SIL -DFLIGHT_HOST_REAL_TIME_SERVICE @includes -c (Join-Path $flight 'sensor_device/time_base/systime.c') -o $timeService
+if ($LASTEXITCODE) { throw 'Flight time service compilation failed' }
 $objects = Get-ChildItem -LiteralPath $buildDir -Filter '*.o' -File |
     Where-Object Name -ne 'tests_simulation_sil_flight.c.o' | Select-Object -ExpandProperty FullName
 $wrappers = @('estimator_init', 'estimator_push_imu', 'estimator_update', 'estimator_get_snapshot',

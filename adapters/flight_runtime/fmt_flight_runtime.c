@@ -1,12 +1,24 @@
 /* Reuse Flight's RT-Thread host device/clock stubs and real task translation
  * units. The standalone SIL scenario and its UDP helpers are never called. */
+/* The MIL must exercise the firmware time service, not the SIL stub. */
+#define FLIGHT_HOST_REAL_TIME_SERVICE 1
 #define main flight_standalone_sil_main
 #include "sil_flight.c"
 #undef main
+#include "systime.h"
 #include "fmt_flight_runtime.h"
 #include "fmt_sensor_simulation.h"
 #include "calibration/sensor_calibration.h"
 #include "sample_normalization/sensor_sample.h"
+
+/* The firmware time service derives monotonic time from this source. */
+static Status host_tick_source(uint64_t *tick64, uint32_t *time_epoch)
+{
+    if (!tick64 || !time_epoch) return STATUS_INVALID_ARGUMENT;
+    *tick64 = test_clock.monotonic_us;
+    *time_epoch = test_clock.time_epoch;
+    return STATUS_OK;
+}
 
 typedef struct {
     NavigationSnapshot snapshot;
@@ -566,7 +578,29 @@ __declspec(dllexport) int fmt_flight_start(int mode)
 {
     if (attached || mode < FMT_DATA_SIM || mode > FMT_EXTINS_DATA_SIM)
         return -1;
-    test_clock = (ClockInstant){0x12345678, 1000000, 1, 0};
+    /* The firmware time service anchors monotonic time at zero, so the host
+     * clock starts at zero too; mixing a 1 s-based host clock with a 0-based
+     * time service breaks every TTL comparison. */
+    test_clock = (ClockInstant){0x12345678, 0, 1, 0};
+    {
+        static TimeConfig time_config;
+        Status time_status;
+        memset(&time_config, 0, sizeof(time_config));
+        time_config.boot_id = test_clock.boot_id;
+        time_config.time_epoch = test_clock.time_epoch;
+        time_config.tick_hz = 1000000u;
+        time_config.pps_timeout_us = 2000000u;
+        time_config.utc_timeout_us = 5000000u;
+        time_config.utc_locked_uncertainty_ns = 100000u;
+        time_config.utc_max_uncertainty_ns = 5000000u;
+        time_config.holdover_rate_bound_ppb = 50000;
+        time_config.gnss_pps_installed = 1u;
+        time_status = systime_init(&time_config, host_tick_source);
+        if (time_status != STATUS_OK) {
+            fprintf(stderr, "systime_init failed: %d\n", (int)time_status);
+            return -1;
+        }
+    }
     run_index++;
     step_calls = 0;
     test_imu_pending = 0;
