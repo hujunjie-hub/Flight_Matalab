@@ -360,8 +360,13 @@ static void mdlOutputs(SimStruct *S, int_T tid)
         fmt_cross(alpha_body, lever_imu, alpha_cross_imu);
     }
     fmt_cross(x + 10, omega_cross_imu, centripetal_imu);
-    for (int i = 0; i < 3; ++i) {
+    /* The lever-arm acceleration must be complete before the body-to-NED
+     * assembly below reads all three of its components; filling it inside
+     * that loop would read uninitialized entries for axes that have not been
+     * visited yet. */
+    for (int i = 0; i < 3; ++i)
         accel_imu_body[i] = alpha_cross_imu[i] + centripetal_imu[i];
+    for (int i = 0; i < 3; ++i) {
         velocity_imu_ned[i] = x[3 + i];
         accel_imu_ned[i] = accel_cg_ned[i];
         for (int j = 0; j < 3; ++j) {
