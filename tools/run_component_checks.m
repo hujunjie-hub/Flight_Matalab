@@ -32,6 +32,7 @@ try
     % Prove the evidence pipeline itself: source/artifact separation, classification
     % and the repeated-run determinism the archive manifest relies on.
     report.checks.archive_reliability=verify_archive_reliability;
+    report.checks.m6_jobs=verify_m6_jobs;
     report.checks.time_service=verify_time_service_sync;
     report.checks.gnss_time_recovery=verify_gnss_time_recovery;
     report.checks.rectime_time_mapping=verify_rectime_time_mapping;

@@ -636,9 +636,28 @@ __declspec(dllexport) int fmt_flight_start(int mode)
     return 0;
 }
 
+/* M6 acceptance evidence: the runtime only exposes the current solver status, so
+ * the job counts and covered time are written once at shutdown. The counters are
+ * owned by the real MPC task; this function only serializes them. */
+static void write_m6_job_stats(void)
+{
+    RuntimeStats stats;
+    FILE *file;
+    runtime_get_stats(&stats);
+    file = fopen("work/validation/m6_runtime_stats.json", "w");
+    if (!file) return;
+    fprintf(file,
+            "{\n  \"mpc_updates\": %u,\n  \"mpc_solved\": %u,\n"
+            "  \"mpc_rejected\": %u,\n  \"mpc_covered_us\": %llu\n}\n",
+            stats.mpc_updates, stats.mpc_solved, stats.mpc_rejected,
+            (unsigned long long)stats.mpc_covered_us);
+    fclose(file);
+}
+
 __declspec(dllexport) void fmt_flight_stop(void)
 {
     if (attached) {
+        write_m6_job_stats();
         telemetry_link_release_radio();
         runtime_shutdown();
         attached = 0;
