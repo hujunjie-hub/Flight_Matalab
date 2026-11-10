@@ -83,6 +83,24 @@ outer_min_life_us = outer_max_life_us = 8000   /* 快照有效期 */
 
 诊断代码已回退（Host 与固件均恢复原状，MIL 短跑 `MIL_OK`），避免把未核实的口径留在固件里。若下一阶段继续，建议先把 `expires_at_us` 的 min 链逐项打印出来（本轮的索引记录返回 0，即 `start+20000`，与 8 ms 的实测矛盾，说明口径还需查清）。
 
+## 4.2 第 36 轮：快照到期被执行器消息掐住（已核实）
+
+在消费侧记录被采用那一刻的三个时间戳（Host 只读，26 s MIL）：
+
+```json
+{ "used_samples": 80,
+  "expires_us": 13905000, "sample_us": 13897000, "eval_us": 13904000,
+  "life_us": 8000, "expires_minus_eval_us": 1000 }
+```
+
+- `sample_us` 是导航采样时刻，`eval_us` 是消费时刻，两者相差 **7 ms**；
+- 快照的 `expires_at_us = sample + 8000`，因此被消费时只剩 **1 ms**；
+- 外环周期是 20 ms，1 kHz 内环每 1 ms 采一次，于是每次成功求解平均只覆盖约 1 个内环周期。
+
+`mpc_solve()` 的到期时间是 13 项取 min，其中包含 `actuator_capability->header.valid_until_us` 与 `actuator_status->header.valid_until_us`；而执行器侧 `actuator_guard.c` 的 `header()` 把 `valid_until_us` 设为 `now + 5000`（**5 ms**）。5 ms TTL 的执行器消息决定了 MPC 快照的全部有效期。
+
+这解释了 `outer_mpc_used = 80 / 9760`：不是 MPC 求解不出来（那是 4.1% 的另一个问题），而是**求解出来也几乎立刻过期**。
+
 ## 5. 边界
 
 本节只确认了消费路径与条件，**没有**定位到具体缺陷，也没有修改任何固件代码。三次实验的代码改动均已回退（Flight `8b938ca` 与后续 checkout），当前工作树干净。
