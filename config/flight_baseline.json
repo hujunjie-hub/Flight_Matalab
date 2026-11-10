@@ -274,7 +274,7 @@
     "libraries/HAL_Drivers/drivers/drv_wdt.h": "1da856e26a05eca21d3c717ad7754acfcaa83925b4d515302be872b70c01bc8f",
     "middleware/actuator/device_adapter/actuator_device.c": "2da164c1436b945b1da29a25492ccae6ba51fc1c55b6b9409958531c1dc096f2",
     "middleware/actuator/device_adapter/actuator_device.h": "46d95af8108a532cc39de80b65685b3dd2d823907e7685ab768cad04f33a9e17",
-    "middleware/actuator/output_guard/actuator_guard.c": "035380ccc6fd913f5e48fae88278888467d6e3cb3981f1bcf44871b2e4a8a4f1",
+    "middleware/actuator/output_guard/actuator_guard.c": "0b7a06356f0395af5a45727575e8ef1a39b27aa0be52f9ef5d1c2f220a9d84a3",
     "middleware/actuator/output_guard/actuator_guard.h": "5b15c542b10b31f7fb71ae5c9ceba9749f124a77eaaa69832a5a6fc7fbbde2b4",
     "middleware/communication/sim/fmt_sim_host.c": "402f85ee69498cda8157fbf6db8bbfb3ea9fa7af8d152bdd11d688d7adc51d51",
     "middleware/communication/sim/fmt_sim_host.h": "16473fdbd5501a88f959b77f2277a52b6766c324aa836ab8647d2d413de4d481",

@@ -55,7 +55,7 @@
 
 真实固件路径 `middleware/actuator/output_guard/actuator_guard.c`，本轮新增 `GroundStopCertificate` 契约与事务：
 
-| 要求 | 实测（Flight M7 主机套件，226 checks / 0 failures） |
+| 要求 | 实测（Flight M7 主机套件，230 checks / 0 failures） |
 |---|---|
 | GroundStopCertificate | `MSG_GROUND_STOP_CERTIFICATE`(56)；stop code 只接受 0，速率只接受 `(0, 100]` N/s，生命周期只接受 LANDED/DISARMING（取值 0x1001/0x1002，避免与 `LandedState` 混淆） |
 | LANDED / DISARMING 生命周期限制 | 畸形证书 5 类全部拒绝（`M7-11`） |
@@ -145,7 +145,7 @@ P-10 整体仍为 `PARTIAL`：物理 TIM2 capture ISR、UM982 UART/DMA、`sensor
 
 **#15**：状态 `OPEN → FIXED_WAITING_RETEST`。修复 commit 见 Flight `a40c4b2`；M6 主机套件 13+11/0 failures。
 
-**#13**：执行器侧 `IN_PROGRESS → FIXED_WAITING_RETEST`（**不得关闭**）。修复 commit 见 Flight `80bca5e`；实测 Flight M7 主机套件 226 checks / 0 failures，`ground_stop_transaction=PASS`、`ground_stop_evidence=FIRMWARE_GROUND_STOP_CERTIFICATE`，40 帧 / 100,000 µs 归零、受理到应用 100,500 µs ≤ 105,500 µs；DISARMED 仅在 `ZERO_TARGET_APPLIED` 后进入且后续无输出。**遗留（阻塞端到端关闭）**：FMS 侧签发 `GroundStopCertificate` 的触发逻辑尚未实现，物理 ESC 推力响应与 PIL/HIL 未验证——执行器侧 PASS 不等于停止功能端到端完成。
+**#13**：执行器侧 `IN_PROGRESS → FIXED_WAITING_RETEST`（**不得关闭**）。修复 commit 见 Flight `80bca5e`；实测 Flight M7 主机套件 230 checks / 0 failures，`ground_stop_transaction=PASS`、`ground_stop_evidence=FIRMWARE_GROUND_STOP_CERTIFICATE`，40 帧 / 100,000 µs 归零、受理到应用 100,500 µs ≤ 105,500 µs；DISARMED 仅在 `ZERO_TARGET_APPLIED` 后进入且后续无输出。**遗留（阻塞端到端关闭）**：FMS 侧签发 `GroundStopCertificate` 的触发逻辑尚未实现，物理 ESC 推力响应与 PIL/HIL 未验证——执行器侧 PASS 不等于停止功能端到端完成。
 
 **#12**：保持 `IN_PROGRESS`，追加本轮证据：拒绝阶段分布（`RESIDUAL` 468 / `OK` 20）、dual residual 分位数（median 1.75e-3）、以及"`eps_rel=0` 后 489/489 但 TAKEOFF `reason=5`"的因果链。
 

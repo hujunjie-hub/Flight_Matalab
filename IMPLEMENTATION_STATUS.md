@@ -136,5 +136,5 @@
 
 - Flight 固件：`middleware/actuator/output_guard/actuator_guard.{c,h}`（`actuator_guard_ground_stop`、帧边界降推力分支、DISARMED latch、`thrust_to_code()` 统一映射）、`middleware/contracts/messages/common_messages.h`（`GroundStopCertificate`、stop code/速率/预算常量、`ACTUATOR_RECEIPT_ZERO_TARGET_APPLIED`）、`message_ids.h`（`MSG_GROUND_STOP_CERTIFICATE` = 56）、`tests/actuation/test_m7_main.c`（M7-11…M7-16）、`tests/actuation/run_host_tests.ps1`。
 - Flight_Matalab：`tests/verify_actuation_components.m`（透出 ground stop 字段）、`external_dependencies.lock.json`（契约头哈希，旧值归档于 `config/dependency_history/607f4996….json`）、`config/flight_baseline.json`。
-- 实测：M7 主机套件 226 checks / 0 failures；归零 40 帧、100,000 µs，受理到应用 100,500 µs ≤ 105,500 µs。
+- 实测：M7 主机套件 230 checks / 0 failures；归零 40 帧、100,000 µs，受理到应用 100,500 µs ≤ 105,500 µs。
 - 未覆盖：FMS 侧签发触发逻辑、真实 ESC 物理推力响应、PIL/HIL 与实机时序。

@@ -123,7 +123,7 @@ MATLAB 集成：`verify_actuation_components.m` 通过 `run_m7_host_suite` 调�
 4. 完成后置 latch：`actuator_apply()` 与帧边界一律拒绝，输出保持零推力码，直到下一次 `actuator_init()`。
 5. 超过预算仍未归零时在回执 `limit_flags` 置 `ACTUATOR_GROUND_STOP_OVERRUN_FLAG`（不掩盖超时）。
 
-### 5.3 实测（Flight `tests/actuation`，226 checks）
+### 5.3 实测（Flight `tests/actuation`，230 checks）
 
 | 用例 | 结果 |
 |---|---|
@@ -133,6 +133,7 @@ MATLAB 集成：`verify_actuation_components.m` 通过 `run_m7_host_suite` 调�
 | M7-14 零目标回执 | PASS（四路均恰好 0 N，`ZERO_TARGET_APPLIED`） |
 | M7-15 应用时间 | PASS（**40 帧 / 100,000 µs 归零，受理到应用 100,500 µs ≤ 105,500 µs**） |
 | M7-16 DISARMED 与锁死 | PASS（仅在零回执后 DISARMED；之后的 demand 与帧均不产生提交，输出为零推力码） |
+| M7-17 重复证书幂等 | PASS（发布方每周期重发同一证书时不重启事务，`start_us` 不漂移；不同速率/码被拒绝，不会掩盖超时） |
 
 `actuation_host_summary.json` 现在输出 `ground_stop_transaction=PASS`、`ground_stop_evidence=FIRMWARE_GROUND_STOP_CERTIFICATE`、`ground_stop_max_apply_us=105500`、`ground_stop_max_ramp_nps=100` 和一行实测摘要。
 
