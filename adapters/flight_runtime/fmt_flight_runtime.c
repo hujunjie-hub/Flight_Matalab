@@ -867,6 +867,30 @@ static void write_m6_job_stats(void)
     }
     fprintf(file, "\n  ]\n}\n");
     fclose(file);
+    /* Time-resolved usage inside the takeoff window: the aggregate counters
+     * cannot say whether the MPC acceleration acted before TAKEOFF. */
+    file = fopen("work/validation/m6_use_trace.json", "w");
+    if (!file) return;
+    {
+        static MpcUseTrace rows[MPC_TRACE_CAPACITY];
+        uint32_t count = mpc_copy_use_trace(rows, MPC_TRACE_CAPACITY);
+        fprintf(file, "{\n  \"schema\": \"fmat-m6-use-trace/1.0\",\n"
+                      "  \"window_us\": [%u, %u],\n  \"record_count\": %u,\n"
+                      "  \"records\": [",
+                (unsigned)MPC_TRACE_FIRST_US, (unsigned)MPC_TRACE_LAST_US,
+                (unsigned)count);
+        for (index = 0; index < count; ++index)
+            fprintf(file,
+                    "%s\n    {\"time_us\": %u, \"backup\": %u,"
+                    " \"mpc\": [%.9g, %.9g, %.9g], \"pd\": [%.9g, %.9g, %.9g]}",
+                    index ? "," : "", rows[index].time_us,
+                    rows[index].backup, (double)rows[index].mpc[0],
+                    (double)rows[index].mpc[1], (double)rows[index].mpc[2],
+                    (double)rows[index].pd[0], (double)rows[index].pd[1],
+                    (double)rows[index].pd[2]);
+        fprintf(file, "\n  ]\n}\n");
+        fclose(file);
+    }
 }
 
 /* Sampled during the holdover window so the loss and the re-lock can be judged
