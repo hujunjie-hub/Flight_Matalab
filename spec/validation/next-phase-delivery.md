@@ -114,7 +114,9 @@ Ground Stop 不是测试缺口：`middleware/`、`applications/` 检索 `GroundS
 
 ## 6. 下一阶段任务（按优先级）
 
-1. **MPC 成功率（P0）**：查清"为什么 96% 的求解被 1e-3 门限拒绝、被放行的解又控制不好"。需要判断是 QP 病态（权重/边界尺度）、还是 MPC 与内环/分配器在边界条件下不稳。在结论出来前不要调门限。
+1. **MPC 快照有效期与成功率（P0）**：已核实为两个叠加问题——
+   - **有效期**：`mpc_solve()` 用 13 项取 min 作为快照到期时间，其中含执行器状态/能力消息头，而 `actuator_guard.c` 的 `header()` 设 `valid_until = now + 5000`（5 ms）。实测快照在消费时只剩 **1 ms**（`expires - eval = 1000 µs`），因此 9760 个内环周期里只被采用 80 个。修法需在三种取向中选择：快照只取控制输入 TTL、提高执行器消息 TTL、或消费侧要求执行器状态自身新鲜而允许快照更旧。
+   - **成功率**：严格 1e-3 门限下 488 个 job 中仅 20 个通过（4.1%）。三次实验表明放宽门限或收紧求解器都会让飞行变差（起飞高度不足 1.8 m），说明被拒的解确实劣化控制。需要先解决有效期语义，再重测成功率——两者叠加时任何单点调参都无法判断因果。
 2. **Ground Stop 实现（P0）**：Flight 侧新增 `GroundStopCertificate` 契约、`actuator_guard_ground_stop()`、`ZERO_TARGET_APPLIED` 回执与 DISARMED 后非零推力锁死；完成后 #13 的第三个 NOT_RUN 才能转 PASS。
 3. **P-10b 剩余两项（P1）**：UTC 授时纪律（`time_get_status` 的 UTC 有效位随 RECTIMEA 更新）与失锁/恢复（PPS 丢失后 holdover、恢复后重新锁定），各需独立夹具。
 4. **覆盖率口径（P2）**：`time_weighted_coverage` 的分母是否排除非轨迹模式时段，需要按 Issue #12 口径确认。
