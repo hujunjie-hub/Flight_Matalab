@@ -1,3 +1,7 @@
+> **新会话接管 / 证据冻结提示（2026-11-10）**：本文件所列 P-10b 的 26/0/26、UTC epoch 13、25 intervals 与 RUN_ID `20261110T144333455Z_9131a72` 的 ZIP 原始报告不一致。该 ZIP 的 `p10b_report.json` 为 21 accepted / 1 rejected / 21 RECTIMEA / 21 GNSS observations；`p10b_utc_mapping_report.json` 为 epoch 11 / 12 accepted intervals。关联 GitHub Issue [#17](https://github.com/hujunjie-hub/Flight_Matalab/issues/17)。在 #17 核清前，禁止把有争议的 26/0/26/epoch13/25 作为该 RUN_ID 的事实；新 Agent 必须先读取原始归档并完成证据对账。
+
+> **当前阻塞摘要**：M6 真实 MPC job gate 未达标（Issue #12）；M7 Ground Stop 固件能力未实现（Issue #13）；P-10b 文档/报告冲突及完整集成未闭环（Issue #14/#17）；归档 dirty-before + changed-during 分类缺陷（Issue #16）；controller 数组越界待修复（Issue #15）。新 Agent 开始修改前必须核对这些 Issue 的最新状态。
+
 # 下一阶段交付清单（截至 RUN_ID `20261110T144333455Z_9131a72`）
 
 本文件汇总本轮五个阶段的实际产出、证据位置与未闭合项。所有数字均来自同一轮 `run_component_checks`，不是多轮拼接。
