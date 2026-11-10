@@ -49,6 +49,27 @@ static uint64_t mil_gnss_gate_ready_time_us, mil_gnss_first_fix_sample_us;
 static uint32_t gnss_push_not_ready_count, gnss_push_not_permitted_count, gnss_push_other_failures;
 static uint32_t candidate_first_sequence;
 static uint64_t candidate_first_sample_us, candidate_first_age_us;
+static uint64_t first_terminal_time_us, arm_submit_time_us;
+static uint32_t first_terminal_decision_code, first_terminal_decision_reason;
+static uint32_t first_terminal_landed_state, first_terminal_landed_stable_ms;
+static uint32_t first_terminal_landed_evidence;
+static double first_terminal_landed_confidence;
+static uint32_t first_terminal_control_health_state, first_terminal_control_dof_mask;
+static uint32_t first_terminal_control_degraded_dof_mask, first_terminal_control_reason;
+static int32_t first_terminal_control_status, first_terminal_runtime_error;
+static uint32_t first_terminal_runtime_control_health, first_terminal_solver_status;
+static uint32_t first_terminal_deadline_miss_count, first_terminal_allocation_failure_count;
+static uint32_t first_terminal_actuator_fault_mask, first_terminal_actuator_available_mask;
+static uint32_t first_terminal_actuator_cap_available_mask, first_terminal_actuator_cap_dof_mask;
+static uint32_t first_terminal_permit_flags, first_terminal_permit_reason;
+static uint32_t first_terminal_guidance_state, first_terminal_guidance_reason;
+static uint32_t first_terminal_guidance_feasible, first_terminal_feasibility_reason;
+static uint32_t first_terminal_control_reference_id, first_terminal_receipt_result_code;
+static uint32_t first_terminal_mpc_updates, first_terminal_nav_capability_mask;
+static uint32_t first_terminal_nav_solution_state, first_terminal_nav_valid_mask;
+static uint32_t first_terminal_bundle_ready;
+static uint32_t arm_prearm_state_at_submit, arm_prearm_failed_mask_at_submit;
+static uint32_t arm_prearm_epoch_at_submit, arm_request_id;
 
 static int external_mode(void);
 
@@ -478,6 +499,48 @@ static int feed_simulated_sensor_events(const double *sensor_frame,
     return 0;
 }
 
+static void capture_first_terminal(void)
+{
+    if (first_terminal_time_us != 0u ||
+        runtime_data.fms.failsafe_level != FAILSAFE_TERMINAL)
+        return;
+
+    first_terminal_time_us = test_clock.monotonic_us;
+    first_terminal_decision_code = fms_output.decision_event.decision_code;
+    first_terminal_decision_reason = fms_output.decision_event.reason_code;
+    first_terminal_landed_state = fms_output.landed_state.state;
+    first_terminal_landed_stable_ms = fms_output.landed_state.stable_duration_ms;
+    first_terminal_landed_evidence = fms_output.landed_state.evidence_mask;
+    first_terminal_landed_confidence = fms_output.landed_state.confidence_0_to_1;
+    first_terminal_control_health_state = runtime_data.control_cap.health_state;
+    first_terminal_control_dof_mask = runtime_data.control_cap.controllable_dof_mask;
+    first_terminal_control_degraded_dof_mask = runtime_data.control_cap.degraded_dof_mask;
+    first_terminal_control_reason = runtime_data.control_cap.reason_code;
+    first_terminal_control_status = (int32_t)runtime_stats.control_status;
+    first_terminal_runtime_control_health = runtime_data.control_health.common.health_state;
+    first_terminal_solver_status = runtime_data.control_health.solver_status;
+    first_terminal_deadline_miss_count = runtime_data.control_health.deadline_miss_count;
+    first_terminal_allocation_failure_count = runtime_data.control_health.allocation_failure_count;
+    first_terminal_actuator_fault_mask = runtime_data.actuator.fault_mask;
+    first_terminal_actuator_available_mask = runtime_data.actuator.available_mask;
+    first_terminal_actuator_cap_available_mask = runtime_data.actuator_cap.available_mask;
+    first_terminal_actuator_cap_dof_mask = runtime_data.actuator_cap.controllable_dof_mask;
+    first_terminal_permit_flags = fms_output.actuation_permit.permit_flags;
+    first_terminal_permit_reason = fms_output.actuation_permit.reason_code;
+    first_terminal_guidance_state = plan_bundle.guidance.guidance_status.guidance_state;
+    first_terminal_guidance_reason = plan_bundle.guidance.guidance_status.reason_code;
+    first_terminal_guidance_feasible = plan_bundle.guidance.feasibility.feasible;
+    first_terminal_feasibility_reason = plan_bundle.guidance.feasibility.reason_code;
+    first_terminal_control_reference_id = runtime_data.control_reference_id;
+    first_terminal_receipt_result_code = runtime_data.receipt.result_code;
+    first_terminal_runtime_error = (int32_t)runtime_stats.last_error;
+    first_terminal_mpc_updates = runtime_stats.mpc_updates;
+    first_terminal_nav_capability_mask = runtime_data.nav_cap.capability_mask;
+    first_terminal_nav_solution_state = runtime_data.nav_cap.solution_state;
+    first_terminal_nav_valid_mask = runtime_data.nav.core.valid_mask;
+    first_terminal_bundle_ready = runtime_data.bundle_ready;
+}
+
 static void feed_contact(double contact)
 {
     last_fmt_us = contact == 0 || contact == 1 ? test_clock.monotonic_us : 0;
@@ -522,6 +585,27 @@ __declspec(dllexport) int fmt_flight_start(int mode)
     gnss_push_not_ready_count = gnss_push_not_permitted_count = gnss_push_other_failures = 0u;
     candidate_first_sequence = 0u;
     candidate_first_sample_us = candidate_first_age_us = 0u;
+    first_terminal_time_us = arm_submit_time_us = 0u;
+    first_terminal_decision_code = first_terminal_decision_reason = 0u;
+    first_terminal_landed_state = first_terminal_landed_stable_ms = 0u;
+    first_terminal_landed_evidence = 0u;
+    first_terminal_landed_confidence = 0.0;
+    first_terminal_control_health_state = first_terminal_control_dof_mask = 0u;
+    first_terminal_control_degraded_dof_mask = first_terminal_control_reason = 0u;
+    first_terminal_control_status = first_terminal_runtime_error = 0;
+    first_terminal_runtime_control_health = first_terminal_solver_status = 0u;
+    first_terminal_deadline_miss_count = first_terminal_allocation_failure_count = 0u;
+    first_terminal_actuator_fault_mask = first_terminal_actuator_available_mask = 0u;
+    first_terminal_actuator_cap_available_mask = first_terminal_actuator_cap_dof_mask = 0u;
+    first_terminal_permit_flags = first_terminal_permit_reason = 0u;
+    first_terminal_guidance_state = first_terminal_guidance_reason = 0u;
+    first_terminal_guidance_feasible = first_terminal_feasibility_reason = 0u;
+    first_terminal_control_reference_id = first_terminal_receipt_result_code = 0u;
+    first_terminal_mpc_updates = first_terminal_nav_capability_mask = 0u;
+    first_terminal_nav_solution_state = first_terminal_nav_valid_mask = 0u;
+    first_terminal_bundle_ready = 0u;
+    arm_prearm_state_at_submit = arm_prearm_failed_mask_at_submit = 0u;
+    arm_prearm_epoch_at_submit = arm_request_id = 0u;
     gnss_submit_attempts = gnss_submit_successes = 0u;
     gnss_submit_last_status = 0;
     gnss_push_attempts = gnss_push_successes = 0u;
@@ -648,18 +732,29 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
             }
         }
     }
+    if (mission_turned)
+        capture_first_terminal();
     if (elapsed_ticks % (2u * TASK_MPC_PERIOD_MS) == 0u)
         turn(task_mpc_entry);
     if (elapsed_ticks % (2u * TASK_SUPERVISOR_PERIOD_MS) == 0u)
         task_supervisor_step();
     if (command[0] >= 1 && command[0] <= UINT16_MAX && floor(command[0]) == command[0] &&
         isfinite(command[1])) {
-        uint32_t request = submit_command((uint16_t)command[0], runtime_data.prearm.check_epoch,
+        const uint16_t command_code = (uint16_t)command[0];
+        if (command_code == PRODUCT_CMD_ARM && arm_submit_time_us == 0u) {
+            arm_prearm_state_at_submit = runtime_data.prearm.state;
+            arm_prearm_failed_mask_at_submit = runtime_data.prearm.failed_checks_mask;
+            arm_prearm_epoch_at_submit = runtime_data.prearm.check_epoch;
+            arm_submit_time_us = test_clock.monotonic_us;
+        }
+        uint32_t request = submit_command(command_code, runtime_data.prearm.check_epoch,
                                           (float)command[1]);
         if (request) {
             last_request = request;
             last_ack = last_reason = 0;
-            last_command_code = (uint16_t)command[0];
+            last_command_code = command_code;
+            if (command_code == PRODUCT_CMD_ARM && arm_request_id == 0u)
+                arm_request_id = request;
         }
     }
 
@@ -727,7 +822,46 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
         origin_snapshot.origin_id,
         candidate_first_sequence,
         candidate_first_sample_us,
-        candidate_first_age_us
+        candidate_first_age_us,
+        first_terminal_time_us,
+        first_terminal_decision_code,
+        first_terminal_decision_reason,
+        first_terminal_landed_state,
+        first_terminal_landed_stable_ms,
+        first_terminal_landed_evidence,
+        first_terminal_landed_confidence,
+        first_terminal_control_health_state,
+        first_terminal_control_dof_mask,
+        first_terminal_control_degraded_dof_mask,
+        first_terminal_control_reason,
+        first_terminal_control_status,
+        first_terminal_runtime_control_health,
+        first_terminal_solver_status,
+        first_terminal_deadline_miss_count,
+        first_terminal_allocation_failure_count,
+        first_terminal_actuator_fault_mask,
+        first_terminal_actuator_available_mask,
+        first_terminal_actuator_cap_available_mask,
+        first_terminal_actuator_cap_dof_mask,
+        first_terminal_permit_flags,
+        first_terminal_permit_reason,
+        first_terminal_guidance_state,
+        first_terminal_guidance_reason,
+        first_terminal_guidance_feasible,
+        first_terminal_feasibility_reason,
+        first_terminal_control_reference_id,
+        first_terminal_receipt_result_code,
+        first_terminal_runtime_error,
+        first_terminal_mpc_updates,
+        first_terminal_nav_capability_mask,
+        first_terminal_nav_solution_state,
+        first_terminal_nav_valid_mask,
+        first_terminal_bundle_ready,
+        arm_prearm_state_at_submit,
+        arm_prearm_failed_mask_at_submit,
+        arm_prearm_epoch_at_submit,
+        arm_submit_time_us,
+        arm_request_id
     };
     memcpy(status, values, sizeof(values));
     NavFrame published = {0};
