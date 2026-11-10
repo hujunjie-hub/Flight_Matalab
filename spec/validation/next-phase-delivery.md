@@ -1,4 +1,4 @@
-# 下一阶段交付清单（截至 RUN_ID `20261110T143219012Z_83bbed3`）
+# 下一阶段交付清单（截至 RUN_ID `20261110T144333455Z_9131a72`）
 
 本文件汇总本轮五个阶段的实际产出、证据位置与未闭合项。所有数字均来自同一轮 `run_component_checks`，不是多轮拼接。
 
@@ -6,15 +6,15 @@
 
 | 项目 | 值 |
 |---|---|
-| RUN_ID | `20261110T143219012Z_83bbed3` |
-| ZIP | `work/validation/archives/20261110T143219012Z_83bbed3.zip`（41 个证据文件） |
-| ZIP SHA-256 | `01c54d0fae2f5b4503d6ee39c8e34587fd4bbb5eb3d1d95f6804d3e35d4ef36a` |
+| RUN_ID | `20261110T144333455Z_9131a72` |
+| ZIP | `work/validation/archives/20261110T144333455Z_9131a72.zip`（44 个证据文件） |
+| ZIP SHA-256 | `7ceac0b57d40f4b6827efcd97f94b593a20e12308bd04e4ee052378f23f23779` |
 | 大小 | 7.56 MB |
 | `component_status` | **FAIL**（16 PASS 中含 `p10b`、`p10b_utc`；1 PARTIAL；1 FAIL） |
-| source 指纹 | `a6bfe99efc3a1e23beccd87c5b4d7446c93caa4a55bf13dc830242b492a6e399`（committed `a5f83a99…`） |
-| artifact 指纹 | `89a69b0fff91a56243e1a578d2cec9d06c844d6f2e539f29e66036fabe0d5b46` |
+| source 指纹 | `f92e96557b6b2474251e6aa68aa835751c81fb98ddf34b26e04d72484452c4b1`（committed `f20af7c7…`） |
+| artifact 指纹 | `161505ad7c3dc8cfb256a45582ce1d9a4d1507bf98bb6cafee76674f53409531` |
 | `source_clean` | true |
-| 归档记录的 commit | `83bbed3`（与本轮 HEAD 一致） |
+| 归档记录的 commit | `9131a72`（与本轮 HEAD 一致） |
 | Flight HEAD | `125773b`（分支 `test/fmat-0012-m6-controller`，工作树干净） |
 | PR 状态 | Flight_Matalab#1 Draft；Flight#3 Draft；Flight#4 Draft；`main` 未改动 |
 
@@ -64,7 +64,7 @@ Ground Stop 不是测试缺口：`middleware/`、`applications/` 检索 `GroundS
 | UM982 RECTIMEA 解析 | 26 帧解码（真实 `unicore_ascii` + 录制句子） |
 | GNSS 时间配对 | 26 次 `time_submit_gnss_time` 成功 |
 | `utc_mapping_verified` | **PASS**（`utc_valid=1`、`mapping_epoch=13`、不确定度 384 µs、25 个有效 PPS 间隔） |
-| `holdover_recovery_verified` | `NOT_RUN` |
+| `holdover_recovery_verified` | **PASS**（失锁期 `utc_valid=0`、holdover 4.5 s、不确定度 225 ms；恢复后 384 µs、21 个有效边沿） |
 
 ## 3. 实际执行的测试
 
@@ -78,6 +78,7 @@ Ground Stop 不是测试缺口：`middleware/`、`applications/` 检索 `GroundS
 | Matalab 速率阶跃 | PASS（0.460 s / 1.4% / 0.0062） |
 | Matalab P-10b 注入 | PASS（26/26/26，0 拒绝） |
 | Matalab P-10b UTC 授时 | PASS（`utc_valid=1`、epoch 13、384 µs、25 间隔） |
+| Matalab P-10b 失锁/恢复 | PASS（holdover 4.5 s、不确定度 225 ms → 384 µs） |
 | Matalab 完整回归 | 15 PASS / 1 PARTIAL / 1 FAIL |
 
 ## 4. 修改文件清单
@@ -109,7 +110,7 @@ Ground Stop 不是测试缺口：`middleware/`、`applications/` 检索 `GroundS
 |---|---|---|
 | #12（M6） | open | 组装/严格校验/上下文守卫/速率阶跃 PASS；MPC 成功率 4.1% 未达标 |
 | #13（M7） | open | permit 与帧应用 PASS；Ground Stop 为固件功能缺口 |
-| #14（P-10b） | open | 时统接入、PPS/RECTIMEA 注入、UTC 授时纪律 PASS；失锁恢复未验证 |
+| #14（P-10b） | open | 时统接入、PPS/RECTIMEA 注入、UTC 授时纪律、失锁/恢复均 PASS；仅剩实机/PIL 层不在本阶段范围 |
 
 ## 6. 下一阶段任务（按优先级）
 
