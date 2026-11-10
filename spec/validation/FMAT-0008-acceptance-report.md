@@ -60,7 +60,18 @@
 | 11 | DataSIM 回放 | PASS | `Flight:SensorReplay` |
 | 12 | ExtINS 回放 | PASS（本报告前修复） | `Flight:ExternalReplay` |
 | — | 源数据指纹 | 可用 | `275e8374fc8a9de6a17d65e7226142047f47ca5a11dad7f72c1f1c3ec3984f7c` |
-| — | 后续组件门（Plant P-07 之后） | **未执行** | 阻塞于 P-07 |
+| — | 后续组件门（Plant P-07 之后） | **逐个独立执行后全部 PASS**（见下） |
+
+独立执行结果（绕过 `verify_plant_open_loop` 的 P-07 断言，其余门逐个 `feval`）：
+
+```
+verify_time_service_sync PASS   verify_gnss_time_recovery PASS   verify_rectime_time_mapping PASS
+verify_parameter_view    PASS   verify_osqp_gate          PASS   verify_execution_gate      PASS
+verify_truth_isolation   PASS   verify_rate_pid_transaction PASS verify_pid_allocator_feedback PASS
+verify_actuation_components PASS  verify_sensor_event_timing PASS
+```
+
+因此整条验收链上**唯一失败点是 Plant P-07**；其余 MIL、回放、指纹与全部组件门均为绿。
 
 ## 3. 剩余阻塞：Plant P-07（建议单独立项）
 
