@@ -639,18 +639,22 @@ __declspec(dllexport) int fmt_flight_start(int mode)
 /* M6 acceptance evidence: the runtime only exposes the current solver status, so
  * the job counts and covered time are written once at shutdown. The counters are
  * owned by the real MPC task; this function only serializes them. */
+/* The solver owns the accounting; the adapter only serializes it. */
+typedef struct { uint32_t jobs, solved, rejected; uint64_t covered_us; } MpcRunStats;
+void mpc_get_run_stats(MpcRunStats *out);
+
 static void write_m6_job_stats(void)
 {
-    RuntimeStats stats;
+    MpcRunStats stats;
     FILE *file;
-    runtime_get_stats(&stats);
+    mpc_get_run_stats(&stats);
     file = fopen("work/validation/m6_runtime_stats.json", "w");
     if (!file) return;
     fprintf(file,
             "{\n  \"mpc_updates\": %u,\n  \"mpc_solved\": %u,\n"
             "  \"mpc_rejected\": %u,\n  \"mpc_covered_us\": %llu\n}\n",
-            stats.mpc_updates, stats.mpc_solved, stats.mpc_rejected,
-            (unsigned long long)stats.mpc_covered_us);
+            stats.jobs, stats.solved, stats.rejected,
+            (unsigned long long)stats.covered_us);
     fclose(file);
 }
 

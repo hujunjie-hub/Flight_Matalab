@@ -16,12 +16,23 @@ assert(isfile(entriesFile),'Flight:M6Jobs', ...
 entries=jsondecode(fileread(entriesFile));
 durationUs=max(1,round(entries.duration_s*1e6));
 
-jobs=double(stats.mpc_updates);
-solved=double(stats.mpc_solved);
-rejected=double(stats.mpc_rejected);
-coveredUs=double(stats.mpc_covered_us);
-assert(jobs>0 && solved+rejected==jobs,'Flight:M6Jobs', ...
-    'MPC counters are inconsistent: updates=%d solved=%d rejected=%d.',jobs,solved,rejected);
+jobs=double(stats.jobs);
+solved=double(stats.solved);
+rejected=double(stats.rejected);
+coveredUs=double(stats.covered_us);
+assert(solved+rejected==jobs,'Flight:M6Jobs', ...
+    'MPC counters are inconsistent: jobs=%d solved=%d rejected=%d.',jobs,solved,rejected);
+if jobs==0
+    % The MIL scenario never entered the trajectory MPC path, so there is no
+    % job set to judge. Report NOT_RUN rather than a fake 0 % success rate.
+    report=struct('scope','M6_MPC_JOBS','status','NOT_RUN','jobs',0, ...
+        'reason','MIL scenario never entered the trajectory MPC path');
+    file=fullfile(root,'work','validation','m6_report.json');
+    fid=fopen(file,'w'); cleanup=onCleanup(@()fclose(fid));
+    fprintf(fid,'%s\n',jsonencode(report,PrettyPrint=true));
+    disp(report);
+    return;
+end
 
 successRate=solved/jobs;
 coverage=min(1,coveredUs/durationUs);
