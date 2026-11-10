@@ -139,7 +139,7 @@ Host SIL 的确定性调度器必须显式模拟 RTOS 信号量唤醒：Sensor �
 
 所有必需报告必须来自同一次验收运行。报告缺失、时间戳/Hash 不一致、输入在测试期间改变或运行中断，都不能按 PASS 验收。
 
-Origin Reset 验收必须同时满足：GNSS candidate 已进入 runtime data；FMS `fms_authorize_origin_reset` 返回成功；INS `estimator_reset` 返回成功；随后导航有效位包含水平位置。仅有 candidate 或最终 PreArm 状态不足以证明授权链闭环。
+Origin Reset 验收必须同时满足：GNSS candidate 已进入 runtime data；FMS `fms_authorize_origin_reset` 返回成功；INS `estimator_reset` 返回成功；随后导航有效位包含水平位置。仅有 candidate 或最终 PreArm 状态不足以证明授权链闭环。 M7 提交验收还必须在同一采样帧观察到 `PERMIT_SCOPE_CONTROL_ACTIVE` 且未置 `PERMIT_FLAG_REVOKED`、`ACTUATOR_RECEIPT_COMMITTED` 和 Host SIL `commit_valid=1`；仅有 Permit 位或单独的非零推力均不足以证明有效提交。
 
 Flight 入口诊断约定：`verify_flight_entries` 在 MIL 断言之前写出 `mil_diagnostics.json`，记录每条命令的 command code、request ID、ACK state/reason，以及对应时刻的 arm/mode/failsafe、PreArm state、failed mask、primary reason、failed count、check epoch 和 authority。Host SIL 状态帧宽度为 40；第 25～32 列依次为 PreArm failed mask、primary reason、failed count、warning count、check epoch、FMS authority、mission state、最近命令码；第 33～40 列依次为 FMS origin-reset 授权尝试数、成功数、最近授权状态码、INS reset 尝试数、成功数、最近 reset 状态码、reset type、requested origin ID。不得使用最后一条 DISARM ACK 代替 ARM ACK 诊断。
 
