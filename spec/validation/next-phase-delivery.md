@@ -14,7 +14,7 @@
 | source 指纹 | `b4ed29d4c8856d30bc074bc4532abf906557f1acc77a57db8b9e9b7b99fd5c2c`（committed `b40d1c20…`） |
 | artifact 指纹 | `b973cb0a9b03b430bc7b282ce64ebac41b9ce4dc481a8c75107212516073c643` |
 | `source_clean` | true |
-| Flight_Matalab HEAD | `e93302d`（与归档记录的 commit 一致，工作树干净） |
+| 归档记录的 commit | `e93302d`（此后仅有文档提交，source 指纹未变，仍为 `b4ed29d4…`） |
 | Flight HEAD | `125773b`（分支 `test/fmat-0012-m6-controller`，工作树干净） |
 | PR 状态 | Flight_Matalab#1 Draft；Flight#3 Draft；Flight#4 Draft；`main` 未改动 |
 
