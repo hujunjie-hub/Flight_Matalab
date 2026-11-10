@@ -69,7 +69,7 @@ Status __wrap_estimator_init(const ProductEstimatorConfig *config)
     ProductEstimatorConfig mil_config = *config;
     /* Exercise the real late-first-fix/FMS Origin Reset path only in MIL.
      * DataSIM and ExtINS retain the complete anchored Host SIL bench origin. */
-    if (mode_active == FMT_MIL_SIM)
+    if (mode_active == FMT_MIL_SIM || mode_active == FMT_DATA_SIM)
         mil_config.payload.initial_origin_valid_mask = 1u;
     return __real_estimator_init(&mil_config);
 }
@@ -395,7 +395,7 @@ static int inject_simulated_gnss(const FmtSensorSimEvent *event, const double *m
         return -1;
     }
     ++gnss_submit_successes;
-    if (mode_active == FMT_MIL_SIM && mil_gnss_first_fix_sequence == 0u) {
+    if ((mode_active == FMT_MIL_SIM || mode_active == FMT_DATA_SIM) && mil_gnss_first_fix_sequence == 0u) {
         mil_gnss_first_fix_sequence = event->sequence;
         mil_gnss_first_fix_sample_us = event->sample_us;
     }
@@ -414,7 +414,7 @@ static int feed_simulated_sensor_events(const double *sensor_frame,
         sensor_frame[FMT_SENSOR_VALID] > 15.0 || floor(sensor_frame[FMT_SENSOR_VALID]) != sensor_frame[FMT_SENSOR_VALID])
         return -1;
     memcpy(gated_sensor_frame, sensor_frame, sizeof(gated_sensor_frame));
-    if (mode_active == FMT_MIL_SIM && !mil_gnss_gate_released) {
+    if ((mode_active == FMT_MIL_SIM || mode_active == FMT_DATA_SIM) && !mil_gnss_gate_released) {
         NavigationSnapshot snapshot = {0};
         Status nav_status = __real_estimator_get_snapshot(&snapshot);
         if (nav_status == STATUS_OK &&
@@ -568,7 +568,7 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
     int mission_turned = 0;
     if (external_mode())
         memcpy(&external_frame, nav_in, sizeof(external_frame));
-    if (mode_active == FMT_MIL_SIM &&
+    if ((mode_active == FMT_MIL_SIM || mode_active == FMT_DATA_SIM) &&
         feed_simulated_sensor_events(s, sensor_model_parameters, sensor_timing_parameters,
                                      test_clock.monotonic_us) != 0)
         return -3;
@@ -576,7 +576,7 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
     if (elapsed_ticks % 2u == 0u) {
         if (ms % TASK_MISSION_PERIOD_MS == 0u)
             feed_operator(0, 0);
-        if (mode_active != FMT_MIL_SIM)
+        if (mode_active == FMT_EXTINS_DATA_SIM)
             feed_sensors(s, ms);
         feed_contact(s[FMT_SENSOR_CONTACT]);
         ++sensor_turn_count;
