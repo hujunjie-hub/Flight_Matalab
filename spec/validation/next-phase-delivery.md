@@ -1,4 +1,4 @@
-# 下一阶段交付清单（截至 RUN_ID `20261110T134722988Z_a741f99`）
+# 下一阶段交付清单（截至 RUN_ID `20261110T140933221Z_e93302d`）
 
 本文件汇总本轮五个阶段的实际产出、证据位置与未闭合项。所有数字均来自同一轮 `run_component_checks`，不是多轮拼接。
 
@@ -6,15 +6,15 @@
 
 | 项目 | 值 |
 |---|---|
-| RUN_ID | `20261110T134722988Z_a741f99` |
-| ZIP | `work/validation/archives/20261110T134722988Z_a741f99.zip`（38 个证据文件） |
-| ZIP SHA-256 | `56b4646077790d0678386a9b65f40e554691ed0851a57ad1f719aa7aea6243f3` |
+| RUN_ID | `20261110T140933221Z_e93302d` |
+| ZIP | `work/validation/archives/20261110T140933221Z_e93302d.zip`（38 个证据文件） |
+| ZIP SHA-256 | `3b4a18b90ac64f4e7904e50b96b0545e56f0527b6658babfd8c1a836409613e1` |
 | 大小 | 7.56 MB |
 | `component_status` | **FAIL**（15 PASS / 1 PARTIAL / 1 FAIL） |
-| source 指纹 | `43d7d2e7628de7ce5177403684068d8ce9fc85b8bb2bf556db0f75054aea7553`（committed `9ef31fec…`） |
-| artifact 指纹 | `14abb433031117e51a34c65b16d2b41e21462bb18a5babcc04e8e086ce00489c` |
+| source 指纹 | `b4ed29d4c8856d30bc074bc4532abf906557f1acc77a57db8b9e9b7b99fd5c2c`（committed `b40d1c20…`） |
+| artifact 指纹 | `b973cb0a9b03b430bc7b282ce64ebac41b9ce4dc481a8c75107212516073c643` |
 | `source_clean` | true |
-| Flight_Matalab HEAD | `a741f99`（领先 `origin/main` 400 个提交，工作树干净） |
+| Flight_Matalab HEAD | `e93302d`（与归档记录的 commit 一致，工作树干净） |
 | Flight HEAD | `125773b`（分支 `test/fmat-0012-m6-controller`，工作树干净） |
 | PR 状态 | Flight_Matalab#1 Draft；Flight#3 Draft；Flight#4 Draft；`main` 未改动 |
 
