@@ -1,4 +1,4 @@
-# 下一阶段交付清单（截至 RUN_ID `20261110T163238005Z_a5628f7`）
+# 下一阶段交付清单（截至 RUN_ID `20261110T170102013Z_c2b04c6`）
 
 本文件汇总本轮的实际产出、证据位置与未闭合项。所有数字均来自同一轮 `run_component_checks`，不是多轮拼接。
 
@@ -12,18 +12,18 @@
 
 | 项目 | 值 |
 |---|---|
-| RUN_ID | `20261110T163238005Z_a5628f7` |
-| ZIP | `work/validation/archives/20261110T163238005Z_a5628f7.zip`（46 个证据文件） |
-| ZIP SHA-256 | `307279fcdbd53ae111f8467276f8669db293f9d9683474fef8cd39199b978afc` |
+| RUN_ID | `20261110T170102013Z_c2b04c6` |
+| ZIP | `work/validation/archives/20261110T170102013Z_c2b04c6.zip`（46 个证据文件） |
+| ZIP SHA-256 | `f53aa6a1001b40b2e92efabab37fc0e8f49e3742b57447a07b3a4b1f8a239c5b` |
 | `component_status` | **FAIL**（18 PASS、1 PARTIAL、1 FAIL；FAIL 只有 `m6_jobs`） |
 | source 指纹（磁盘） | `68fc81d080685d4bf66ae89b799a9891ff6b89976b5f137290a493b1bb7c8631` |
-| source 指纹（committed） | `9eee07efa0fac963dff19bcf5e5722de8221c54971a1f7b1a6c2554228b738d2` |
-| artifact 指纹 | `3d4d3d9ac925cbf86dce15cd12260193bf8f31269beecbe077a7a23c8b310d89` |
-| `source_clean` | true（Flight_Matalab `a5628f7`，manifest 的 before/after commit 与之一致） |
-| Flight 上游 | `a40c4b2`（分支 `test/fmat-0012-m6-controller`） |
+| source 指纹（committed） | `5e1bfd45ee4d2f0b46d0e0e32a6cfb9f3cf92645d5a650694ecbb5af3a22edc0` |
+| artifact 指纹 | `ad3f90db2a04b2d2b304b02b13a84359c8130ed6dd8ee4c7b2054cc904a0802a` |
+| `source_clean` | true（Flight_Matalab `c2b04c6`，manifest 的 before/after commit 与之一致） |
+| Flight 上游 | `80bca5e`（分支 `test/fmat-0012-m6-controller`） |
 | 生成文件分类 | `pre_existing_local_change_modified_by_run` 5、`pre_existing_local_change` 4、`commit_candidate` 1、`excluded_from_source` 13 |
 | PR 状态 | Flight_Matalab#1 Draft；Flight#3 Draft；Flight#4 Draft；`main` 未改动 |
-| 已被取代的归档 | `20261110T162048653Z_61a90f6`（同一代码树、含 `m6_jobs.json` 空记录缺陷的那一轮，保留不删） |
+| 已被取代的归档 | `20261110T162048653Z_61a90f6`（M6 诊断首轮）、`20261110T165750883Z_c2b04c6`（M7 首轮，运行前文档未提交，`source_clean=false`）；两者均保留不删 |
 
 ## 2. 本轮实际结果
 
@@ -144,6 +144,8 @@ P-10 整体仍为 `PARTIAL`：物理 TIM2 capture ISR、UM982 UART/DMA、`sensor
 **#17**：状态 `IN_PROGRESS → FIXED_WAITING_RETEST`。修复 commit `57087e0`；同一 RUN_ID。事实：`9131a72` 归档原始值为 21/1/21/21、epoch 11、12 intervals、失锁期 `utc_valid=0`；旧文档的 26/0/26/epoch13/25 为错误数字。另修复两处报告缺陷：注入门硬编码 `NOT_RUN`、失锁门把派生判定写入 `loss_utc_valid`。
 
 **#15**：状态 `OPEN → FIXED_WAITING_RETEST`。修复 commit 见 Flight `a40c4b2`；M6 主机套件 13+11/0 failures。
+
+**#13**：执行器侧 `IN_PROGRESS → FIXED_WAITING_RETEST`（**不得关闭**）。修复 commit 见 Flight `80bca5e`；实测 Flight M7 主机套件 226 checks / 0 failures，`ground_stop_transaction=PASS`、`ground_stop_evidence=FIRMWARE_GROUND_STOP_CERTIFICATE`，40 帧 / 100,000 µs 归零、受理到应用 100,500 µs ≤ 105,500 µs；DISARMED 仅在 `ZERO_TARGET_APPLIED` 后进入且后续无输出。**遗留（阻塞端到端关闭）**：FMS 侧签发 `GroundStopCertificate` 的触发逻辑尚未实现，物理 ESC 推力响应与 PIL/HIL 未验证——执行器侧 PASS 不等于停止功能端到端完成。
 
 **#12**：保持 `IN_PROGRESS`，追加本轮证据：拒绝阶段分布（`RESIDUAL` 468 / `OK` 20）、dual residual 分位数（median 1.75e-3）、以及"`eps_rel=0` 后 489/489 但 TAKEOFF `reason=5`"的因果链。
 
