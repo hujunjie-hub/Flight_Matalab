@@ -61,6 +61,28 @@ requested[i] = backup ? ref.acc + kp*(ref.pos - nav.pos) + kd*(ref.vel - nav.vel
 
 一次 MIL 即可看出爬升段两者差异的方向与量级，比继续猜代价参数高效。该诊断只在 Host 侧开启，不改变固件行为。
 
+## 4.1 第 31 轮的实测（Host 只读诊断）
+
+在 `position_control_track()` 增加 Host 专用诊断（`#ifdef FLIGHT_HOST_TEST`，只读、不改行为），26 s MIL 得到：
+
+```
+outer_samples   = 9760      /* 每个 1 kHz 内环周期采样一次 */
+outer_mpc_used  = 80        /* 真正采用 MPC 加速度的周期数 */
+outer_max_diff  = 0.1597    /* MPC 与 PD 回退值之差的最大值，m/s^2 */
+outer_max_mpc   = 0.1609    /* MPC 加速度峰值，m/s^2 */
+outer_min_life_us = outer_max_life_us = 8000   /* 快照有效期 */
+```
+
+三点结论：
+
+1. **MPC 在这 9.76 s 里只被采用 80 个 1 kHz 周期（约 80 ms）**，参与度极低；
+2. 被采用时 MPC 与 PD 的差异最大仅 **0.16 m/s²**（约 1.6% g），幅度很小；
+3. 快照有效期实测恒为 **8 ms**，而外环周期是 20 ms——即使求解成功，也只有约 40% 的时间窗可用。
+
+第 3 点若成立，将直接解释"MPC 参与度低"；但也可能是我的测量口径问题：寿命用 `expires_at_us - header.timestamp_sample_us` 计算，而 `timestamp_sample_us` 的语义（导航采样时刻 vs 求解时刻）尚未核实。**该数字在核实前不应作为结论引用。**
+
+诊断代码已回退（Host 与固件均恢复原状，MIL 短跑 `MIL_OK`），避免把未核实的口径留在固件里。若下一阶段继续，建议先把 `expires_at_us` 的 min 链逐项打印出来（本轮的索引记录返回 0，即 `start+20000`，与 8 ms 的实测矛盾，说明口径还需查清）。
+
 ## 5. 边界
 
 本节只确认了消费路径与条件，**没有**定位到具体缺陷，也没有修改任何固件代码。三次实验的代码改动均已回退（Flight `8b938ca` 与后续 checkout），当前工作树干净。
