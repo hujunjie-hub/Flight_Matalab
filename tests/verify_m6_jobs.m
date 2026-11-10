@@ -16,10 +16,15 @@ assert(isfile(entriesFile),'Flight:M6Jobs', ...
 entries=jsondecode(fileread(entriesFile));
 durationUs=max(1,round(entries.duration_s*1e6));
 
-jobs=double(stats.jobs);
-solved=double(stats.solved);
-rejected=double(stats.rejected);
-coveredUs=double(stats.covered_us);
+% The adapter has used both key sets; accept either so a stale DLL cannot make
+% the gate read the wrong field.
+if isfield(stats,'jobs')
+    jobs=double(stats.jobs); solved=double(stats.solved);
+    rejected=double(stats.rejected); coveredUs=double(stats.covered_us);
+else
+    jobs=double(stats.mpc_updates); solved=double(stats.mpc_solved);
+    rejected=double(stats.mpc_rejected); coveredUs=double(stats.mpc_covered_us);
+end
 assert(solved+rejected==jobs,'Flight:M6Jobs', ...
     'MPC counters are inconsistent: jobs=%d solved=%d rejected=%d.',jobs,solved,rejected);
 if jobs==0
