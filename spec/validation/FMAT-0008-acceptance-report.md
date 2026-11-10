@@ -1,9 +1,9 @@
 # FMAT-0008 验收报告：ARM_INITIAL_CONTROL_REFERENCE_RACE
 
 - 分支：`optimize/sil-physical-parameter-alignment`
-- 基线：`c5da00a8133a4cf675c313d6e743c876dedb3fae`（起始）→ 本报告对应 `3458546`
+- 基线：`c5da00a8133a4cf675c313d6e743c876dedb3fae`（起始）→ 本报告对应 `9169cb9`
 - 状态：**FIXED_WAITING_RETEST**（Issue 不关闭）
-- 结论：本 Issue 描述的三个缺陷已修复并有证据；全部 12 项验收未全绿，阻塞在第 7 项之后的 Plant P-07（本分支新增测试，与本 Issue 主题无关，建议单独立项）。
+- 结论：本 Issue 描述的三个缺陷已修复并有证据；12 项验收目标全部 PASS，`run_component_checks` 为 `PARTIAL_PASS`（Plant 门为设计内的 `PARTIAL`，全部 20 个 Plant 用例通过）。原先阻塞验收的 Plant P-07 已定位并修复，见 §3 与 [FMAT-0009](../quality/FMAT-0009-plant-sensor-accel-anomaly.md) §12。
 
 ## 1. 已修复缺陷
 
@@ -59,55 +59,35 @@
 | 10 | DISARM / LOCK | PASS（26.020 s，ack=3，arm=0） | 命令历史 |
 | 11 | DataSIM 回放 | PASS | `Flight:SensorReplay` |
 | 12 | ExtINS 回放 | PASS（本报告前修复） | `Flight:ExternalReplay` |
-| — | 源数据指纹 | 可用 | `7c514e63032674fb7e299682a2ba5f3e9b96c26cfef902fe33de62512bdc2937` |
-| — | 后续组件门（Plant P-07 之后） | **逐个独立执行后全部 PASS**（见下） |
+| — | 源数据指纹 | 可用 | `857d6d6de3b39710b05aa0554d2fc13168a365782bd1e0ffce87270382b1bcd6` |
+| — | `run_component_checks` 总体 | `PARTIAL_PASS`（1 个大项 `PARTIAL`：Plant 闭合环不在组件门内） | `component_checks.json` |
+| — | 组件门逐项 | `flight_entries`/`time_service`/`gnss_time_recovery`/`rectime_time_mapping`/`parameters`/`osqp`/`execution`/`sensor_event_timing`/`truth_isolation`/`pid`/`pid_allocator_feedback`/`actuation` 全部 **PASS**，`plant` **PARTIAL**（20/20 用例通过） | 同上 |
 
-独立执行结果（绕过 `verify_plant_open_loop` 的 P-07 断言，其余门逐个 `feval`）：
+`plant` 的 `PARTIAL` 是设计内取值：`plant_open_loop_report.json` 明确 `system_closed_loop=NOT_RUN`，闭合环由 `flight_entries` 覆盖。实测 20 个 Plant 用例（P-02…P-21）全部通过，包含修复后的 P-07 与 P-20。
 
-```
-verify_time_service_sync PASS   verify_gnss_time_recovery PASS   verify_rectime_time_mapping PASS
-verify_parameter_view    PASS   verify_osqp_gate          PASS   verify_execution_gate      PASS
-verify_truth_isolation   PASS   verify_rate_pid_transaction PASS verify_pid_allocator_feedback PASS
-verify_actuation_components PASS  verify_sensor_event_timing PASS
-```
+## 3. Plant P-07 与 P-20：已定位并修复（FMAT-0009）
 
-因此整条验收链上**唯一失败点是 Plant P-07**；其余 MIL、回放、指纹与全部组件门均为绿。
+本轮将原「剩余阻塞」闭环，结论与证据见 [FMAT-0009](../quality/FMAT-0009-plant-sensor-accel-anomaly.md) §12，摘要：
 
-## 3. 剩余阻塞：Plant P-07（建议单独立项）
+- **P-07 根因**：`fmt_plant_sensors_sfun.c` 的 `mdlOutputs` 在同一个循环里既写 `accel_imu_body[i]`、又立刻读它的全部三个分量，`i=0` 时轴 1/2 尚未初始化 → 未定义行为。这解释了此前所有「跨构建不一致」：加一条 `fprintf` 就改变栈布局，MSVC 与 GCC 结果不同，UBSan 检测不到。
+- **定量证明**：脱离 Simulink 的纯 C 复算（`work/p07_standalone/p07.c`）在 MSVC `/O2`、GCC `-O0`、GCC `-O2` 下都给出缺陷写法 `1.307812563`/`1.307812724`（与 mex 实测一致）、修复写法 `1.315879362`（与解析参考差 `2.2e-16`），且 `缺陷 − 参考 = [-8.067e-03, 3.237e-06, 0]` 与此前记录的残差逐位吻合。
+- **修复**：把杆臂加速度装配提前为独立循环（5 行，无语义变化）。
+- **连带发现**：P-07 断言此前中断整个脚本，使 P-20 从未在完整序列执行；P-20 的断言漏写转置（`1×3 − 3×1` 广播成 3×3，`norm` 取到约 11），补 `'` 后通过（差 `8.9e-16`）。组件实现本身正确。
 
-`tests/verify_plant_open_loop.m` 的 P-07 杆臂运动学断言失败（该段落是本分支 Plant 验证重构新增，`origin/main` 上不存在）：
-
-```
-accel err=3.895e-02  pos err=0.000e+00  vel err=0.000e+00
-got=[0.438949 -0.00155877 -9.80665]  expected=[0.4 0 -9.80665]
-```
-
-已排除：参数读取（天线位置/速度精确通过）、安装矩阵（实测单位阵，`MᵀM·ideal` 与理论一致）、偏置/刻度/噪声（测试已清零）、模型链路附加环节（`FMT_PlantSensors` 仅 1 个 S-function + 2 inport + 1 outport）。
-
-**关键反转（已两次修正）**：同一工况、同一参数下，结果随**构建**变化：
-
-| 构建 | 结果 |
-|---|---|
-| 带临时 `fprintf` 诊断的 mex | `ideal = measured = [0.400000, 0, -9.806650]`（断言期望值） |
-| 干净源码重建的 mex | `[0.438949, -0.001559, -9.80665]` |
-
-同一 MATLAB 会话内前后两次探针结果一致（`0.438949` ↔ `0.438949`），说明**不是测试顺序/状态泄漏**；而同一源码在不同构建下数值不同，属于构建相关的数值异常（未定义行为嫌疑）。四组对照（杆臂 0/0.1 × 角速度 0/2）显示偏差恒为 `ω² × 9.74 mm` 的等效杆臂，但该量既不在传入参数、也不在任何打印的中间量中（`lever_imu`、`centripetal_imu`、`accel_cg_ned`、安装矩阵均与理论一致）。
-
-已尝试但受阻：以 `mex -O0` 单独重编该 S-function 对比优化级别影响，`mex` 报错未能完成；需改用其它手段（GCC 侧 `-O0`/sanitizer 构建、或脱离 Simulink 的纯 C 运算主体测试）继续定位。
-
-该缺陷与 FMAT-0008 主题无技术关联，建议单独立项（例如 FMAT-0009：Plant SensorKinematics 加速度通道构建相关数值异常）。
+修复后 `verify_plant_open_loop` 的 `tests_executed_count = 20`、全部 PASS。
 
 ## 4. 交付物索引
 
 | 项目 | 位置 |
 |---|---|
 | Flight 修复 | `b8ae3ed`（failsafe）、`841478a`/`0851021`（着陆下探）、`b33b58e`（AUTO_LAND 模式） |
-| Draft PR | hujunjie-hub/Flight#3（draft，未合 main） |
-| Flight_Matalab | `139646f`、`a016d48`、`92eb036`、`e4b55e8`、`86c128f`、`53f2a7b`、`292f59b`、`3458546` |
-| RUN_ID | `20261110T081853514Z_324d166` |
-| ZIP | `work/validation/archives/20261110T081853514Z_324d166.zip`（22 个证据文件 + `run_manifest.json`，共 23 个条目） |
-| ZIP SHA-256 | `bfd3a522112239396cc60fa95dc9b5e945e35303c6ef4e9b44e128aed2a8e00e` |
-| 源指纹 | `7c514e63032674fb7e299682a2ba5f3e9b96c26cfef902fe33de62512bdc2937`（较早一轮为 `275e8374…`） |
+| Plant 修复（FMAT-0009） | `633eefe`（加速度装配）、`5f87578`（P-20 断言转置）、`9169cb9`/`d6f2c18`（文档） |
+| Draft PR | hujunjie-hub/Flight#3（draft，未合 main）、hujunjie-hub/Flight_Matalab#1（draft） |
+| Flight_Matalab | `139646f`、`a016d48`、`92eb036`、`e4b55e8`、`86c128f`、`53f2a7b`、`633eefe`、`5f87578`、`9169cb9` |
+| RUN_ID | `20261110T092328651Z_9169cb9` |
+| ZIP | `work/validation/archives/20261110T092328651Z_9169cb9.zip`（23 个证据文件 + `run_manifest.json`，共 24 个条目） |
+| ZIP SHA-256 | `d8f90759f5ec086cf869169125f6f2b00b6277ef5181f27683c4220cbe420945` |
+| 源指纹 | `857d6d6de3b39710b05aa0554d2fc13168a365782bd1e0ffce87270382b1bcd6`（早前两轮为 `7c514e63…`、`275e8374…`） |
 | FMS 单元测试报告 | Flight `tests/flight_management` 主机套件输出（993 checks / 0 failures） |
 | M5 单测 | Flight `tests/guidance` 主机套件（9515 checks / 0 failures） |
 
@@ -116,8 +96,10 @@ got=[0.438949 -0.00155877 -9.80665]  expected=[0.4 0 -9.80665]
 ```powershell
 # 同级 Flight 仓库切到 fix/fmat-0008-first-reference-race
 cd E:\Flight\Flight_Matlab_Test
-matlab -batch "cd(pwd); addpath('tools'); addpath('work'); run_acceptance"
+matlab -batch "cd(pwd); addpath('tools'); addpath('work'); acceptance_batch"
 pwsh -File .\tools\archive_validation_run.ps1
 ```
 
-预期：MIL/DataSIM/ExtINS 通过并产出带源指纹的 ZIP；随后在 Plant P-07 处失败（与本 Issue 无关，见 §3）。
+`work/acceptance_batch.m` 按 [验收与结果提交](../MATLAB-验收与结果提交.md) §8 打开 diary 后调用 `run_component_checks`；控制台输出另存 `work/validation/matlab_batch_console.log`。两者随归档进入 ZIP。
+
+预期：`COMPONENT_STATUS=PARTIAL_PASS`，MIL/DataSIM/ExtINS 回放通过，组件门 13 项中 12 项 PASS、`plant` 为设计内 PARTIAL（20/20 用例通过），产出带源指纹的 ZIP。

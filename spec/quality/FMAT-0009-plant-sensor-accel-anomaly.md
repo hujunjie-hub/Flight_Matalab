@@ -1,7 +1,8 @@
-# FMAT-0009（草案）：Plant SensorKinematics 加速度通道构建相关数值异常
+# FMAT-0009：Plant SensorKinematics 加速度装配的未初始化读取
 
-- 严重级别：中（阻断 `run_component_checks` 全链路，但不影响 MIL/回放与已验收组件门）
+- 严重级别：中（曾阻断 `run_component_checks` 全链路；不影响 MIL/回放与已验收组件门）
 - 发现于：FMAT-0008 验收（RUN_ID `20261110T081853514Z_324d166`）
+- 修复于：`633eefe`（代码）+ `5f87578`（P-20 断言）；回归 RUN_ID `20261110T092328651Z_9169cb9`（`component_status=PARTIAL_PASS`）
 - 关联分支：`optimize/sil-physical-parameter-alignment`
 - 状态：FIXED_WAITING_RETEST（根因已定位并修复，见 §12）
 - 说明：本单与 FMAT-0008 主题（ARM 首次控制参考竞态）无技术关联，从 FMAT-0008 中拆出单独立项。
@@ -262,4 +263,4 @@ norm(..., inf)                                       % 取到 ~11，而非 1e-12
 | P-07 杆臂向心项 | `expected = measured = [0.400000 0 −9.806650]` |
 | P-07 动态 2 ms 子工况 | PASS（此前 `x` 通道差 `8.067e-3`） |
 | P-20 非对角惯量 + 陀螺耦合 | PASS（差 `8.9e-16`） |
-| `run_component_checks` | 见 RUN_ID 归档的 `component_status` |
+| `run_component_checks` | `PARTIAL_PASS`（RUN_ID `20261110T092328651Z_9169cb9`，Plant 门 PARTIAL，13 项中 12 PASS） |
