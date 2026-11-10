@@ -3,8 +3,9 @@
 - 严重级别：中（阻断 `run_component_checks` 全链路，但不影响 MIL/回放与已验收组件门）
 - 发现于：FMAT-0008 验收（RUN_ID `20261110T081853514Z_324d166`）
 - 关联分支：`optimize/sil-physical-parameter-alignment`
-- 状态：OPEN（待复测）
+- 状态：FIXED_WAITING_RETEST（根因已定位并修复，见 §12）
 - 说明：本单与 FMAT-0008 主题（ARM 首次控制参考竞态）无技术关联，从 FMAT-0008 中拆出单独立项。
+- 结论：单一未初始化读取缺陷（§12），与旋转约定、编译器语义、Simulink 输入缓冲均无关；§9/§11 中的假设已被推翻。
 
 ## 1. 现象
 
@@ -180,3 +181,85 @@ diff=[-8.067e-03  3.237e-06  0.000e+00]   (容差 1e-6)
 2. 在该固定构建下，用**纯 C 最小程序**（不经 Simulink）直接调用数学实现，逐分量复算动态工况；
 3. 若最小程序复现 8e-3，则逐行加入 `volatile`/边界打印做二分；
 4. 若不复现，检查 `ssGetInputPortRealSignal` 的输入缓冲是否与输出缓冲重叠（`ssSetInputPortRequiredContiguous` + 输出写入顺序），这是唯一尚未验证的 Simulink 层假设。
+## 12. 定论（根因与修复）
+
+### 12.1 根因
+
+`adapters/flight_runtime/fmt_plant_sensors_sfun.c` 的 `mdlOutputs` 中，杆臂加速度在**同一个循环内既赋值又被读取**：
+
+```c
+for (int i = 0; i < 3; ++i) {
+    accel_imu_body[i] = alpha_cross_imu[i] + centripetal_imu[i];  /* 逐个轴写入 */
+    velocity_imu_ned[i] = x[3 + i];
+    accel_imu_ned[i] = accel_cg_ned[i];
+    for (int j = 0; j < 3; ++j) {
+        ...
+        accel_imu_ned[i] += rotation[3 * i + j] * accel_imu_body[j];  /* 立刻读全部三个轴 */
+    }
+}
+```
+
+`i = 0` 时 `accel_imu_body[1]`、`accel_imu_body[2]` **尚未初始化**即被读走，属于未定义行为。落在该栈槽的残留值决定了结果，因此：
+
+- 增加一条 `fprintf` 就会改变栈布局 → 结果在“正确 / 0.4389”之间跳动；
+- MSVC 与 GCC、不同优化级别给出不同数值；
+- UBSan 检测不到（这是未初始化读取，不是 UB 检测器覆盖的越界/溢出/非法转换类别）；
+- 静态阅读时所有局部量“看起来都赋过值”，因为赋值就在循环体内。
+
+数值上完全自洽：`accel_imu_ned[0]` 少了 `r[1] · accel_imu_body[1] = (−4.01333e-4) · (−20.1) = +8.067e-3` 一项，随后 NED→体的转换再减去 `r[3] · sf[1]`，于是输出 x 通道偏低 `8.067e-3`，而 y 通道只因该偏差被再旋转一次才差 `3.237e-6`、z 通道不受影响——与 §8 记录的 `diff=[−8.067e-03 3.237e-06 0]` 逐位吻合。
+
+### 12.2 独立复算（不经 Simulink）
+
+`work/p07_standalone/p07.c` 把 P-07 动态子工况的解析输入直接喂给两种循环写法（融合 / 拆分），仅依赖 `fmt_rotation.h`：
+
+| 构建 | 融合写法（原缺陷） | 拆分写法（修复后） | 解析参考 |
+|---|---|---|---|
+| MSVC `/O2` (`cl /W4`) | `1.307812724` | `1.315879362` | `1.315879362` |
+| MinGW GCC `-O0` | `1.307812563` | `1.315879362` | `1.315879362` |
+| MinGW GCC `-O2` | `1.307812563` | `1.315879362` | `1.315879362` |
+
+- 融合写法的两个数值与 mex 实测失败值 `[1.307812563 −20.800518439 −9.456650000]` 一致；
+- 拆分写法与测试期望 `[1.315879362 −20.800521677 −9.456650000]` 在 `2.2e-16` 内一致；
+- `fused − reference = [−8.067e-03 3.237e-06 0.000e+00]`，与 §8 的残差逐位相同。
+
+因此“跨构建不一致”不是编译器语义问题，而是同一份**有缺陷**的源码在不同栈布局下的不同表现；纯净复算证明算法本身（杆臂、向心、角加速度、比力、旋转换算）是正确的。
+
+### 12.3 修复
+
+把杆臂加速度的装配提前到独立循环，保证 3 个分量全部就绪后再做体→NED 装配：
+
+```c
+for (int i = 0; i < 3; ++i)
+    accel_imu_body[i] = alpha_cross_imu[i] + centripetal_imu[i];
+for (int i = 0; i < 3; ++i) {
+    velocity_imu_ned[i] = x[3 + i];
+    accel_imu_ned[i] = accel_cg_ned[i];
+    for (int j = 0; j < 3; ++j) {
+        velocity_imu_ned[i] += rotation[3 * i + j] * omega_cross_imu[j];
+        accel_imu_ned[i] += rotation[3 * i + j] * accel_imu_body[j];
+    }
+}
+```
+
+改动 5 行、无语义变化、不引入新符号。全仓 `*.c/*.h` 审计未发现同类“同循环内先写后读”写法（其余 17 个文件扫描为零命中）。
+
+### 12.4 连带暴露的第二个缺陷（纯测试侧）
+
+P-07 断言此前会中断整个脚本，使 P-20 从未在完整序列中执行。修复 §12.3 后 P-20 暴露失败：
+
+```
+derivative(11:13) - expectedAngularAcceleration     % 1x3 − 3x1 → 3x3 广播
+norm(..., inf)                                       % 取到 ~11，而非 1e-12
+```
+
+`derivative` 来自 `Data(end,:)`（行向量），`expectedAngularAcceleration` 是 `Jfull\...`（列向量），断言漏写转置；同一文件 P-18 的同类断言写作 `expectedTorqueAcceleration'`。补上 `'` 后 P-20 通过，实测差 `8.9e-16`。组件实现本身正确（`fmt_rigid_sfun.c` 的 Cholesky 求解、`ω×(Jω)` 陀螺项、`J(:)` 列主序重建均与解析解一致）。
+
+### 12.5 复测结果
+
+| 项目 | 结果 |
+|---|---|
+| `verify_plant_open_loop` | `tests_executed_count = 20`，全部 PASS（P-02…P-21） |
+| P-07 杆臂向心项 | `expected = measured = [0.400000 0 −9.806650]` |
+| P-07 动态 2 ms 子工况 | PASS（此前 `x` 通道差 `8.067e-3`） |
+| P-20 非对角惯量 + 陀螺耦合 | PASS（差 `8.9e-16`） |
+| `run_component_checks` | 见 RUN_ID 归档的 `component_status` |
