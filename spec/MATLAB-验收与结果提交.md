@@ -54,6 +54,8 @@ run_component_checks('C:\STM32CubeCLT\mingw64\bin')
 
 命令脉冲由代码生成，不依赖手工编辑的外部 CSV。验收时以当前分支 `fmt_default_input.m` 为准。
 
+**MIL 首次定位场景**：`FMT_MILSIM` 的 Host SIL 适配层仅对该入口把 INS 初始 origin mask 设为 `1`（仅保留 provisional local origin），并在 INS 首次发布 `NAV_VALID_ATTITUDE`、水平位置仍无效之前屏蔽 GNSS 事件。条件满足后才放行 GNSS。这样确定性地覆盖“INS 先完成静态对准、GNSS 后到、Sensor 产生 Origin Candidate、Mission/FMS 授权、INS 执行 ORIGIN_REBUILD”的真实调度链。该改动仅作用于 MATLAB Host MIL 测试夹具，不修改同级 Flight 固件；`FMT_DataSIM` 与 `FMT_ExtINS_DataSIM` 仍使用完整锚定 origin，以保持回放比较的初始条件。被屏蔽的 GNSS 采样机会按事件队列规则记入 suppressed/sequence gap，不延长 GNSS TTL、不伪造 GNSS 数据。
+
 ### 3.2 Flight 回放数据集
 
 | 项目 | 定义 |
@@ -139,9 +141,9 @@ Host SIL 的确定性调度器必须显式模拟 RTOS 信号量唤醒：Sensor �
 
 所有必需报告必须来自同一次验收运行。报告缺失、时间戳/Hash 不一致、输入在测试期间改变或运行中断，都不能按 PASS 验收。
 
-Origin Reset 验收必须同时满足：GNSS candidate 已进入 runtime data；FMS `fms_authorize_origin_reset` 返回成功；INS `estimator_reset` 返回成功；随后导航有效位包含水平位置。仅有 candidate 或最终 PreArm 状态不足以证明授权链闭环。 M7 提交验收还必须在同一采样帧观察到 `PERMIT_SCOPE_CONTROL_ACTIVE` 且未置 `PERMIT_FLAG_REVOKED`、`ACTUATOR_RECEIPT_COMMITTED` 和 Host SIL `commit_valid=1`；仅有 Permit 位或单独的非零推力均不足以证明有效提交。
+Origin Reset 验收必须同时满足：GNSS candidate 已进入 runtime data；FMS `fms_authorize_origin_reset` 返回成功；INS `estimator_reset` 返回成功；随后导航有效位包含水平位置。 `FMT_MILSIM` 还必须证明初始 origin mask 为 `1`、INS 姿态对准后才放行首个 GNSS、首个 GNSS 被暂存为 late fix，Reset 后 origin mask 升至 `3` 且 origin ID 前进。仅有 candidate 或最终 PreArm 状态不足以证明授权链闭环。 M7 提交验收还必须在同一采样帧观察到 `PERMIT_SCOPE_CONTROL_ACTIVE` 且未置 `PERMIT_FLAG_REVOKED`、`ACTUATOR_RECEIPT_COMMITTED` 和 Host SIL `commit_valid=1`；仅有 Permit 位或单独的非零推力均不足以证明有效提交。
 
-Flight 入口诊断约定：`verify_flight_entries` 在 MIL 断言之前写出 `mil_diagnostics.json`，记录每条命令的 command code、request ID、ACK state/reason，以及对应时刻的 arm/mode/failsafe、PreArm state、failed mask、primary reason、failed count、check epoch 和 authority。Host SIL 状态帧宽度为 40；第 25～32 列依次为 PreArm failed mask、primary reason、failed count、warning count、check epoch、FMS authority、mission state、最近命令码；第 33～40 列依次为 FMS origin-reset 授权尝试数、成功数、最近授权状态码、INS reset 尝试数、成功数、最近 reset 状态码、reset type、requested origin ID。 第 41～60 列记录 GNSS 仿真提交/估计器接收计数、pending-origin 查询状态、Sensor/Mission 调度次数、candidate 序号与时间有效期及最后候选年龄。不得使用最后一条 DISARM ACK 代替 ARM ACK 诊断。
+Flight 入口诊断约定：`verify_flight_entries` 在 MIL 断言之前写出 `mil_diagnostics.json`，记录每条命令的 command code、request ID、ACK state/reason，以及对应时刻的 arm/mode/failsafe、PreArm state、failed mask、primary reason、failed count、check epoch 和 authority。Host SIL 状态帧宽度为 74；第 25～32 列依次为 PreArm failed mask、primary reason、failed count、warning count、check epoch、FMS authority、mission state、最近命令码；第 33～40 列依次为 FMS origin-reset 授权尝试数、成功数、最近授权状态码、INS reset 尝试数、成功数、最近 reset 状态码、reset type、requested origin ID。第 41～60 列记录 GNSS 仿真提交/估计器接收计数、pending-origin 查询状态、Sensor/Mission 调度次数、candidate 序号与时间有效期及最后候选年龄。第 61～74 列记录 MIL GNSS 放行状态/时刻、放行前抑制步数、首个 GNSS fix 序号/采样时刻、GNSS ingestion 各类返回计数、INS origin snapshot 状态/mask/ID，以及首个 Origin Candidate 的序号/采样时刻/年龄。不得使用最后一条 DISARM ACK 代替 ARM ACK 诊断。
 
 ## 5. Plant 数值验收阈值
 
