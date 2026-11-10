@@ -143,6 +143,60 @@ ENTRIES=PASS max_alt=2.098
 
 诊断代码已回退。**下一阶段应先补"分布统计"这一课，再判断有效期修复是否足够**——否则会像本轮一样，用一个末值去推断整体。
 
+## 4.5 第 38 轮：按 job 记录分布，两项根因分别定量
+
+第 37 轮末的告诫是"先补分布统计，再判断"。本轮把诊断做成固件侧证据通道（`middleware/model/control/mpc_diagnostics.h`，Host 构建才落盘，不改变任何控制决策）：
+
+- `m6_jobs.json`：每个 job 的首个拒绝阶段、solver status、primal/dual residual、独立约束违反量、推力超出量、首控制量、seed，以及 `sample/control/evaluation/expires` 四个时间戳；
+- `m6_runtime_stats.json` 的 `consumer`：9760 个 1 kHz 消费点里每个备份条件的独立计数、剩余寿命直方图、MPC 与 PD 回退量的逐轴差值。
+
+### 4.5.1 拒绝全部落在同一个阶段
+
+488 个 job 的分布（26 s MIL，基线）：
+
+| 指标 | 值 |
+|---|---|
+| 首个拒绝阶段 | `RESIDUAL` 468 个，`OK` 20 个；没有 `DOMAIN`/`REFERENCE`/`BOUNDS`/`SOLVER_CALL`/`SOLVER_STATUS`/`NON_FINITE`/`PRIMAL`/`THRUST` 拒绝 |
+| solver status | 488 个 job 全部 `CONTROL_SOLVER_SOLVED`（1） |
+| primal residual | min 4.7e-9，median 3.0e-8，max 1.35e-3 |
+| dual residual | min 1.31e-4，p25 1.37e-3，**median 1.75e-3**，p75 3.51e-3，max 1.00e-2 |
+| 独立约束违反量 | 0（p75 及以下全为 0），max 8.6e-4 |
+| 推力超出量 | 0 |
+
+结论：**失败与 QP 组装、预测模型、变量单位无关**。独立可行性检查（A·x 对原始约束、推力幅值）在所有 job 上都通过，primal 残差已达到 1e-8 量级。唯一的拒绝原因是应用侧对 dual residual 的**绝对** 1e-3 门限，而 OSQP 生成工作区里 `eps_abs = eps_rel = 1e-3`，其停止准则是 `1e-3 + 1e-3·max(‖Px‖,‖A'y‖,‖q‖)`，对本 QP 约 2e-3。实测 median 1.75e-3 正好落在 OSQP 自己的容差内：求解器按合同收敛，应用侧按更严的绝对量判负。
+
+### 4.5.2 让求解器满足既有门限之后，飞不起来
+
+只改求解器、**不动 1e-3 门限**（`eps_rel = 0`，按绝对 1e-3 终止）：
+
+| 指标 | 基线 | `eps_rel = 0` |
+|---|---|---|
+| solved / jobs | 20 / 488 | **489 / 489** |
+| max primal / dual residual | 1.35e-3 / 1.00e-2 | 9.83e-4 / 9.98e-4 |
+| 被采用的 1 kHz 周期 | 80 / 9760 | **1956 / 9780** |
+| 备份原因 | 9680 全部为过期 | 7824 全部为过期 |
+| `limit_rejected` / `bounds_rejected` | 0 / 0 | 0 / 0 |
+| **MIL 最大高度** | **2.098 m** | **0.242 m** |
+| TAKEOFF（t=6.0 s）ACK | ack=1 接受 | **ack=0，reason=5（`land != LANDED`）** |
+
+MPC 与 PD 的差值在同一轮里被逐轴记录（1956 个采用点）：x 轴 −0.330…+0.013，y 轴 −0.014…+0.326，z 轴 **−0.161…0.000** m/s²。也就是说 MPC 的水平指令与 PD 相差不超过 0.33 m/s²，**z 轴只会比 PD 更"向上"、从不更向下**。
+
+把 0.33 m/s² 的量级放进 20% 的占空比，无法解释高度从 2.098 m 掉到 0.242 m。真正发生的是**时序**：地面保持阶段 MPC 的零偏让飞行器提前离地 0.24 m，LandDetector 不再报告 `LANDED`，于是 6.0 s 的 TAKEOFF 以 `reason=5` 被拒且不重发——验收场景再也不可能起飞。这与第 37 轮"收紧求解器 → 起飞失败"的现象一致，并且首次给出了机制，而不是"MPC 有害"的笼统说法。
+
+本轮实验已整条回退（`eps_rel` 恢复 1e-3，MIL 回到 2.098 m / TAKEOFF ack=1），只保留诊断通道。
+
+### 4.5.3 快照寿命的分布（不再是末值）
+
+基线 20 个成功 job 的 `expires - sample` 恒为 **8000 µs**，`expires - evaluation` 恒为 **5000 µs**；`evaluation - sample` 恒为 **3000 µs**。5000 µs 恰好等于 `actuator_guard.c` 的 `valid_until_us = now + 5000`，与 §4.2 的判断一致，并且这次是每个 job 的完整分布，不是最后一个样本。
+
+### 4.5.4 下一阶段的入口
+
+按依赖顺序：
+
+1. **地面段与空中段分离**：MPC 的零偏在 `LANDED` 期间必须不改变离地判定（例如地面段不采用 MPC 快照，或采用但把净加速度限幅到不产生升力），否则任何提高接受率的修复都会以 `reason=5` 失败。这是"接受率"与"起飞前置条件"的耦合，不能用调容差绕过。
+2. **快照到期链**：把 `actuator_capability/status` 的 5 ms 消息 TTL 从计划有效期里移除。计划不是执行器遥测的函数——这两项根本不进入 QP——5 ms 是消息新鲜度契约，不是计划有效期。§4.3 已证明该改动在既有场景下无害。
+3. **门限与求解器的一致性**：1e-3 门限保留，把 OSQP 的终止准则改成绝对（`eps_rel = 0`，或重新生成工作区）。第 1 项完成前不得单独启用。
+
 ## 5. 边界
 
-本节只确认了消费路径与条件，**没有**定位到具体缺陷，也没有修改任何固件代码。三次实验的代码改动均已回退（Flight `8b938ca` 与后续 checkout），当前工作树干净。
+本节只确认了消费路径、拒绝阶段分布与"接受率—起飞前置条件"的耦合，**没有**修复任何控制律，也没有放宽容差。第 37 轮的两次实验与第 38 轮的 `eps_rel` 实验均已回退，当前 Flight 工作树只包含诊断通道（`mpc_diagnostics.h`、`mpc.c` 的记录点、`position_control.c` 的消费计数）与 `mpc_consumer_reset()` 的调用点。
