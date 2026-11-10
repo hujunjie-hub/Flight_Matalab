@@ -41,7 +41,7 @@
         8400,
         12000,
         28000,
-        46000
+        50000
       ],
       "command_codes": [
         {
@@ -60,7 +60,7 @@
           "meaning": "land request"
         },
         {
-          "row": 46000,
+          "row": 50000,
           "code": 2,
           "meaning": "lock request"
         }

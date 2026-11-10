@@ -8,7 +8,7 @@ if strcmp(entry,'FMT_MILSIM')
     % ARM completes only after the 2 s ground-confirmation dwell has declared
     % LANDED, and TAKEOFF must be accepted while that LANDED evidence still
     % holds; the pulses are spaced so both preconditions are satisfied.
-    ticks = [8400 12000 28000 46000];
+    ticks = [8400 12000 28000 50000];
     commands(ticks,:) = [1 0; 3 2; 4 0; 2 0];
     ds = Simulink.SimulationData.Dataset;
     ds{1} = sample(t,commands);
