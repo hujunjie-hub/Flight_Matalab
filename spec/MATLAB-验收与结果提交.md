@@ -137,7 +137,7 @@ Host SIL 的确定性调度器必须显式模拟 RTOS 信号量唤醒：Sensor �
 | G1 执行拓扑 | `g1_execution_report.json` | PASS；只代表 G1 调度/拓扑测试，不代表完整 Flight 算法验证 |
 | PID 状态事务 | `rate_pid_report.json` | 已执行项目 PASS；报告中 `NOT_RUN` 字段必须保留，不得升级为完整 M6 闭环 PASS |
 | PID 分配反馈 | `pid_allocator_feedback_report.json` | PASS；同 tick 分配反馈和失败不提交状态 |
-| 执行器数值组件 | `actuation_report.json` | 已执行数值项目 PASS；Permit 生命周期、500 μs frame apply、ground stop transaction 仍为 NOT_RUN |
+| 执行器数值组件 | `actuation_report.json` | 已执行数值项目 PASS；Permit 生命周期、500 μs frame apply、ground stop transaction 均为 PASS（Ground Stop 为固件实现，见 FMAT-0013 第 5 节） |
 | 真值隔离 | `truth_isolation_report.json` | PASS；Plant truth 只能到传感器合成和只读评估出口 |
 | 输入与模型数据指纹 | `current_source_fingerprint.json` | 必须存在；必须包含 `simulation/`、`scenarios/`、`.mat` 数据集及本分支测试/配置的 SHA-256 |
 

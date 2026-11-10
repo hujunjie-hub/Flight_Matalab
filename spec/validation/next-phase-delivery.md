@@ -2,10 +2,11 @@
 
 本文件汇总本轮的实际产出、证据位置与未闭合项。所有数字均来自同一轮 `run_component_checks`，不是多轮拼接。
 
-> **BLOCKER_STATUS: BLOCKED（3 项）**
+> **BLOCKER_STATUS: BLOCKED（2 项）**
 > 1. **M6 MPC job gate 未达标**（[Issue #12](https://github.com/hujunjie-hub/Flight_Matalab/issues/12)），根因已定量，修复与既有验收场景的起飞前置条件冲突，需控制层决策。
-> 2. **M7 Ground Stop 固件能力未实现**（[Issue #13](https://github.com/hujunjie-hub/Flight_Matalab/issues/13)），本轮未实现，`ground_stop_transaction` 仍为 `NOT_RUN`。
-> 3. **本环境无 GitHub 写权限**：`gh` 未安装、无 token、未认证 REST API 被限流（403）。本轮无法新建/更新/评论 Issue，Issue 状态变更待人工执行（待办文案见第 6 节）。
+> 2. **本环境无 GitHub 写权限**：`gh` 未安装、无 token、未认证 REST API 被限流（403）。Issue 状态变更待人工执行（待办文案见第 6 节）。
+>
+> M7 Ground Stop 阻塞已解除（2026-11-11，见 2.2）。
 
 ## 1. 交付物
 
@@ -50,9 +51,23 @@
 
 该实验已整条回退；`eps_rel` 恢复 1e-3，MIL 回到 2.098 m / TAKEOFF ack=1。**没有放宽容差、没有跳过候选验证、没有延长旧解有效期。**
 
-### 2.2 M7 Ground Stop（P0，Issue #13）——未实现
+### 2.2 M7 Ground Stop（P0，Issue #13）——已实现
 
-`actuation_report.json`：`permit_lifecycle=PASS`、`frame_apply_500us=PASS`、`ground_stop_transaction=NOT_RUN`、`ground_stop_evidence=NOT_IMPLEMENTED_IN_FIRMWARE`。本轮未开始固件实现（见第 6 节阻塞与建议）。
+真实固件路径 `middleware/actuator/output_guard/actuator_guard.c`，本轮新增 `GroundStopCertificate` 契约与事务：
+
+| 要求 | 实测（Flight M7 主机套件，226 checks / 0 failures） |
+|---|---|
+| GroundStopCertificate | `MSG_GROUND_STOP_CERTIFICATE`(56)；stop code 只接受 0，速率只接受 `(0, 100]` N/s，生命周期只接受 LANDED/DISARMING（取值 0x1001/0x1002，避免与 `LandedState` 混淆） |
+| LANDED / DISARMING 生命周期限制 | 畸形证书 5 类全部拒绝（`M7-11`） |
+| 撤销后仍可停止 | PASS（`M7-12`：先撤销 Permit 再受理证书） |
+| 最大 100 N/s 降推力 | PASS（`M7-13`：单帧最大 0.25 N，推力单调不回升） |
+| stop code 0 | 仅此码通过，其余 `STATUS_OUT_OF_RANGE` |
+| ZERO_TARGET_APPLIED 回执 | PASS（`M7-14`：四路恰好 0 N 时写入 `ACTUATOR_RECEIPT_ZERO_TARGET_APPLIED`） |
+| 最坏应用时间 ≤105.5 ms | PASS（`M7-15`：**40 帧 / 100,000 µs 归零，受理到应用 100,500 µs**；超预算的速率在受理时即被拒绝，而不是稍后超时） |
+| 确认零目标后才 DISARMED | PASS（`M7-16`：仅在零回执那一帧进入 DISARMED 并 inhibit） |
+| DISARMED 后禁止非零输出 | PASS（`M7-16`：之后的 demand 与帧边界均不产生提交，输出保持零推力码；latch 直到下次 `actuator_init()`） |
+
+`actuation_report.json` 相应字段：`ground_stop_transaction=PASS`、`ground_stop_evidence=FIRMWARE_GROUND_STOP_CERTIFICATE`、`ground_stop_max_apply_us=105500`、`ground_stop_max_ramp_nps=100`。未覆盖：FMS 侧签发触发逻辑、真实 ESC 物理推力响应、PIL/HIL。
 
 ### 2.3 P-10b（P1，Issue #14 / #17）——报告口径修复、数字对账完成
 
@@ -116,7 +131,7 @@ P-10 整体仍为 `PARTIAL`：物理 TIM2 capture ISR、UM982 UART/DMA、`sensor
 | Issue | 本轮动作 | 建议状态 |
 |---|---|---|
 | #12 M6 成功率/覆盖率 | 证据补齐、根因定量、实验回退 | `IN_PROGRESS` + `BLOCKER_IN_PROGRESS` |
-| #13 M7 Ground Stop | 未实现 | `IN_PROGRESS` |
+| #13 M7 Ground Stop | 已实现并实测 | `FIXED_WAITING_RETEST` |
 | #14 P-10b 完整集成 | 报告口径修复、证据对账 | `IN_PROGRESS`（P-10 仍 `PARTIAL`） |
 | #16 归档分类 | 已修复并自测 | `FIXED_WAITING_RETEST` → 待用户回归后 `VERIFIED` |
 | #17 文档/归档数字 | 已对账并修复报告缺陷 | `FIXED_WAITING_RETEST` |
@@ -137,7 +152,7 @@ P-10 整体仍为 `PARTIAL`：物理 TIM2 capture ISR、UM982 UART/DMA、`sensor
 1. **M6 地面段与空中段分离（P0，阻断 #12）**：在 `LANDED` 期间不得让 MPC 快照改变离地判定（例如地面段不采用快照，或采用但把净加速度限幅到不产生升力）。第 2.1 节已证明：不解决这一项，任何提高接受率的修复都会以 `reason=5` 失败。这是需要控制层确认的设计决策，**需要用户决策**。
 2. **M6 快照到期链（P0）**：把 `actuator_capability/status` 的 5 ms 消息 TTL 从计划有效期里移除。计划不消费执行器遥测（两项都不进 QP），5 ms 是消息新鲜度契约；`eps_rel` 修复之前的实验已证明在既有场景下无害。第 1 项完成前不得单独启用。
 3. **M6 门限与求解器一致性（P0）**：1e-3 门限保留，OSQP 改为绝对终止（`eps_rel=0` 或重新生成工作区）。与前两项一起启用并重新验收。
-4. **M7 Ground Stop 固件实现（P0，Issue #13）**：`GroundStopCertificate`、LANDED/DISARMING 生命周期限制、≤100 N/s 降推力、stop code 0、`ZERO_TARGET_APPLIED` 回执、最坏应用时间 ≤105.5 ms、确认零目标后才允许 DISARMED、DISARMED 后禁止非零输出。必须在真实 Flight 固件路径实现并新增主机测试。
+4. **M7 Ground Stop（已完成，遗留项）**：执行器侧事务与回执已完成（第 2.2 节）。剩余：FMS 侧签发证书的触发逻辑（何时在 LANDED/DISARMING 下签发、与 LandDetector/Mission 的时序约束）尚未实现，属 Issue #13 的后续范围，不得把执行器侧 PASS 当作端到端停止功能完成。
 5. **P-10b（P1，Issue #14）**：真实 UART/DMA、PPS capture、`sensor_gnss_poll` 端到端；区分 Host 注入证据与物理 TIM2/板级证据。
 6. **覆盖率口径（P2）**：`time_weighted_coverage` 分母是否排除非轨迹模式时段，需按 Issue #12 口径确认。
 

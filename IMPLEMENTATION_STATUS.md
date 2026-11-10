@@ -131,3 +131,10 @@
 - P-10b：PPS 21/1、RECTIMEA 21、GNSS 21、`utc_mapping_epoch=11`、`accepted_intervals=12`、不确定度 384,042 ns；失锁期 `utc_valid=0`、holdover 4.5 s、225,359,042 ns。顶层 `p10b_report.json` 现由本轮三份报告合成，不再硬编码 `NOT_RUN`。
 - 其他修复：#16 归档分类新增 `pre_existing_local_change_modified_by_run`（本轮实测 5 个文件被归入该类别）；#15 `controller.c` 越界读改为两个 3 元素检查。
 - 证据归档：`work/validation/archives/20261110T163238005Z_a5628f7.zip`，SHA-256 `307279fcdbd53ae111f8467276f8669db293f9d9683474fef8cd39199b978afc`。
+
+**M7 Ground Stop（2026-11-11）**
+
+- Flight 固件：`middleware/actuator/output_guard/actuator_guard.{c,h}`（`actuator_guard_ground_stop`、帧边界降推力分支、DISARMED latch、`thrust_to_code()` 统一映射）、`middleware/contracts/messages/common_messages.h`（`GroundStopCertificate`、stop code/速率/预算常量、`ACTUATOR_RECEIPT_ZERO_TARGET_APPLIED`）、`message_ids.h`（`MSG_GROUND_STOP_CERTIFICATE` = 56）、`tests/actuation/test_m7_main.c`（M7-11…M7-16）、`tests/actuation/run_host_tests.ps1`。
+- Flight_Matalab：`tests/verify_actuation_components.m`（透出 ground stop 字段）、`external_dependencies.lock.json`（契约头哈希，旧值归档于 `config/dependency_history/607f4996….json`）、`config/flight_baseline.json`。
+- 实测：M7 主机套件 226 checks / 0 failures；归零 40 帧、100,000 µs，受理到应用 100,500 µs ≤ 105,500 µs。
+- 未覆盖：FMS 侧签发触发逻辑、真实 ESC 物理推力响应、PIL/HIL 与实机时序。
