@@ -34,7 +34,7 @@ $sensorSimulationObject = Join-Path $buildDir 'fmt_sensor_simulation.o'
 if ($LASTEXITCODE) { throw 'Deterministic sensor simulation compilation failed' }
 $objects = Get-ChildItem -LiteralPath $buildDir -Filter '*.o' -File |
     Where-Object Name -ne 'tests_simulation_sil_flight.c.o' | Select-Object -ExpandProperty FullName
-$wrappers = @('estimator_push_imu', 'estimator_update', 'estimator_get_snapshot',
+$wrappers = @('estimator_init', 'estimator_push_imu', 'estimator_update', 'estimator_get_snapshot',
     'estimator_get_capability', 'ins_get_pending_origin', 'estimator_push_measurement', 'fms_authorize_origin_reset', 'estimator_reset') | ForEach-Object { '-Wl,--wrap=' + $_ }
 $dll = Join-Path $mexDir 'fmt_flight_runtime.dll'
 & (Join-Path $GccDir 'g++.exe') -shared -static -static-libgcc -static-libstdc++ @objects @wrappers -lm -lws2_32 -o $dll
