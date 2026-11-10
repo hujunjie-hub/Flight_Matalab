@@ -1,4 +1,4 @@
-# 下一阶段交付清单（截至 RUN_ID `20261110T171130944Z_6d14740`）
+# 下一阶段交付清单（截至 RUN_ID `20261110T171823694Z_a837ae0`）
 
 本文件汇总本轮的实际产出、证据位置与未闭合项。所有数字均来自同一轮 `run_component_checks`，不是多轮拼接。
 
@@ -12,14 +12,14 @@
 
 | 项目 | 值 |
 |---|---|
-| RUN_ID | `20261110T171130944Z_6d14740` |
-| ZIP | `work/validation/archives/20261110T171130944Z_6d14740.zip`（46 个证据文件） |
-| ZIP SHA-256 | `9343235cee0654854a5bb598696f3bf8fddacfa40163cd20bade8ea3915b7f4e` |
+| RUN_ID | `20261110T171823694Z_a837ae0` |
+| ZIP | `work/validation/archives/20261110T171823694Z_a837ae0.zip`（46 个证据文件） |
+| ZIP SHA-256 | `d9bc41a3d25f25af8e33f47305e71d085de18e6e643786824aac9e0b61f7e8a7` |
 | `component_status` | **FAIL**（18 PASS、1 PARTIAL、1 FAIL；FAIL 只有 `m6_jobs`） |
-| source 指纹（磁盘） | `faff114bc8e5e3e882728b9c5e04491f9a332cdd146c1bcf4f9c2902102ff11a` |
-| source 指纹（committed） | `33af2bd60d96c183c7849d9aa5361f37ccf64beb0de8d115c8d83e1bd18e075d` |
-| artifact 指纹 | `7af8c417420c15d79e359c7a29d5cc72e580a2e4acb698c2a13fd113b7a6a1bd` |
-| `source_clean` | true（Flight_Matalab `6d14740`，manifest 的 before/after commit 与之一致） |
+| source 指纹（磁盘） | `6b5b6bb235c7ab454d9e8b04c55e81ad95c7332130de235931d9b25224fd6d41` |
+| source 指纹（committed） | `09ae621e1da97b5f81ff129459b72128397f0f158edfbcd876f64afa6904b8d2` |
+| artifact 指纹 | `58c624d3b0f2e2f9c5782ff02759d9223ec3f4508b9252fc363d9aa6b24cfc0f` |
+| `source_clean` | true（Flight_Matalab `a837ae0`，manifest 的 before/after commit 与之一致） |
 | Flight 上游 | `bef9022`（分支 `test/fmat-0012-m6-controller`） |
 | 生成文件分类 | `pre_existing_local_change_modified_by_run` 5、`pre_existing_local_change` 4、`commit_candidate` 1、`excluded_from_source` 13 |
 | PR 状态 | Flight_Matalab#1 Draft；Flight#3 Draft；Flight#4 Draft；`main` 未改动 |
@@ -41,6 +41,7 @@
 | dual residual | min 1.31e-4，p25 1.37e-3，**median 1.75e-3**，p75 3.51e-3，max 1.00e-2 |
 | 独立约束违反量 / 推力超出 | max 8.6e-4（p75 及以下为 0）/ 全 0 |
 | 消费点 | 9760 个，`used` 80（0.82%），`backup_expired` 9680，其余备份条件全 0 |
+| 覆盖率口径 | 门限分母保持**整轮**（不变）：400,000 µs / 26 s = **1.538%**；另报告"轨迹模式可用窗口" 751 tick = 15.02 s 下的 **2.663%**（仅供诊断，不参与判定）。即使取最有利分母仍远低于 90%，**缺口不是分母口径造成的** |
 | 快照寿命 | `expires-sample` max 8000 µs；`expires-eval` max 5000 µs；`eval-sample` 恒 3000 µs |
 
 机制（已定量，见 [FMAT-0012 附记](FMAT-0012-mpc-consumer-path.md) §4.5）：
@@ -163,7 +164,7 @@ P-10 整体仍为 `PARTIAL`：物理 TIM2 capture ISR、UM982 UART/DMA、`sensor
    - 两个已知陷阱：(a) `ARM_STATE` 是状态帧/ABI 的一部分，新增中间态要同步 `fmt_flight_runtime` 的状态列与验收文档；(b) 执行器的 ground-stop latch 只能由 `actuator_init()` 清除，重新解锁路径必须先确认这一点，否则第二次解锁将无输出。
    - 完成前 Issue #13 不得关闭：执行器侧 PASS 只证明"给定证书能安全停"，不证明"FMS 会签发证书"。
 5. **P-10b（P1，Issue #14）**：真实 UART/DMA、PPS capture、`sensor_gnss_poll` 端到端；区分 Host 注入证据与物理 TIM2/板级证据。
-6. **覆盖率口径（P2）**：`time_weighted_coverage` 分母是否排除非轨迹模式时段，需按 Issue #12 口径确认。
+6. **覆盖率口径（P2，已量化待裁定）**：`m6_report.json` 现已同时给出两个分母（整轮 1.538% / 轨迹模式可用窗口 2.663%），判定仍用整轮口径不变。**需要 Issue #12 明确哪个分母是合同口径**——这是验收标准变更，Agent 不得自行切换；数据已证明无论取哪个都远低于 90%。
 
 ## 8. 边界声明
 

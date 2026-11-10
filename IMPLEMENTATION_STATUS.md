@@ -138,3 +138,9 @@
 - Flight_Matalab：`tests/verify_actuation_components.m`（透出 ground stop 字段）、`external_dependencies.lock.json`（契约头哈希，旧值归档于 `config/dependency_history/607f4996….json`）、`config/flight_baseline.json`。
 - 实测：M7 主机套件 230 checks / 0 failures；归零 40 帧、100,000 µs，受理到应用 100,500 µs ≤ 105,500 µs。
 - 未覆盖：FMS 侧签发触发逻辑、真实 ESC 物理推力响应、PIL/HIL 与实机时序。
+
+**M6 覆盖率口径（2026-11-11）**
+
+- `m6_report.json` 新增 `coverage_basis`：整轮分母（判定用，不变）与"轨迹模式可用窗口"分母（仅诊断），含 `worker_ticks` / `blocked_mode_ticks` / `trajectory_eligible_ticks`。
+- 实测：整轮 1.538%（400,000 µs / 26 s）vs 可用窗口 2.663%（751 tick = 15.02 s）。最有利分母仍远低于 90%，缺口不是口径造成的。
+- 待裁定：Issue #12 需明确哪个分母是合同口径；Agent 未切换判定分母。
