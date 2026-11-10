@@ -257,7 +257,13 @@ static void feed_sensors(const double *s, unsigned ms)
         if ((valid & FMT_MAG_VALID) && ms % 10u == 0u && valid_group(s + FMT_SENSOR_MAG, 3))
             inject_mag(s, ms);
     }
-    if ((valid & FMT_IMU_VALID) && valid_group(s, 6))
+    /* External-navigation replay only needs an IMU sample to clock the
+     * estimator task: the push itself is bypassed and the navigation state is
+     * injected. The recorded validity bit marks IMU samples only on alternate
+     * 500 us rows, and this feed runs on the 1 ms grid, so gating on it would
+     * starve the task forever (FMAT-0008 ExtINS replay). */
+    if ((external_mode() ? valid_group(s, 6)
+                         : ((valid & FMT_IMU_VALID) && valid_group(s, 6))))
         inject_imu(s, ms);
 }
 
