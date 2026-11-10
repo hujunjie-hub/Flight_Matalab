@@ -371,7 +371,7 @@
     "middleware/model/fms/quad_x4/flight_state_machine/fms.c": "c6cfa47e257b1a14e9fcbfc5e6d6be44dc3251caec16a9386a83e6a75499a80a",
     "middleware/model/fms/quad_x4/flight_state_machine/fms_internal.h": "f767e655e5e3e382b3cee4fb654c490ed58d377155ee841aaccd7f2ee7d4212e",
     "middleware/model/fms/quad_x4/mission_lifecycle/mission_lifecycle.c": "77b0a7ba12660bbb77490147a39878378328feab1deaf1dc0aa044530e133a70",
-    "middleware/model/fms/quad_x4/operator_authority/operator_authority.c": "3fccf392938cc51aac0f96d1665b1bddb8b56c6559783b116a8b32d4266b5dad",
+    "middleware/model/fms/quad_x4/operator_authority/operator_authority.c": "9d46c64c92fbb0a282ba993cacacda3edad67ae171e0074e652dfa7b3d25752c",
     "middleware/model/ins/ins_interface.c": "a8a790facf91dbf53dd03d1d1be5597e4822f3af40a3cc508a28958ed98d8166",
     "middleware/model/ins/ins_interface.h": "af4e369675f10445923a9223f23f5743a74740897e58e99f7a84e2012d523173",
     "middleware/model/ins/ins_model.h": "0e32de04382a4ad005b862c851798ea3575d1a55bc64b3e64ed86267dccb57f1",
