@@ -122,4 +122,12 @@
 - 结果：**FAIL**，仍在 `verify_flight_entries`；断言变为 `Flight:MILHorizontalPosition`（第 121 行）：“GNSS-assisted origin reset did not establish valid horizontal position.”
 - `mil_diagnostics.json` 与上轮一致：`prearm_state=3`、`failed_mask=8`（ESTIMATOR_POSITION）、`primary_reason=2`、`max_nav_mask=0xD7`、四条指令 ack=0。
 - 结论：上一轮推断的“水平位置有效性未置位”已由脚本专门断言确认，问题不在姿态/IMU/遥控/执行器，也不在采样历元。
-- 证据归档：`work/validation/archives/20261110T010015204Z_0dd4515.zip`，SHA-256 `9ec6006bf11ec8455603da166f895acbca86484092a1e793695356336b2c5cb2`。
+- 证据归档：`work/validation/archives/20261110T010015204Z_0dd4515.zip`，SHA-256 `9ec6006bf11ec8455603da166f895acbca86484092a1e793695356336b2c5cb2`。## 2026-11-11 00:32 MATLAB 验收运行记录（M6 诊断通道 + P-10b 口径修复）
+
+- 分支/HEAD：`optimize/sil-physical-parameter-alignment` @ `a5628f7`（Flight 上游 `a40c4b2`），`source_clean=true`，运行前后 commit 一致。
+- 结果：**FAIL**，18 PASS / 1 PARTIAL（Plant）/ 1 FAIL。唯一 FAIL 是 `m6_jobs`；其余全部门通过，含新增的 `p10b_summary` 与 A-08 归档自测。
+- M6 证据（逐 job，`m6_jobs.json` 488 条）：首个拒绝阶段 `RESIDUAL` 468 / `OK` 20；488 个 job 全部 `CONTROL_SOLVER_SOLVED`；primal residual median 3.0e-8，dual residual median **1.75e-3**、max 1.00e-2；独立约束违反 max 8.6e-4，推力超出恒 0；消费点 9760 中仅 80 采用（全部因 `expires` 过期），快照 `expires-sample` max 8000 µs、`expires-eval` max 5000 µs。
+- 判别实验（已回退）：`eps_rel=0`（门限不动）→ solved 489/489、采用 1956/9780、MIL 最大高度 **0.242 m**，TAKEOFF 于 6.0 s 以 `reason=5`（`land != LANDED`）被拒。MPC−PD 逐轴差值上限 0.33/0.33/0.16 m/s²，说明失败来自地面段与起飞前置条件的耦合，而非控制量幅值。
+- P-10b：PPS 21/1、RECTIMEA 21、GNSS 21、`utc_mapping_epoch=11`、`accepted_intervals=12`、不确定度 384,042 ns；失锁期 `utc_valid=0`、holdover 4.5 s、225,359,042 ns。顶层 `p10b_report.json` 现由本轮三份报告合成，不再硬编码 `NOT_RUN`。
+- 其他修复：#16 归档分类新增 `pre_existing_local_change_modified_by_run`（本轮实测 5 个文件被归入该类别）；#15 `controller.c` 越界读改为两个 3 元素检查。
+- 证据归档：`work/validation/archives/20261110T163238005Z_a5628f7.zip`，SHA-256 `307279fcdbd53ae111f8467276f8669db293f9d9683474fef8cd39199b978afc`。
