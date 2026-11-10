@@ -67,8 +67,8 @@ Status __wrap_estimator_init(const ProductEstimatorConfig *config)
     if (!config)
         return __real_estimator_init(config);
     ProductEstimatorConfig mil_config = *config;
-    /* Exercise the real late-first-fix/FMS Origin Reset path only in MIL.
-     * DataSIM and ExtINS retain the complete anchored Host SIL bench origin. */
+    /* Exercise the real late-first-fix/FMS Origin Reset path in MIL and its
+     * DataSIM replay. ExtINS consumes recorded navigation and keeps the anchored profile. */
     if (mode_active == FMT_MIL_SIM || mode_active == FMT_DATA_SIM)
         mil_config.payload.initial_origin_valid_mask = 1u;
     return __real_estimator_init(&mil_config);
