@@ -150,3 +150,9 @@
 - 新增 `tools/verify_archive_claims.py`：把交付文档引用的数字与某一归档的原始 JSON 对账（manifest commit、M6 成功率/覆盖率是否等于 `solved/jobs`、`covered/duration`、阶段计数守恒、P-10b 顶层与子报告一致、失锁测量值与判定分离、Ground Stop 固件证据与预算）。
 - 当前最新归档 `20261110T171823694Z_a837ae0`：22/22 通过。
 - 负向对照：在临时副本里复现 #17 的"顶层 NOT_RUN 与子报告 PASS 冲突"和一条伪造成功率，工具精确报出这两条失败，其余 20 条仍通过——证明它检查的是内容而不是文件存在。
+
+**M7 FMS 侧余项调查（2026-11-11）**
+
+- 更正上一轮的判断：两阶段 DISARM 的落点不是 `fms_permit_ground_disarm()`（首次参考超时路径，无推力授权），而是 `fms.c` 的 `PRODUCT_CMD_DISARM` 分支——它已有 `ARM_STATE_DISARMING` 中间态却在同一 handler 内立刻跳到 `DISARMED`。
+- 安全属性成立：该分支先撤销 Permit，证书链路即使完全不通，执行器也会 inhibit；再加 105.5 ms 有界回退，不会停留在有推力的中间态。
+- 发现可用的验证手段：FMS 主机套件能在本机 WSL 运行（`bash tests/flight_management/run_host_tests.sh`），改前基线 993 checks / 0 failures。

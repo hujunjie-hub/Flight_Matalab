@@ -156,14 +156,14 @@ P-10 整体仍为 `PARTIAL`：物理 TIM2 capture ISR、UM982 UART/DMA、`sensor
 1. **M6 地面段与空中段分离（P0，阻断 #12）**：在 `LANDED` 期间不得让 MPC 快照改变离地判定（例如地面段不采用快照，或采用但把净加速度限幅到不产生升力）。第 2.1 节已证明：不解决这一项，任何提高接受率的修复都会以 `reason=5` 失败。这是需要控制层确认的设计决策，**需要用户决策**。
 2. **M6 快照到期链（P0）**：把 `actuator_capability/status` 的 5 ms 消息 TTL 从计划有效期里移除。计划不消费执行器遥测（两项都不进 QP），5 ms 是消息新鲜度契约；`eps_rel` 修复之前的实验已证明在既有场景下无害。第 1 项完成前不得单独启用。
 3. **M6 门限与求解器一致性（P0）**：1e-3 门限保留，OSQP 改为绝对终止（`eps_rel=0` 或重新生成工作区）。与前两项一起启用并重新验收。
-4. **M7 Ground Stop（执行器侧已完成，FMS 侧待接）**：执行器侧事务与回执已完成（第 2.2 节）。剩余是 FMS 签发证书，按"发布 → 等待零回执 → 才 DISARMED"实现，不能跳过中间态：
+4. **M7 Ground Stop（执行器侧已完成，FMS 侧待接）**：执行器侧事务与回执已完成（第 2.2 节）。本轮把余项的调查结论固化为事实，避免下一轮重新摸索：
 
-   - `middleware/model/fms/quad_x4/flight_state_machine/fms_internal.h`：`FmsInputs` 增加 `const ActuatorCommitReceipt *receipt` 与 `receipt_ok`；`FmsOutput` 增加 `GroundStopCertificate ground_stop`；`FmsPermit` 增加 `ground_stop_pending` 与缓存的证书。
-   - `actuation_permit.c` 的 `fms_permit_ground_disarm()`：改为"先发布证书并进入携带 DISARMING 的中间态"，只有当 `receipt->result_code == ACTUATOR_RECEIPT_ZERO_TARGET_APPLIED` 且回执新鲜时才执行现有的 revoke/DISARMED 主体。
-   - `fms.c:1269` 附近（`fms_permit_fill` 旁）增加 `fms_ground_stop_fill()`，发布路径与 Permit 一致。
-   - 运行时：Mission 把证书放进 bundle，执行器 owner 在帧边界前调用 `actuator_guard_ground_stop()`；执行器回执需沿相反方向进入 `FmsInputs`。
-   - 两个已知陷阱：(a) `ARM_STATE` 是状态帧/ABI 的一部分，新增中间态要同步 `fmt_flight_runtime` 的状态列与验收文档；(b) 执行器的 ground-stop latch 只能由 `actuator_init()` 清除，重新解锁路径必须先确认这一点，否则第二次解锁将无输出。
-   - 完成前 Issue #13 不得关闭：执行器侧 PASS 只证明"给定证书能安全停"，不证明"FMS 会签发证书"。
+   - **两阶段的位置不是 `fms_permit_ground_disarm()`**。那个函数只服务"首次参考超时且已 LANDED"路径，此时从未获得控制权、没有需要斜坡下降的推力；把它改成两阶段会改写 `test_first_reference_window_expires_to_ground_stop` 的既有断言（同步 DISARMED + REVOKED），理由不成立。
+   - **真正的调用点是 `fms.c` 的 `PRODUCT_CMD_DISARM` 分支**：它先把 `arm_state` 置为 `ARM_STATE_DISARMING`（枚举里已存在该中间态），随后在同一个 handler 里立刻置 `ARM_STATE_DISARMED`。要做的就是把"立刻"改成"等零回执或超时回退"。
+   - 安全属性：该分支已先 `fms_permit_revoke`，因此即使证书链路完全不通，执行器也会因无有效 Permit 进入 inhibit；加上 105.5 ms 的有界回退，两阶段不会把飞行器留在有推力的中间态。
+   - 待改文件（已定位）：`fms_internal.h` 的 `FmsPermit`（新增 pending/requested_us）与 `FmsInputs`（新增 `const ActuatorCommitReceipt *receipt`）；`fms_contract.h` 的 `FmsOutputView`（新增 `GroundStopCertificate ground_stop`）；`actuation_permit.c` 的 `fms_ground_stop_fill()`；`fms.c` 的 DISARM 分支与 tick 完成条件；`applications/tasks/mission/task_mission.c`（把 `fms_output.ground_stop` 紧挨着 `actuator_update_permit` 调用 `actuator_guard_ground_stop()`，并把 `plan_bundle.receipt` 送进 `FmsInputs`）。不需要改 `ControlBundle` 或 `task_actuator.c`，因为 Mission 已经直接更新执行器许可。
+   - **验证手段**：FMS 主机套件可在本机 WSL 中直接运行（`bash -lc "cd /mnt/e/Flight/Flight && bash tests/flight_management/run_host_tests.sh"`），改前基线 **993 checks / 0 failures**。改后必须重跑该套件与完整 MATLAB 回归。
+
 5. **P-10b（P1，Issue #14）**：真实 UART/DMA、PPS capture、`sensor_gnss_poll` 端到端；区分 Host 注入证据与物理 TIM2/板级证据。
 6. **覆盖率口径（P2，已量化待裁定）**：`m6_report.json` 现已同时给出两个分母（整轮 1.538% / 轨迹模式可用窗口 2.663%），判定仍用整轮口径不变。**需要 Issue #12 明确哪个分母是合同口径**——这是验收标准变更，Agent 不得自行切换；数据已证明无论取哪个都远低于 90%。
 
