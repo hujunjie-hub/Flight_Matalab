@@ -88,7 +88,10 @@
           "origin_reset_last_origin_id": 40,
           "prearm_reject_state": 3,
           "prearm_ready_state": 2,
-          "origin_rebuild_reset_type": 2
+          "origin_rebuild_reset_type": 2,
+          "permit_scope_control_active_flag": 2,
+          "permit_flag_revoked": 4,
+          "actuator_receipt_committed": 1
         },
         "command_history_fields": [
           "request_id",
