@@ -47,6 +47,10 @@ try
     report.checks.p10b=verify_p10b_pps_rectime;
     report.checks.p10b_utc=verify_p10b_utc_mapping;
     report.checks.p10b_holdover=verify_p10b_holdover;
+    % Composed from this run's three reports, so the top-level P-10b verdict can
+    % no longer contradict the gates that produced it.
+    report.checks.p10b_summary=verify_p10b_summary(report.checks.p10b, ...
+        report.checks.p10b_utc,report.checks.p10b_holdover);
     % The MPC job gate runs last: a failure there must not hide the evidence of
     % the other gates, and its numbers belong in the same archive.
     report.checks.m6_jobs=verify_m6_jobs;

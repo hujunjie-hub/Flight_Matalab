@@ -37,13 +37,16 @@ report=struct('scope','P10B_HOST_MIL_PPS_RECTIME','status','PASS', ...
     'gnss_time_pairing',ternary(paired,'PASS','FAIL'), ...
     'no_rejected_edges',ternary(clean,'PASS','FAIL'), ...
     'rejected_note','at most one edge may be rejected by the deliberate holdover gap', ...
-    'utc_mapping_verified','NOT_RUN', ...
-    'holdover_recovery_verified','NOT_RUN', ...
-    'note','PPS/RECTIMEA injection runs on the real systime.c and unicore_ascii; UTC discipline and holdover recovery still need their own fixtures.');
+    'note','Injection only. UTC discipline and holdover recovery are judged by their own gates and summarised by verify_p10b_summary.');
 if ~(injection && rectime && paired && clean)
     report.status='FAIL';
 end
-file=fullfile(root,'work','validation','p10b_report.json');
+% The injection gate used to write p10b_report.json and to hardcode
+% utc_mapping_verified / holdover_recovery_verified as NOT_RUN, so the archived
+% top-level report contradicted the two gates that ran later in the same run.
+% It now owns the injection evidence only; verify_p10b_summary composes the
+% top-level report from this run's three reports.
+file=fullfile(root,'work','validation','p10b_injection_report.json');
 fid=fopen(file,'w'); cleanup=onCleanup(@()fclose(fid));
 fprintf(fid,'%s\n',jsonencode(report,PrettyPrint=true));
 disp(report);
