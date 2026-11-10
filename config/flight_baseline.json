@@ -366,7 +366,7 @@
     "middleware/model/fms/geofence_geometry/geofence_geometry.h": "68e78d40a91ba6eaa69891c7880d570f5489116c0f0cd870ac81044ecc09ca22",
     "middleware/model/fms/quad_x4/flight_policy/fms_policy.h": "6447a9ce5a40ce6f5d2f9b2890edce96240089d40bb4f3079a850877d18350b5",
     "middleware/model/fms/quad_x4/flight_policy/quad_x4_fms.c": "0d26d879aeaf5ec02423aa9ae97333610b1600d9afe3955f27584d3e0a96fee2",
-    "middleware/model/fms/quad_x4/flight_safety/actuation_permit.c": "390e475b6ca203f095db4f21e036b5eea632b3d42af15cf4ba58f92d98c4fea3",
+    "middleware/model/fms/quad_x4/flight_safety/actuation_permit.c": "6a2ab22c52e749b09a76bb1347be9ff934117b681d99c99bdf48a38d1cb52335",
     "middleware/model/fms/quad_x4/flight_safety/fms_safety.c": "f99471ac736ce359ce40f6541893b7d8e046d87fc4984177a93476c545668410",
     "middleware/model/fms/quad_x4/flight_state_machine/fms.c": "c6cfa47e257b1a14e9fcbfc5e6d6be44dc3251caec16a9386a83e6a75499a80a",
     "middleware/model/fms/quad_x4/flight_state_machine/fms_internal.h": "f767e655e5e3e382b3cee4fb654c490ed58d377155ee841aaccd7f2ee7d4212e",
