@@ -146,3 +146,20 @@ diff=[-8.067e-03  3.237e-06  0.000e+00]   (容差 1e-6)
 3. `accel_ideal_body[axis] += rotation[3*i + axis] * specific_force_ned[i];`（NED→体）
 
 若 1) 与 3) 使用同一 `rotation` 且二者互为转置，则结果精确；残差说明其中一处缺少/多了一次转置，或 `fmt_rotation` 的返回约定与调用处索引约定不一致。
+## 10. 旋转约定核对结果（排除转置假设）
+
+`fmt_rotation`（`models/plant/fmt_rotation.h`）返回**行主序 C_ned_from_body**（体→NED），与测试侧 `reference_rotation` 的实现逐元素一致。三处使用点核对：
+
+| 使用点 | 索引形式 | 数学语义 | 结论 |
+|---|---|---|---|
+| `accel_imu_ned[i] += rotation[3*i + j] * accel_imu_body[j]` | 行 i | `(R·v)_i`，体→NED | 正确 |
+| `sensor[FMT_SENSOR_POSITION + axis] += rotation[3*axis + i] * lever_ant[i]` | 行 axis | `(R·lever)_axis`，体→NED | 正确 |
+| `accel_ideal_body[axis] += rotation[3*i + axis] * specific_force_ned[i]` | 列 axis | `(Rᵀ·sf)_axis`，NED→体 | 正确 |
+
+因此 §9 提出的「转置不一致」假设**不成立**，动态工况 8e-3 残差另有来源。剩余可能：
+
+1. 测试侧与组件侧对「区间平均」的定义不同（例如 `avgAA` 用 0.5·jerk·P，而组件用 `(ω(2ms)-ω(0))/dt`，二者在加速度为常数+jerk 时应一致，但若组件实际用的是 `(ω(2ms)-ω(1ms))/dt` 则不同）；
+2. `specific_force_ned[2] -= gravity` 之后，`accel_ideal_body` 的索引虽然正确，但 `gravity` 的符号/参考系在动态工况下与其他项不同源；
+3. 测试的 `velocityImuNed` 与组件的 `velocity_imu_ned` 在「是否包含 Coriolis 前置项」上不一致（当前 earth rate 置零，影响应为 0，但需确认置零的确实是 earth rate 而不是 magnetic field）。
+
+建议下一步：在动态工况下同时打印组件的 `specific_force_ned` 与测试侧同样公式算出的期望值，逐分量比对，即可把残差锁定到上述三者之一。
