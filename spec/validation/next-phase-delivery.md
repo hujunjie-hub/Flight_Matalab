@@ -1,4 +1,4 @@
-# 下一阶段交付清单（截至 RUN_ID `20261110T175134005Z_72f1395`）
+# 下一阶段交付清单（截至 RUN_ID `20261110T180223584Z_199e87a`）
 
 本文件汇总本轮的实际产出、证据位置与未闭合项。所有数字均来自同一轮 `run_component_checks`，不是多轮拼接。
 
@@ -12,18 +12,18 @@
 
 | 项目 | 值 |
 |---|---|
-| RUN_ID | `20261110T175134005Z_72f1395` |
-| ZIP | `work/validation/archives/20261110T175134005Z_72f1395.zip`（47 个证据文件，含 `m6_use_trace.json`） |
-| ZIP SHA-256 | `4ae84f415258544076a57d033e7d2c5403f9265cf7fb376f8148ac5d1fe6ff91` |
+| RUN_ID | `20261110T180223584Z_199e87a` |
+| ZIP | `work/validation/archives/20261110T180223584Z_199e87a.zip`（47 个证据文件，`m6_use_trace.json` 覆盖 4.0–10.5 s） |
+| ZIP SHA-256 | `cfb1ab4fef23a60a78c12b370d96909ce2e5a8182cc06debe112629594ec9031` |
 | `component_status` | **FAIL**（18 PASS、1 PARTIAL、1 FAIL；FAIL 只有 `m6_jobs`） |
 | source 指纹（磁盘） | `c16f2fa05b8adce192ea96331eec9fea9e308dc15a368743a2cd9de278031c31` |
 | source 指纹（committed） | `982054e602b0bece7065e44b6b55f1d4a375471c3b0c6df2397ed6a7f70d6b38` |
 | artifact 指纹 | `2d995a22d16b0fa236cf20bf707cbfb5d0fa05e4bf10e7ccefcbe3a920a66c7c` |
-| `source_clean` | true（Flight_Matalab `72f1395`，manifest 的 before/after commit 与之一致） |
+| `source_clean` | true（Flight_Matalab `199e87a`，manifest 的 before/after commit 与之一致） |
 | Flight 上游 | `cf92ed2`（分支 `test/fmat-0012-m6-controller`） |
 | 生成文件分类 | `pre_existing_local_change_modified_by_run` 5、`pre_existing_local_change` 4、`commit_candidate` 1、`excluded_from_source` 13 |
 | PR 状态 | Flight_Matalab#1 Draft；Flight#3 Draft；Flight#4 Draft；`main` 未改动 |
-| 归档对账 | `python tools/verify_archive_claims.py --run-id 20261110T175134005Z_72f1395` → **22/22 PASS** |
+| 归档对账 | `python tools/verify_archive_claims.py --run-id 20261110T180223584Z_199e87a` → **22/22 PASS** |
 | 已被取代的归档 | `…1616`/`…1701`（M6 诊断与 M7 首轮）、`20261110T165750883Z_c2b04c6`（M7 首轮，运行前文档未提交，`source_clean=false`）；全部保留不删 |
 
 ## 2. 本轮实际结果
