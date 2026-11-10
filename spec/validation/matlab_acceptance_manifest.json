@@ -65,7 +65,7 @@
           "meaning": "lock request"
         }
       ],
-      "acceptance": "26 s MIL completes FMS-authorized late-GNSS origin rebuild, takeoff/landing/disarm; no nonzero thrust without valid commit.",
+      "acceptance": "26 s MIL completes FMS-authorized late-GNSS origin rebuild, ARM, valid CONTROL_ACTIVE permit and committed M7 output, takeoff/landing/disarm; no terminal failsafe before valid commit and no nonzero thrust without valid commit.",
       "mil_origin_profile": {
         "initial_origin_valid_mask": 1,
         "complete_origin_valid_mask": 3,
@@ -76,7 +76,7 @@
       },
       "diagnostics": {
         "report": "work/validation/mil_diagnostics.json",
-        "status_width": 74,
+        "status_width": 113,
         "status_columns": {
           "prearm_failed_mask": 25,
           "prearm_primary_reason": 26,
@@ -133,7 +133,46 @@
           "candidate_first_age_us": 74,
           "permit_scope_control_active_flag": 2,
           "permit_flag_revoked": 4,
-          "actuator_receipt_committed": 1
+          "actuator_receipt_committed": 1,
+          "first_terminal_time_us": 75,
+          "first_terminal_decision_code": 76,
+          "first_terminal_decision_reason": 77,
+          "first_terminal_landed_state": 78,
+          "first_terminal_landed_stable_ms": 79,
+          "first_terminal_landed_evidence": 80,
+          "first_terminal_landed_confidence": 81,
+          "first_terminal_control_health_state": 82,
+          "first_terminal_control_dof_mask": 83,
+          "first_terminal_control_degraded_dof_mask": 84,
+          "first_terminal_control_reason": 85,
+          "first_terminal_control_status": 86,
+          "first_terminal_runtime_control_health": 87,
+          "first_terminal_solver_status": 88,
+          "first_terminal_deadline_miss_count": 89,
+          "first_terminal_allocation_failure_count": 90,
+          "first_terminal_actuator_fault_mask": 91,
+          "first_terminal_actuator_available_mask": 92,
+          "first_terminal_actuator_cap_available_mask": 93,
+          "first_terminal_actuator_cap_dof_mask": 94,
+          "first_terminal_permit_flags": 95,
+          "first_terminal_permit_reason": 96,
+          "first_terminal_guidance_state": 97,
+          "first_terminal_guidance_reason": 98,
+          "first_terminal_guidance_feasible": 99,
+          "first_terminal_feasibility_reason": 100,
+          "first_terminal_control_reference_id": 101,
+          "first_terminal_receipt_result_code": 102,
+          "first_terminal_runtime_error": 103,
+          "first_terminal_mpc_updates": 104,
+          "first_terminal_nav_capability_mask": 105,
+          "first_terminal_nav_solution_state": 106,
+          "first_terminal_nav_valid_mask": 107,
+          "first_terminal_bundle_ready": 108,
+          "arm_prearm_state_at_submit": 109,
+          "arm_prearm_failed_mask_at_submit": 110,
+          "arm_prearm_epoch_at_submit": 111,
+          "arm_submit_time_us": 112,
+          "arm_request_id": 113
         },
         "command_history_fields": [
           "request_id",
@@ -155,7 +194,12 @@
           "origin_reset_successes",
           "origin_reset_last_status",
           "origin_reset_last_type",
-          "origin_reset_last_origin_id"
+          "origin_reset_last_origin_id",
+          "arm_prearm_state_at_submit",
+          "arm_prearm_failed_mask_at_submit",
+          "arm_prearm_epoch_at_submit",
+          "arm_submit_time_us",
+          "arm_request_id"
         ]
       }
     },
