@@ -28,12 +28,44 @@ static sensor_context_t simulated_imu_context;
 /* Host SIL must emulate RTOS semaphore wakeups for the GNSS-origin handshake. */
 static uint32_t last_origin_candidate_sequence;
 static uint64_t last_origin_candidate_sample_us;
+static uint32_t origin_auth_attempts, origin_auth_successes;
+static uint32_t origin_reset_attempts, origin_reset_successes;
+static int origin_auth_last_status, origin_reset_last_status;
+static uint16_t origin_reset_last_type;
+static uint32_t origin_reset_last_origin_id;
 
 Status __real_estimator_push_imu(const ImuSample *);
 Status __real_estimator_update(uint64_t);
 Status __real_estimator_get_snapshot(NavigationSnapshot *);
 Status __real_estimator_get_capability(NavigationCapability *);
 Status __real_ins_get_pending_origin(ContractHeader *, uint32_t *);
+Status __real_fms_authorize_origin_reset(const ContractHeader *, uint32_t, EstimatorResetRequest *);
+Status __real_estimator_reset(const EstimatorResetRequest *);
+
+Status __wrap_fms_authorize_origin_reset(const ContractHeader *candidate, uint32_t next_origin_id,
+                                         EstimatorResetRequest *request)
+{
+    ++origin_auth_attempts;
+    Status result = __real_fms_authorize_origin_reset(candidate, next_origin_id, request);
+    origin_auth_last_status = (int)result;
+    if (result == STATUS_OK)
+        ++origin_auth_successes;
+    return result;
+}
+
+Status __wrap_estimator_reset(const EstimatorResetRequest *request)
+{
+    ++origin_reset_attempts;
+    if (request) {
+        origin_reset_last_type = request->reset_type;
+        origin_reset_last_origin_id = request->requested_origin_id;
+    }
+    Status result = __real_estimator_reset(request);
+    origin_reset_last_status = (int)result;
+    if (result == STATUS_OK)
+        ++origin_reset_successes;
+    return result;
+}
 
 static int external_mode(void)
 {
@@ -387,6 +419,11 @@ __declspec(dllexport) int fmt_flight_start(int mode)
     sensor_simulation_epoch_us = test_clock.monotonic_us + FMT_SENSOR_SIM_FIXED_STEP_US;
     last_ack = last_reason = 0;
     last_command_code = 0u;
+    origin_auth_attempts = origin_auth_successes = 0u;
+    origin_reset_attempts = origin_reset_successes = 0u;
+    origin_auth_last_status = origin_reset_last_status = 0;
+    origin_reset_last_type = 0u;
+    origin_reset_last_origin_id = 0u;
     memset(&external_frame, 0, sizeof(external_frame));
     memset(&fmt_origin, 0, sizeof(fmt_origin));
     memset(&fmt_state, 0, sizeof(fmt_state));
@@ -519,7 +556,15 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
         runtime_data.prearm.check_epoch,
         runtime_data.fms.authority,
         runtime_data.fms.mission_state,
-        last_command_code
+        last_command_code,
+        origin_auth_attempts,
+        origin_auth_successes,
+        origin_auth_last_status,
+        origin_reset_attempts,
+        origin_reset_successes,
+        origin_reset_last_status,
+        origin_reset_last_type,
+        origin_reset_last_origin_id
     };
     memcpy(status, values, sizeof(values));
     NavFrame published = {0};
