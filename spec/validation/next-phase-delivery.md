@@ -172,7 +172,10 @@ pwsh -NoProfile -File .\tools\build_flight_runtime.ps1 -GccDir 'D:\STM32CubeCLT\
 | #15 controller.c 越界 | 主机套件复跑通过 | `FIXED_WAITING_RETEST` |
 | #2～#6、#10、#11 | 正文 `Current status` 已是 `VERIFIED`/`FIXED_WAITING_RETEST`，但 GitHub 仍 Open | 建议按 §6 关闭或改状态 |
 
-## 6. 待人工执行的 Issue 更新（本环境无法写 GitHub）
+## 6. GitHub Issue 状态已同步（2026-11-11）
+
+> **同步结果：** 已将最新证据和处理卡实际写入 GitHub Issues。当前状态以 Issue 正文顶部的 Current status 为准：#12 BLOCKED、#13 BLOCKED、#14 IN_PROGRESS、#15 FIXED_WAITING_RETEST、#16 VERIFIED、#17 VERIFIED。下方原“待人工执行”内容保留为本轮状态迁移说明，不再要求用户手工复制更新。
+
 
 **#12 → `BLOCKED`**（追加评论 + 正文 Current status）：
 > 2026-11-11，`IN_PROGRESS → BLOCKED`。修复见 Flight `b2f33ee`（计划有效期移除执行器 5 ms TTL；`mpc_reset()` 改绝对终止），证据 RUN_ID `20261110T235206650Z_78912e8`（ZIP SHA-256 `07575f02…`，`source_clean=true`，claims 22/22）。实测 488/488 job 通过（成功率 100%）、控制路径覆盖 9272/9760（95.0%）、dual residual max 9.995e-4、MIL 2.0841 m 且 TAKEOFF ack=1。阻塞点：验收计划写"有效 MPC 周期 / 闭环时长 ≥90%"，实现用整轮 26 s 做分母，而 `blocked_mode=549/1300`，该分母上限 57.77%，任何实现不可达。需在"整轮 26 s / worker 可用窗口 15.02 s / 1 kHz 消费点"三者中裁定合同口径；裁定前判定口径不动。附：地面段旧根因（MPC 水平指令少 0.20 m/s²）已被三构建实测否证，真实激励是 5 ms 计划寿命导致的 MPC/PD 1 kHz 交替。
@@ -196,3 +199,51 @@ pwsh -NoProfile -File .\tools\build_flight_runtime.ps1 -GccDir 'D:\STM32CubeCLT\
 - 未实测项一律保持 `NOT_RUN`/`PARTIAL`，没有以"应该可以"替代证据；
 - 未放宽任何门限（1e-3 残差门限、99% 成功率、90% 覆盖率阈值与判定分母均未改），未跳过候选解验证，未延长旧解有效期，未修改 Plant 物理，未修改 `main`，未合并任何 PR；
 - 专题实验的三个构建中，只有最终两项修复保留在 Flight；"仅 `eps_rel=0`" 与"改生成工作区"两种中间形态均已回退。
+
+
+## 9. 阻塞处理卡与任务分发（2026-11-11）
+
+### 9.1 本轮统一证据基线
+
+- RUN_ID：`20261110T235206650Z_78912e8`
+- ZIP SHA-256：`07575f020d77431f49a60360cffc9823059a029358a354a01f2838558ad704c1`
+- Flight_Matalab tested commit：`78912e86b6cd51b82800a6eb1ad5bb7773a4739e`
+- Flight upstream：`b2f33ee00fd7cc36fb51803d38ab0ff1267cbf0f`
+- PR #1 HEAD：`f95c2ae502d6e40b6d7531be42b323e5776a86b2`，仅比测试归档多 1 个修改本交付文档的提交；归档未声称测试该文档提交。
+- 归档结果：19 PASS / 1 PARTIAL（Plant，预期）/ 1 FAIL（M6 coverage_90）。
+- 本地 worktree 仍有 10 项用户本地模型/字典/录制文件修改；备份位于 `work/backup/takeover_20261111T071514/`。任何 Agent 不得 reset/clean/覆盖这些文件。
+
+### 9.2 最新阻塞与任务分配
+
+| FMAT | 状态 | Owner | 当前阻塞 | 下一步 |
+|---|---|---|---|---|
+| #12 M6 | BLOCKED | Flight_Matalab-Agent（待用户确认后） | 488/488 求解成功，但覆盖率分母口径导致 37.54% FAIL；消费点实测 95.0% | 等用户确认 1 kHz consumer denominator；确认前只准备定义和反例测试，不改 gate |
+| #13 M7 | BLOCKED | Flight-Firmware-Agent | 执行器 Ground Stop PASS；FMS 未等待真实 ZERO_TARGET_APPLIED 回执 | 等用户批准完整 Certificate+Receipt 与异步 ACK 设计；批准前只交设计提案 |
+| #14 P-10b | IN_PROGRESS | Flight-Firmware-Agent + Flight_Matalab-Agent（串行接口交接） | Host 核心 PASS，但真实 DMA/parser/poll Host MIL 路径及 H723 板级证据缺失 | Flight 冻结接口后，Matalab 接入 Host DMA-ring adapter；硬件证据独立执行 |
+| #15 数组边界 | FIXED_WAITING_RETEST | Flight-Firmware-Agent | 代码已改为两个 3 元素检查，需专门边界测试 | 增加 canary/ASan 或结构化 fixture，再跑 M6 Host tests |
+| #16 归档分类 | VERIFIED | 无新增分派 | A-01…A-08 8/8 PASS | 仅在新回归时重开 |
+| #17 P-10b 文档对账 | VERIFIED | 无新增分派 | 同 RUN_ID 原始 JSON 与交付文档一致 | 仅在新回归时重开 |
+
+### 9.3 两项需要用户确认的推荐决策
+
+**决策 A — M6 覆盖率合同（FMAT-0012）**
+
+推荐：将 90% 覆盖率定义为 1 kHz 控制消费点的 MPC 实际使用样本数 / 全部控制消费点样本数；PD fallback 必须计入分母。保留整轮 26 s 和 worker 可用窗口指标作为诊断值。成功率 99%、最少 100 jobs、残差 1e-3 和 90% 门槛均不降低。该定义更直接测量控制路径由 MPC 接管的实际时间，也不会通过剔除 fallback 制造 PASS。
+
+**决策 B — M7 DISARM 闭环（FMAT-0013）**
+
+推荐：采用 FMS GroundStopCertificate → Actuator 实际应用 stop code 0 → ActuatorCommitReceipt(ZERO_TARGET_APPLIED) 回传 FMS → FMS 才从 DISARMING 转 DISARMED。命令 ACK 先 ACCEPTED，真实回执完成后再 COMPLETED。拒绝仅等待固定时长后由 Mission 合成证书的弱化方案。
+
+### 9.4 执行顺序和并行边界
+
+1. 用户先确认决策 A/B；未确认前两个 Issue 均保持 BLOCKED，Agent 不得修改验收分母或公共 ABI。
+2. Flight-Firmware-Agent 可独立继续 #14 的驱动/时间服务接口设计，以及 #15 的边界测试；#13 只提交设计提案，等待批准。
+3. Flight_Matalab-Agent 可独立继续 #14 的 Host MIL 适配设计，但必须等待 Flight 接口/commit 冻结后才接入共享链路。
+4. #12 的验收脚本变更必须等决策 A；不得与 Flight 固件 Agent 并行修改同一控制接口。
+5. #16/#17 已 VERIFIED，不重复开发或重跑；#14 的 P-10 overall 在 H723 板级证据齐全前保持 PARTIAL。
+
+每个 Agent 只接收其 Owner 范围内的文件和任务；跨仓库接口只有 Flight-Firmware-Agent 能修改，Flight_Matalab-Agent 消费固定版本。任何共享文件只允许一个写入 Owner。
+
+### 9.5 阻塞上报要求
+
+每次任务分发前，先在对应 Issue 写入“推荐方案、精确步骤、Owner、依赖、禁止事项、测试命令、验收门槛和解除条件”。Agent 若无法执行，必须在同一 Issue 评论中提供错误日志、复现命令、已尝试方案和下一步建议；不允许只报告“卡住了”。
