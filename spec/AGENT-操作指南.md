@@ -235,3 +235,50 @@ Agent 不得静默跳过阻塞，也不得为了继续推进而自行改变架�
 - 阻塞解除的明确条件。
 
 若没有阻塞，必须明确写 `BLOCKER_STATUS: NONE`，不能省略该字段。
+
+
+## 14. 阻塞解决指导与任务分发（强制）
+
+Agent 不能只收到“调查一下/修复一下”这类模糊任务。每个 BLOCKED 或 BLOCKER_IN_PROGRESS 项必须由总体验收负责人形成一张可执行的阻塞处理卡，并同步到对应 GitHub Issue。
+
+### 14.1 阻塞处理卡的必填内容
+
+1. **问题与证据**：FMAT Issue、RUN_ID、ZIP SHA-256、精确报告路径、分支/commit、命令/日志、期望值与实际值。
+2. **根因可信度**：已证实根因、待验证假设、尚缺证据分别列出；不得把推测写成事实。
+3. **明确推荐方案**：给出一个首选解决方案，说明为什么；其他方案仅在存在真实架构/验收取舍时列出，并明确推荐哪一个。
+4. **可执行步骤**：按顺序列出要修改的仓库、分支、文件、函数/模块、接口字段、测试入口和报告字段。根因未明时，第一项必须是有明确采样字段、窗口和退出条件的诊断任务，不得要求 Agent 无边界探索。
+5. **任务归属**：指定唯一 Owner Agent、协作 Agent、用户/硬件依赖人；一个共享文件或接口只能有一个写入 Owner。
+6. **依赖关系**：标出前置接口/commit/用户决策，以及可并行和必须串行的子任务。
+7. **禁止事项**：明确不能改的安全约束、验收阈值、分母、公共 ABI、用户本地文件及其他边界。
+8. **验收条件**：逐项给出测试名称、通过数量/数值门槛、预期报告字段、回归范围和解除 BLOCKED 的条件。
+9. **失败回报格式**：若无法执行，必须返回精确错误、复现命令、日志/证据、已尝试动作、剩余假设和下一步建议。
+
+Issue 正文必须保存这张处理卡；每次任务分发和状态变化追加评论。不能只在聊天里给指导，也不能只登记“待修复”而没有解决路线。
+
+### 14.2 固定 Agent 责任边界
+
+- **Flight-Firmware-Agent**：只负责 Flight 仓库中的固件 C/C++、FMS、INS、Control、M7、驱动、TimeService、Host 固件测试和 ICD/公共接口。公共接口变更由该 Agent 作为唯一 Owner。
+- **Flight_Matalab-Agent**：只负责 Flight_Matalab 仓库中的 Simulink/MATLAB 模型、Host SIL adapter、测试夹具、验收脚本、报告、manifest、归档和仿真回归。不得与 Flight-Firmware-Agent 并行修改 Flight 公共头文件/ICD。
+- **H723-Hardware/Bench Owner**：负责物理 TIM2、UART/DMA、板级时钟、ESC/电机和台架测量。没有真实板级证据时，相关项只能是 NOT_RUN/PARTIAL。
+- **Integration Owner（总体验收负责人）**：负责固定跨仓库接口版本、安排执行顺序、合并证据、更新 Issue 状态和独立验收；不得让两个 Agent 同时写同一个分支或文件。
+
+### 14.3 跨仓库任务分发顺序
+
+1. 先由 Flight-Firmware-Agent 定义/冻结接口契约，提交 Flight commit 和 ICD 版本。
+2. 再由 Flight_Matalab-Agent 基于该精确 Flight commit 接入模型/Host adapter，不复制固件算法。
+3. 两仓库分别完成专项测试后，再运行 Flight SIL 和 Flight_Matalab 完整 MATLAB 回归。
+4. 最后由 Integration Owner 核对两仓库 commit、RUN_ID、source/model/config/data hashes、ZIP SHA-256 和 Issue 证据。
+
+禁止两个 Agent 同时修改同一公共接口、同一测试入口或同一分支。并行任务必须文件范围互斥；有依赖的任务按接口冻结顺序串行执行。
+
+### 14.4 当前项目任务分发基线
+
+- **FMAT-0012 / M6**：Flight MPC 算法修复已在本轮 488/488 jobs、100% 成功率下通过；当前唯一 FAIL 是覆盖率分母口径。Issue BLOCKED 等用户确认。Flight_Matalab-Agent 只能先准备指标定义/反例测试，不能擅自更改分母或 90% 阈值。
+- **FMAT-0013 / M7**：执行器侧 Ground Stop 已通过；FMS 两阶段 DISARM 仍需完整证书+真实回执契约。Issue BLOCKED 等用户批准；Flight-Firmware-Agent 先提交设计提案，不得先改公共 ABI。
+- **FMAT-0014 / P-10b**：保持 IN_PROGRESS。Flight-Firmware-Agent 负责驱动/时间服务接口和真实链路；Flight_Matalab-Agent 在接口冻结后负责 Host SIL DMA-ring/parser/poll adapter；H723 台架负责物理证据。
+- **FMAT-0015**：FIXED_WAITING_RETEST，Flight-Firmware-Agent 增加专门数组边界回归后再申请 VERIFIED。
+- **FMAT-0016、FMAT-0017**：本轮证据已 VERIFIED，不重复分派；只有出现新回归才重开。
+
+### 14.5 用户可见任务指令
+
+每次交给用户的 Agent 指令必须是一段可直接复制粘贴的任务单，至少包括：任务 ID、Owner Agent、仓库/分支、前置依赖、精确修改范围、执行步骤、禁止事项、测试命令、验收门槛、交付文件、Issue 更新要求和阻塞回报格式。若多个 Agent 需要协作，分别给出独立任务单，并明确先后顺序；不得把互相依赖的任务混成一个并行任务。
