@@ -8,7 +8,7 @@
 
 | 项 | 值 |
 |---|---|
-| Flight_Matalab | `optimize/sil-physical-parameter-alignment` @ `34e57d0`（Draft PR #1） |
+| Flight_Matalab | `optimize/sil-physical-parameter-alignment` @ `34e57d0`（Draft PR #1 的 head 现在是 `ca79d47`，比归档 commit 多两个只改本文件的文档提交；归档**未**声称测试它们） |
 | Flight 上游 | `test/fmat-0012-m6-controller` @ `1c7a72a`（M7 FMS→执行器地面停止证书链、异步帧应用、M6 截止时间记账、CI 门；含本会话 `b2f33ee` 的 M6 计划寿命/绝对终止修复并被加固） |
 | 最后归档 | `work/validation/archives/20261113T092308651Z_34e57d0.zip`，SHA-256 `303198ebc0730c98fe3584a97790e1803b9b0219afed22375e214fa1b3203d8d`，`source_clean=true`，47 个证据文件 |
 | 归档自对账 | `python tools/verify_archive_claims.py --run-id 20261113T092308651Z_34e57d0` → **22/22 PASS** |
