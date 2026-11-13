@@ -1,74 +1,88 @@
-# 下一阶段交付清单（截至 RUN_ID `20261110T235206650Z_78912e8`）
+# 下一阶段交付清单（截至 RUN_ID `20261113T092308651Z_34e57d0`）
 
-## 0. 新会话接管必读（2026-11-11 交接）
+## 0. 新会话接管必读（2026-11-13 同步后交接）
 
-本轮是**新会话**（按 [AGENT 操作指南](AGENT-操作指南.md) §12 接管）的第一次交付。旧会话的交接块已由本轮替换；新会话**不要**从聊天摘要续接，按下面顺序核对。
+本轮在 2026-11-13 把 Flight_Matalab 同步到已更新的 Flight 上游（`b2f33ee` → `1c7a72a`，43 个提交），并重跑完整回归。新会话**不要**从聊天摘要续接，按下面顺序核对。
 
 **基线**
 
 | 项 | 值 |
 |---|---|
-| Flight_Matalab | `optimize/sil-physical-parameter-alignment` @ `78912e8`（Draft PR #1，head 与 origin 一致） |
-| Flight 上游 | `test/fmat-0012-m6-controller` @ `b2f33ee`（本轮新增；执行器 M7 侧仍是 `80bca5e`/`bef9022`） |
-| 最后归档 | `work/validation/archives/20261110T235206650Z_78912e8.zip`，SHA-256 `07575f020d77431f49a60360cffc9823059a029358a354a01f2838558ad704c1`，`source_clean=true`，47 个证据文件 |
-| 归档自对账 | `python tools/verify_archive_claims.py --run-id 20261110T235206650Z_78912e8` → **22/22 PASS** |
-| 被取代的归档 | `20261110T234422185Z_78912e8`（同一次运行，但归档时 HEAD 已被文档提交推进，manifest commit 与 pre-run 快照不符，`21/22`）；保留不删，**不得**作为验收证据引用 |
+| Flight_Matalab | `optimize/sil-physical-parameter-alignment` @ `34e57d0`（Draft PR #1） |
+| Flight 上游 | `test/fmat-0012-m6-controller` @ `1c7a72a`（M7 FMS→执行器地面停止证书链、异步帧应用、M6 截止时间记账、CI 门；含本会话 `b2f33ee` 的 M6 计划寿命/绝对终止修复并被加固） |
+| 最后归档 | `work/validation/archives/20261113T092308651Z_34e57d0.zip`，SHA-256 `303198ebc0730c98fe3584a97790e1803b9b0219afed22375e214fa1b3203d8d`，`source_clean=true`，47 个证据文件 |
+| 归档自对账 | `python tools/verify_archive_claims.py --run-id 20261113T092308651Z_34e57d0` → **22/22 PASS** |
+| 被取代的归档 | `20261110T235206650Z_78912e8`（上一基线）、`20261110T234422185Z_78912e8`（归档时 HEAD 已被文档提交推进，`21/22`）；保留不删，**不得**作为当前验收证据引用 |
 
-**本轮已完成且有归档证据**
+**本次同步做了什么**
 
-1. **M6（#12）修复并实测**：488/488 job 全部通过，控制路径覆盖 95.0%（详见 §2.1）。
-2. **M6 地面段机制更正**：旧结论"MPC 水平指令比 PD 少 0.20 m/s² 把飞行器推走"被实测否证；真实激励是 5 ms 计划寿命造成的 MPC/PD 1 kHz 交替（详见 [附记 §4.6](FMAT-0012-mpc-consumer-path.md)）。
-3. **归档/证据完整性（#16、#17）**：A-01…A-08 全 PASS，本轮 `generated_assets_summary` 正确区分 `pre_existing_local_change_modified_by_run`(5) / `pre_existing_local_change`(4) / `commit_candidate`(1) / `excluded_from_source`(13)。
-4. **#15**：`controller.c` 越界读修复仍在，Flight M6 主机套件 13+11 checks / 0 failures。
+1. `config/flight_baseline.json` 重新录制：Flight 源文件 483 → **484**（新增 `middleware/model/fms/quad_x4/flight_safety/ground_stop_adapter.c`），所有受影响哈希更新。
+2. `external_dependencies.lock.json` 重新钉住 OSQP 运行时锁：新锁记录 qdldl v0.1.8 来源并声明 `hash_newlines: canonical CRLF`；`osqp.source_lock` 同步 `transitive_sources`，`runtime_lock_sha256` → `1f193ed2…`。
+3. `tools/verify_inputs.py` 按该声明做**规范化换行后取哈希**，47 个运行时文件仍逐个校验，并新增"锁覆盖文件数必须等于 `verified_files`"的断言。这是跨平台一致性修复，不是放宽校验。
+4. 重建 Host SIL（Flight SIL 4147 checks / 0 failures）、参数字典、Plant/Flight/Actuation 模型，再跑完整 `run_component_checks`。
 
-**未完成（两条都需要用户裁定）**
+**本次回归实测**
 
-1. **覆盖率口径（P0，阻断 #12 结案）**：验收计划写的是"时间加权覆盖率 = 有效 MPC 周期 / **闭环时长** ≥90%"，实现却用了**整轮 26 s** 做分母。实测 `worker_ticks=1300`，其中 `blocked_mode=549` 根本不进入 `mpc_solve()`，因此该分母的上限是 `751×20 ms / 26 s = 57.8%`——**任何实现都不可能达标**。三种口径的实测值见 §2.1，需要你在三者中确认合同口径（推荐：1 kHz 消费点口径，本轮 95.0%）。
-2. **M7 FMS 侧两阶段 DISARM（P0，#13）**：执行器侧事务已 PASS，但 `fms.c:599-626` 仍在同一个 handler 里把 `ARM_STATE_DISARMING` 立刻置成 `ARM_STATE_DISARMED`。需要的改动跨 A 侧公共契约（`GroundStopCertificate` 已存在，但 FMS 需要 receipt 反馈与延迟 ACK 语义），属 S1 契约/安全语义决策，本轮**未动**（详见 §2.2 与 §7.2）。
+| 项 | 值 |
+|---|---|
+| `component_status` | **FAIL**（19 PASS、1 PARTIAL（Plant，预期）；FAIL 仅 `m6_jobs` 的覆盖率分母） |
+| M6 | 488/488 job 通过（成功率 100%），消费点 9272/9760（**95.0%**），整轮口径 37.54% |
+| M7 | 主机套件 230 checks / 0 failures，`ground_stop_transaction=PASS`、105,500 µs |
+| MIL | `flight_entries=PASS`，最高 2.0829 m，终速 0.0118 m/s，三入口回放一致 |
+| P-10b | 各子门 PASS，整体仍 `PARTIAL`（板级证据缺失） |
 
-**两条已知陷阱（会浪费一整轮）**
+**仍未闭合**
+
+1. **覆盖率口径（P0，阻断 #12 结案）**：验收计划写"有效 MPC 周期 / **闭环时长** ≥90%"，实现用**整轮 26 s**；`blocked_mode=549/1300` 使该分母上限只有 **57.8%**，任何实现不可达。三种口径与推荐见 §2.1 与 §9.3 决策 A。
+2. **M7 FMS 两阶段 DISARM（P0，#13）**：Flight 侧已按 §9.3 决策 B 实现证书→应用→回执链（`36321bd`、`ef10fd4`、`f28b7b7`），本项目的 M7 门与 SIL 已复跑通过；仍需你确认该设计即合同口径，并补 FMS 侧"等真实零回执再转 DISARMED"的端到端断言（当前证据来自固件套件，不是本项目的 Host MIL 断言）。
+3. **P-10b 板级链路**：真实 TIM2 capture、UM982 UART/DMA、`sensor_gnss_poll` 与板级时钟仍未实现/未测。
+
+**三条已知陷阱（会浪费一整轮）**
 
 - 状态帧**第 75～108 列是 `FAILSAFE_TERMINAL` 的终端锁存值**，不是实时 land 状态；不要用它判断 landed。
-- `config/flight_baseline.json` 会被重建 Host SIL 改写：**先在 `../Flight` 提交源码，再重建、提交该文件，最后才跑完整回归**，否则 `source_clean=false`（本轮已按此顺序执行）。另注意 Flight 仓库 `core.autocrlf=true` 且无 `.gitattributes`：`git checkout` 会把 LF 改成 CRLF 并改变锁文件哈希，恢复生成文件请用 `git checkout <rev> -- <path>` 后核对 `external_dependencies.lock.json` 中的期望哈希。
+- `config/flight_baseline.json` 会被重建 Host SIL 改写：**先在 `../Flight` 提交/更新源码，再重建、提交该文件，最后才跑完整回归**，否则 `source_clean=false`。
+- Flight 仓库 `core.autocrlf=true` 且无 `.gitattributes`：`git checkout` 会把 LF 改成 CRLF。恢复生成文件用 `git checkout <rev> -- <path>`；OSQP 运行时哈希按 `hash_newlines=canonical CRLF` 计算，不要用裸哈希判断。
 
 **第一条命令**
 
 ```powershell
 git -C E:\Flight\Flight_Matlab_Test status --short; git -C E:\Flight\Flight_Matlab_Test rev-parse HEAD
 git -C E:\Flight status --short; git -C E:\Flight rev-parse HEAD
-python -B tools\verify_archive_claims.py --run-id 20261110T235206650Z_78912e8
+python -B tools\verify_archive_claims.py --run-id 20261113T092308651Z_34e57d0
+python -B tools\verify_inputs.py
 pwsh -NoProfile -File .\tools\build_flight_runtime.ps1 -GccDir 'D:\STM32CubeCLT\mingw64\bin'
 ```
 
-> **BLOCKER_STATUS: BLOCKED（3 项）**
-> 1. **覆盖率合同口径未定**（[Issue #12](https://github.com/hujunjie-hub/Flight_Matalab/issues/12)）：现有分母在数学上不可达 90%，需用户裁定；裁定前 `verify_m6_jobs.m` 判定口径不动，`component_checks.status` 只能是 FAIL。
-> 2. **M7 FMS 两阶段 DISARM 需要契约/ACK 语义决策**（[Issue #13](https://github.com/hujunjie-hub/Flight_Matalab/issues/13)）。
-> 3. **本环境无 GitHub 写权限**：`gh` 未安装、无 token；未认证 REST 只读可用（GET 200），写操作不可用。Issue 状态变更待人工执行（文案见 §6）。
+> **BLOCKER_STATUS: BLOCKED（2 项）**
+> 1. **覆盖率合同口径未定**（[Issue #12](https://github.com/hujunjie-hub/Flight_Matalab/issues/12)）：分母数学上不可达 90%，需用户裁定（§9.3 决策 A）；裁定前 `verify_m6_jobs.m` 判定口径不动，`component_checks.status` 只能是 FAIL。
+> 2. **M7 DISARM 闭环的合同确认**（[Issue #13](https://github.com/hujunjie-hub/Flight_Matalab/issues/13)）：固件已实现决策 B 的证书+回执链，需确认设计并补 FMS 侧端到端断言；本会话只做消费侧验证，不改 Flight 公共接口。
+>
+> 说明：本会话环境仍无 GitHub 写权限；Issue 状态由 Integration Owner 维护（§6）。
 
 ## 1. 交付物
 
 | 项目 | 值 |
 |---|---|
-| RUN_ID | `20261110T235206650Z_78912e8` |
-| ZIP | `work/validation/archives/20261110T235206650Z_78912e8.zip`（47 个证据文件） |
-| ZIP SHA-256 | `07575f020d77431f49a60360cffc9823059a029358a354a01f2838558ad704c1` |
+| RUN_ID | `20261113T092308651Z_34e57d0` |
+| ZIP | `work/validation/archives/20261113T092308651Z_34e57d0.zip`（47 个证据文件） |
+| ZIP SHA-256 | `303198ebc0730c98fe3584a97790e1803b9b0219afed22375e214fa1b3203d8d` |
 | `component_status` | **FAIL**（19 PASS、1 PARTIAL；FAIL 只有 `m6_jobs`，且只差覆盖率分母） |
-| source 指纹（磁盘） | `c817e5a21e00df36dbbe14422de62e8b2ff8276b1c30c65233ecff7d3c5a0155` |
-| source 指纹（committed） | `cb643f8e34a9cd3e0d549abd8d7cb35cc3a559e62d4744a92f393bcf82b2c558` |
-| artifact 指纹 | `ad7a51a8f802a1dd254a9504374e9b8165ea6ad5f12d4182f8c2e63813f90840` |
-| `source_clean` | true（Flight_Matalab `78912e8`，Flight `b2f33ee`） |
+| source 指纹（磁盘） | `5402d81cde925cb0e157af1ad8a8c2ccf39aafe33739eb27a73faba40bc26421` |
+| source 指纹（committed） | `c9deb905af53eeaccc3ee6da490739898cbda2b7ff49561bd40faa90124d75ef` |
+| artifact 指纹 | `9248b244e56a1e87d021e9fecf7796903528b2c4f35aa3409f095b2b14593226` |
+| `source_clean` | true（Flight_Matalab `34e57d0`，Flight `1c7a72a`） |
 | 生成文件分类 | `pre_existing_local_change_modified_by_run` 5、`pre_existing_local_change` 4、`commit_candidate` 1、`excluded_from_source` 13 |
-| PR 状态 | Flight_Matalab#1 Draft；Flight#3 Draft；Flight#4 Draft；`main` 未改动 |
-| 重复性 | 同一 commit 连跑两次完整入口，`m6_report` 数字逐位一致（488/488、0.3754），MIL 最高 2.0841 m 一致 |
+| PR 状态 | Flight_Matalab#1 Draft；`main` 未改动 |
+| 重复性 | M6 计数在同一 Flight commit 上与前一轮一致（488/488、9272/9760），dual median 8.397e-4 vs 8.316e-4（求解器数值路径微差，均 <1e-3） |
 
 ## 2. 本轮实际结果
 
 ### 2.1 M6 MPC（P0，#12）——修复完成，只剩覆盖率口径
 
-**修复（Flight `b2f33ee`，`mpc.c` 两处）**
+**修复（Flight `b2f33ee`，`mpc.c` 两处；在 `1c7a72a` 中被上游保留并加固）**
 
 1. **计划有效期不再被 5 ms 执行器消息 TTL 掐住**：`actuator_capability/status` 的 `valid_until_us` 从到期取 min 链中移除。两者都不进入 QP，5 ms 是遥测新鲜度契约，不是计划有效期；此前它把计划压到 20 ms 周期的四分之一。
-2. **求解器改绝对终止**：`mpc_reset()` 用 `osqp_update_settings()` 把工作区 `eps_rel` 置 0（`eps_abs` 仍 1e-3），使 OSQP 满足应用侧**未改动**的绝对 1e-3 双残差门限。生成的工作区与 `UPSTREAM_LOCK.json` 保持逐字节一致，依赖锁未变。
+2. **求解器改绝对终止**：`mpc_reset()` 用 `osqp_update_settings()` 把工作区 `eps_rel` 置 0（`eps_abs` 仍 1e-3），使 OSQP 满足应用侧**未改动**的绝对 1e-3 双残差门限。`1c7a72a` 把该函数改为返回 `Status` 并在失败时拒绝初始化控制器（`control_backend_init` 置 `MODULE_HEALTH_FAILED`），比原实现更严格。
 
 **实测（同一 RUN_ID）**
 
@@ -83,7 +97,7 @@ pwsh -NoProfile -File .\tools\build_flight_runtime.ps1 -GccDir 'D:\STM32CubeCLT\
 | 消费点 used / samples | 80 / 9760（0.8%） | **9272 / 9760（95.0%）** |
 | 其余回退条件 | 全部为 0 | 全部为 0（`backup_expired` 488 = 每 job 1 tick） |
 | 求解超时 / 精度不足 / 不可行 | 0 | 0 |
-| 26 s MIL | 2.0982 m，TAKEOFF ack=1 | **2.0841 m，TAKEOFF/ARM/LAND/DISARM 全部 ack=1**，终速 0.0249 m/s，三入口回放一致 |
+| 26 s MIL | 2.0982 m，TAKEOFF ack=1 | **2.0829 m，TAKEOFF/ARM/LAND/DISARM 全部 ack=1**，终速 0.0118 m/s，三入口回放一致 |
 
 **覆盖率口径（需裁定）**
 
@@ -99,17 +113,20 @@ pwsh -NoProfile -File .\tools\build_flight_runtime.ps1 -GccDir 'D:\STM32CubeCLT\
 
 旧结论（"MPC 水平指令比 PD 少 0.2038 m/s²，把飞行器推到 0.58 m/s"）被三个构建的实测否证：滑移方向上位置环在**刹车**（5.4 s 时 PD +1.026、MPC +0.799 m/s²，而飞行器沿 −x 漂移）；水平加速度 100% 由倾斜推力解释（最大残差 0.040 m/s²）；地面俯仰与指令**反向**（指令 −0.6…−11.0°，实测 +5.35°）。真实激励是 8 ms 计划寿命造成的 MPC/PD 每 20 ms 数次切换；寿命修好后占空比 0.8%→95%，俯仰落在 −0.46…0°，地面 `|v_h|` 0.58→0.046 m/s。
 
-### 2.2 M7 Ground Stop（P0，#13）——执行器侧保持 PASS，FMS 侧未动
+### 2.2 M7 Ground Stop（P0，#13）——执行器侧 PASS，FMS 证书链已由固件侧落地
 
-| 项目 | 本轮实测（同一 RUN_ID） |
+| 项目 | 本轮实测（RUN_ID `20261113T092308651Z_34e57d0`） |
 |---|---|
 | `ground_stop_transaction` | PASS（`FIRMWARE_GROUND_STOP_CERTIFICATE`） |
-| 最坏应用时间 | 100,500 µs ≤ 105,500 µs（40 帧 / 100,000 µs 归零） |
+| 最坏应用时间 | 105,500 µs（套房自报上限，实测段见前轮 100,500 µs） |
 | 最大降推力速率 | 100 N/s |
-| 零回执后才 DISARMED | PASS；DISARMED 后无非零输出 |
+| 零回执后才 DISARMED | 执行器侧 PASS；DISARMED 后无非零输出 |
 | Flight M7 主机套件 | 230 checks / 0 failures |
+| Flight SIL（构建时） | 4147 checks / 0 failures（含新增 FMS→M7 地面停止链路用例） |
 
-未完成：`fms.c:599-626` 的 `PRODUCT_CMD_DISARM` 仍在同一 handler 内 `DISARMING → DISARMED`。改动会跨 A 侧公共契约与 ACK 语义（要么给 `FmsOutputView` 加证书并把 `ActuatorCommitReceipt` 送进 FMS，要么只做"定时等待 + Mission 侧合成证书"的弱化版），需要你先定方向，见 §7.2。
+**同步带来的变化**：Flight `1c7a72a` 已按 §9.3 决策 B 实现 FMS 侧证书链——`36321bd feat(fms): translate ground disarm into M7 stop certificate`、`ef10fd4 feat(runtime): route FMS ground-stop certificate to M7`、`f28b7b7 test(sil): exercise live FMS request-to-actuator ground stop`，并新增 `middleware/model/fms/quad_x4/flight_safety/ground_stop_adapter.c`（Flight M4 套件 `31edd08` 覆盖真实证书输出）。
+
+**仍未完成的部分（属于本项目证据）**：本项目只验证到"固件套件 + SIL 已跑通该链路"，**没有**在本项目的 Host MIL 里逐帧断言"FMS 从 DISARMING 等到真实 `ZERO_TARGET_APPLIED` 回执才转 DISARMED"。该断言需要读取 FMS 输出与执行器回执的对应关系，属本项目新增测试；在补上之前 #13 不能按端到端结论处置。
 
 ### 2.3 P-10b（P1，#14）——报告一致，端到端仍 PARTIAL
 
@@ -127,7 +144,7 @@ pwsh -NoProfile -File .\tools\build_flight_runtime.ps1 -GccDir 'D:\STM32CubeCLT\
 ### 2.4 归档证据完整性（#16、#17）——验证通过
 
 - `archive_reliability_report.json`：A-01…A-08 **8/8 PASS**（含 A-07 "运行前已脏且被本轮改写"、A-08 "运行前已脏且未被触碰"）。
-- `verify_archive_claims.py --run-id 20261110T235206650Z_78912e8` → **22/22 PASS**。
+- `verify_archive_claims.py --run-id 20261113T092308651Z_34e57d0` → **22/22 PASS**。
 - P-10b 文档数字与原始 ZIP 数字一致（21/1/21/21、epoch 11、12 intervals）。
 
 ### 2.5 固件缺陷（P2，#15）——保持已修复
@@ -139,23 +156,27 @@ pwsh -NoProfile -File .\tools\build_flight_runtime.ps1 -GccDir 'D:\STM32CubeCLT\
 | 套件 | 结果 |
 |---|---|
 | Matalab 完整入口 `run_component_checks` | 19 PASS / 1 PARTIAL（Plant，预期）/ 1 FAIL（`m6_jobs`，仅覆盖率） |
-| 26 s MIL 闭环 | 最高 2.0841 m、终速 0.0249 m/s、MPC worker 1300 次、执行器提交 8296 次、三入口回放一致 |
+| 26 s MIL 闭环 | 最高 2.0829 m、终速 0.0118 m/s、MPC worker 1300 次、执行器提交 8296 次、三入口回放一致 |
 | Flight `tests/control`（M6 组装 + 上下文守卫） | 13 + 11 checks / 0 failures |
-| Flight `tests/flight_management`（FMS 主机套件，WSL） | 993 checks / 0 failures |
+| Flight `tests/flight_management`（FMS 主机套件，WSL） | 993 checks / 0 failures（同步前基线；`1c7a72a` 新增 M4 证书用例后需复跑确认） |
 | Flight `tests/simulation` SIL（构建时） | 4147 checks / 0 failures |
+| Flight `tests/actuation`（M7，经组件门） | 230 checks / 0 failures |
 | 归档可靠性 A-01…A-08 | 8/8 PASS |
-| 专题实验：三个 26 s MIL 构建（基线 / 仅 `eps_rel=0` / `eps_rel=0`+到期链） | 见 §2.1，原始表格 `work/validation/archives/…/fmat0012_ground_experiment.json` |
+| 专题实验：三个 26 s MIL 构建（基线 / 仅 `eps_rel=0` / `eps_rel=0`+到期链） | 见 §2.1，原始表格在上轮归档的 `fmat0012_ground_experiment.json` |
 
 ## 4. 修改文件清单
 
-**Flight**（`test/fmat-0012-m6-controller`，`b2f33ee`）
+**Flight**（`test/fmat-0012-m6-controller` @ `1c7a72a`，含 `b2f33ee`）
 
-- `middleware/model/control/outer_loop/quad_x4/mpc_solver/mpc.c`——到期链移除执行器 TTL；`mpc_use_absolute_termination()` 在 `mpc_reset()` 内把工作区改为绝对终止。
+- `middleware/model/control/outer_loop/quad_x4/mpc_solver/mpc.c`——到期链移除执行器 TTL；`mpc_use_absolute_termination()` 在 `mpc_reset()` 内把工作区改为绝对终止（`1c7a72a` 加固为返回 `Status`）。
+- 上游后续 43 个提交（M7 证书链、异步帧应用、M6 截止时间记账、CI 门、OSQP 锁规范化）——本项目只消费，不修改。
 
 **Flight_Matalab**（`optimize/sil-physical-parameter-alignment`）
 
-- `spec/validation/FMAT-0012-mpc-consumer-path.md`——§4.6/§4.6.1 新增（机制更正、三构建实测、覆盖率三个分母）。
-- `config/flight_baseline.json`——随 Flight 源码更新重新录制（两次：第一次对应已被取代的工作区改法，第二次对应最终 `b2f33ee`）。
+- `config/flight_baseline.json`——按 `1c7a72a` 重新录制（484 个 Flight 源文件）。
+- `external_dependencies.lock.json`——OSQP 运行时锁重新钉住（`runtime_lock_sha256`=`1f193ed2…`，`source_lock.transitive_sources` 记录 qdldl v0.1.8）。
+- `tools/verify_inputs.py`——按 `hash_newlines=canonical CRLF` 规范化后校验 47 个运行时文件，并新增文件数断言。
+- `spec/validation/FMAT-0012-mpc-consumer-path.md`——§4.6/§4.6.1（机制更正、三构建实测、覆盖率三个分母）。
 - 本文件。
 
 **未提交（用户本地生成物，按规范不动）**：`dictionaries/Flight_Parameters.sldd`、`models/**/*.slx`、`scenarios/flight_sil_recording.mat`、`simulation/*.slx`、`tests/g2/models/FMT_PIDAllocationProbe.slx`、未跟踪的 `models/plant/FMT_PlantSensors.slx`。接管时已整份备份到 `work/backup/takeover_20261111T071514/`。
@@ -174,6 +195,8 @@ pwsh -NoProfile -File .\tools\build_flight_runtime.ps1 -GccDir 'D:\STM32CubeCLT\
 
 ## 6. GitHub Issue 状态已同步（2026-11-11）
 
+> **2026-11-13 追加（同步 Flight `1c7a72a` 后）：** 新证据 RUN_ID `20261113T092308651Z_34e57d0`（ZIP SHA-256 `303198eb…`，`source_clean=true`，claims 22/22，Flight `1c7a72a`）。M6 仍 488/488、消费点 9272/9760（95.0%）、整轮口径 37.54%，`component_status=FAIL` 仅因覆盖率分母；M7 主机套件 230 checks/0 failures、`ground_stop_transaction=PASS`，且固件已落地证书→应用→回执链。**#12 仍等决策 A；#13 从"等设计批准"改为"等本项目 Host MIL 端到端断言 + 用户确认设计 B"。**
+
 > **同步结果：** 已将最新证据和处理卡实际写入 GitHub Issues。当前状态以 Issue 正文顶部的 Current status 为准：#12 BLOCKED、#13 BLOCKED、#14 IN_PROGRESS、#15 FIXED_WAITING_RETEST、#16 VERIFIED、#17 VERIFIED。下方原“待人工执行”内容保留为本轮状态迁移说明，不再要求用户手工复制更新。
 
 
@@ -189,7 +212,7 @@ pwsh -NoProfile -File .\tools\build_flight_runtime.ps1 -GccDir 'D:\STM32CubeCLT\
 ## 7. 下一阶段任务（按依赖顺序）
 
 1. **裁定覆盖率口径（P0，阻断 #12）**：建议采用 1 kHz 消费点口径 `used/samples`（本轮 95.0%），因为它同时满足"PD 回退计入分母"和"闭环时长"两条原文；若确认，改动点只有 `tests/verify_m6_jobs.m` 的分母与 `m6_report.json` 的 `coverage_basis.gate_denominator`，并需同步 `spec/validation/FMAT-0012-m6-acceptance-plan.md` §2.2 的措辞。不得同时放宽 90% 阈值。
-2. **M7 FMS 两阶段 DISARM（P0，等 §6 #13 的决策）**：三种可行路径见 #13 文案。改后必须重跑 FMS 主机套件（基线 993/0）、Flight M7 套件与完整 MATLAB 回归。
+2. **M7 端到端断言（P0，本项目侧）**：固件已在 `1c7a72a` 落地证书→应用→回执链（决策 B），本项目需补一条 Host MIL 断言：FMS 在 `DISARMING` 期间的任务许可为撤销态、证书生命周期间停止输出单调下降、只有收到 `ACTUATOR_RECEIPT_ZERO_TARGET_APPLIED` 后才出现 `ARM_STATE_DISARMED`，且此后无任何非零推力码。补上后再请用户确认 #13 的端到端结论。
 3. **P-10b（P1，#14）**：真实 UART/DMA 与 `sensor_gnss_poll` 端到端接入 Host SIL，再区分板级证据。这是实现工作，不是文档工作。
 4. **旧 Issue 收口（P2）**：#2、#3、#4、#6、#10、#11 正文已是 `VERIFIED`，若确认无回归可按关闭清单关闭；#5 仍是 `FIXED_WAITING_RETEST`。
 
@@ -205,6 +228,8 @@ pwsh -NoProfile -File .\tools\build_flight_runtime.ps1 -GccDir 'D:\STM32CubeCLT\
 
 ### 9.1 本轮统一证据基线
 
+> **已被 2026-11-13 同步取代。** 当前基线见 §0/§1（RUN_ID `20261113T092308651Z_34e57d0`、Flight `1c7a72a`、Matalab `34e57d0`）。下面保留 2026-11-11 记录用于追溯。
+
 - RUN_ID：`20261110T235206650Z_78912e8`
 - ZIP SHA-256：`07575f020d77431f49a60360cffc9823059a029358a354a01f2838558ad704c1`
 - Flight_Matalab tested commit：`78912e86b6cd51b82800a6eb1ad5bb7773a4739e`
@@ -218,7 +243,7 @@ pwsh -NoProfile -File .\tools\build_flight_runtime.ps1 -GccDir 'D:\STM32CubeCLT\
 | FMAT | 状态 | Owner | 当前阻塞 | 下一步 |
 |---|---|---|---|---|
 | #12 M6 | BLOCKED | Flight_Matalab-Agent（待用户确认后） | 488/488 求解成功，但覆盖率分母口径导致 37.54% FAIL；消费点实测 95.0% | 等用户确认 1 kHz consumer denominator；确认前只准备定义和反例测试，不改 gate |
-| #13 M7 | BLOCKED | Flight-Firmware-Agent | 执行器 Ground Stop PASS；FMS 未等待真实 ZERO_TARGET_APPLIED 回执 | 等用户批准完整 Certificate+Receipt 与异步 ACK 设计；批准前只交设计提案 |
+| #13 M7 | BLOCKED → 待本项目端到端断言 | Flight-Firmware-Agent（已交付）+ Flight_Matalab-Agent（验证） | 固件 `1c7a72a` 已实现证书+回执链并通过 M4/M7/SIL 套件；本项目尚无 Host MIL 逐帧断言 | 本项目补 `DISARMING`→真实零回执→`DISARMED` 的 MIL 断言，再请用户确认设计 |
 | #14 P-10b | IN_PROGRESS | Flight-Firmware-Agent + Flight_Matalab-Agent（串行接口交接） | Host 核心 PASS，但真实 DMA/parser/poll Host MIL 路径及 H723 板级证据缺失 | Flight 冻结接口后，Matalab 接入 Host DMA-ring adapter；硬件证据独立执行 |
 | #15 数组边界 | FIXED_WAITING_RETEST | Flight-Firmware-Agent | 代码已改为两个 3 元素检查，需专门边界测试 | 增加 canary/ASan 或结构化 fixture，再跑 M6 Host tests |
 | #16 归档分类 | VERIFIED | 无新增分派 | A-01…A-08 8/8 PASS | 仅在新回归时重开 |
