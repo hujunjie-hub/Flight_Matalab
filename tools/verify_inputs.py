@@ -11,6 +11,25 @@ def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def sha_canonical_crlf(path):
+    """Hash text after normalising every line ending to CRLF.
+
+    Flight's OSQP runtime lock declares ``"hash_newlines": "canonical CRLF"``:
+    the recorded digests must not depend on the checkout's core.autocrlf
+    setting, which is why the same generated header hashed to a different value
+    before and after the upstream normalisation commit.  Only the declared mode
+    is applied; anything else keeps the raw byte hash.
+    """
+    data = path.read_bytes().replace(b'\r\n', b'\n').replace(b'\n', b'\r\n')
+    return hashlib.sha256(data).hexdigest()
+
+
+def runtime_sha(path, runtime):
+    if runtime.get('hash_newlines') == 'canonical CRLF':
+        return sha_canonical_crlf(path)
+    return sha(path)
+
+
 def unique_object(pairs):
     result = {}
     for key, value in pairs:
@@ -113,10 +132,15 @@ def main():
         assert max(radii) - min(radii) < 1e-10, 'X4 motor arms must have equal radial length'
 
         osqp = (ROOT / lock['osqp']['root']).resolve()
-        assert sha(osqp / 'UPSTREAM_LOCK.json') == lock['osqp']['runtime_lock_sha256'], 'OSQP runtime lock changed'
         runtime = read(osqp / 'UPSTREAM_LOCK.json')
+        assert (sha(osqp / 'UPSTREAM_LOCK.json') == lock['osqp']['runtime_lock_sha256'] or
+                sha_canonical_crlf(osqp / 'UPSTREAM_LOCK.json') ==
+                lock['osqp']['runtime_lock_sha256']), 'OSQP runtime lock changed'
         for name, digest in runtime['files'].items():
-            assert sha(osqp / 'generated' / name) == digest, f'OSQP runtime changed: {name}'
+            assert runtime_sha(osqp / 'generated' / name, runtime) == digest, \
+                f'OSQP runtime changed: {name}'
+        assert len(runtime['files']) == lock['osqp']['verified_files'], \
+            'OSQP runtime lock does not cover the expected file count'
         kf = ROOT / lock['kf_gins_matlab']['path']
         for name, digest in lock['kf_gins_matlab']['files'].items():
             assert sha(kf / name) == digest, f'KF-GINS reference changed: {name}'
