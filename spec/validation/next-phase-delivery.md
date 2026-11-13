@@ -41,7 +41,7 @@
 
 - 状态帧**第 75～108 列是 `FAILSAFE_TERMINAL` 的终端锁存值**，不是实时 land 状态；不要用它判断 landed。
 - `config/flight_baseline.json` 会被重建 Host SIL 改写：**先在 `../Flight` 提交/更新源码，再重建、提交该文件，最后才跑完整回归**，否则 `source_clean=false`。
-- Flight 仓库 `core.autocrlf=true` 且无 `.gitattributes`：`git checkout` 会把 LF 改成 CRLF。恢复生成文件用 `git checkout <rev> -- <path>`；OSQP 运行时哈希按 `hash_newlines=canonical CRLF` 计算，不要用裸哈希判断。
+- Flight 仓库 `core.autocrlf=true` 且无 `.gitattributes`：`git checkout` 会把 LF 改成 CRLF。恢复生成文件用 `git checkout <rev> -- <path>`；OSQP 运行时哈希按 `hash_newlines=canonical CRLF` 计算，不要用裸哈希判断。**新增的 `tests/**/*.sh` 在本机检出后是 CRLF，WSL 直接跑会报 `set: pipefail: invalid option name`**；不要为此改动 Flight 工作树（会破坏 baseline 哈希），用 `sed 's/\r$//' <script> > build/<name>.sh` 后从仓库根执行（脚本靠向上找 `SConstruct` 定位根目录，放在 `build/` 里不影响）。
 
 **第一条命令**
 
@@ -149,16 +149,16 @@ pwsh -NoProfile -File .\tools\build_flight_runtime.ps1 -GccDir 'D:\STM32CubeCLT\
 
 ### 2.5 固件缺陷（P2，#15）——保持已修复
 
-`controller.c` 的 `finite_array(n->core.position_ned_m, 6)` 已拆成对位置/速度各 3 元素的显式检查；本轮 Flight M6 主机套件 13 + 11 checks / 0 failures 复跑通过。
+`controller.c` 的 `finite_array(n->core.position_ned_m, 6)` 已拆成对位置/速度各 3 元素的显式检查；本轮 Flight M6 主机套件扩充为 15 + 26 = **41 checks / 0 failures**（固件侧已补结构化边界夹具），复跑通过。
 
 ## 3. 实际执行的测试
 
 | 套件 | 结果 |
 |---|---|
 | Matalab 完整入口 `run_component_checks` | 19 PASS / 1 PARTIAL（Plant，预期）/ 1 FAIL（`m6_jobs`，仅覆盖率） |
-| 26 s MIL 闭环 | 最高 2.0829 m、终速 0.0118 m/s、MPC worker 1300 次、执行器提交 8296 次、三入口回放一致 |
-| Flight `tests/control`（M6 组装 + 上下文守卫） | 13 + 11 checks / 0 failures |
-| Flight `tests/flight_management`（FMS 主机套件，WSL） | 993 checks / 0 failures（同步前基线；`1c7a72a` 新增 M4 证书用例后需复跑确认） |
+| 26 s MIL 闭环 | 最高 2.0829 m、终速 0.0118 m/s、MPC worker 1300 次、执行器提交 8311 次、三入口回放一致 |
+| Flight `tests/control`（M6 组装 + 上下文守卫） | 15 + 26 = **41 checks / 0 failures**（同步前为 13+11） |
+| Flight `tests/flight_management`（FMS 主机套件，WSL） | **1002 checks / 0 failures**（同步前 993；新增 M4 地面停止证书用例） |
 | Flight `tests/simulation` SIL（构建时） | 4147 checks / 0 failures |
 | Flight `tests/actuation`（M7，经组件门） | 230 checks / 0 failures |
 | 归档可靠性 A-01…A-08 | 8/8 PASS |
