@@ -16,9 +16,14 @@ class SpecValidationTests(unittest.TestCase):
             root = Path(folder)
             (root / 'models').mkdir()
             (root / 'models/FMT_Leaf.slx').write_bytes(b'fixture')
+            (root / '.github/workflows').mkdir(parents=True)
+            (root / '.github/workflows/static-validation.yml').write_text('name: static-validation')
             (root / 'unexpected.outside').write_text('fixture')
             outside, rejected = checker.project_artifacts(root)
-            self.assertEqual(set(outside), {'models/FMT_Leaf.slx', 'unexpected.outside'})
+            self.assertEqual(
+                set(outside),
+                {'models/FMT_Leaf.slx', '.github/workflows/static-validation.yml', 'unexpected.outside'},
+            )
             self.assertEqual(set(rejected), set(outside))
             outside, rejected = checker.project_artifacts(root, allow_implementation=True)
             self.assertEqual(rejected, ['unexpected.outside'])
