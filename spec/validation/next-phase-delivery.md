@@ -47,6 +47,7 @@
 | #15 / FMAT-0015 | FIXED_WAITING_RETEST | 上游数组边界修复已有结构化测试；等待当前配套基线的本地复测确认 |
 | #16 / FMAT-0016 | VERIFIED（Issue 仍 Open） | 归档分类有历史 8/8 证据；当前 main 回归后再结案 |
 | #17 / FMAT-0017 | VERIFIED（Issue 仍 Open） | P-10b 同 RUN_ID 对账有历史证据；当前 main 回归后再结案 |
+| #18 / FMAT-0018 | BLOCKED | 旧/新 C 头文件对照未发现既有布局变更；GroundStopCertificate 是已存在类型新纳入 registry/ABI inventory，但 ARM/Host 编译证据与当前 144/993 lock 不一致。须同轮重跑 ABI 证据并审查 Product/Port revision policy |
 | #18 / FMAT-0018 | BLOCKED | Flight/main 比旧配套基线前进 618 个提交；依赖锁已更新，ABI inventory 差异和当前 MATLAB/Simulink 配套回归仍待确认 |
 | #19 / FMAT-0019 | FIXED_WAITING_RETEST | M6 汇总 solved/rejected 与逐 job outcome 对账、job ID 连续性检查已提交；新增负向测试，等待本地 MATLAB 回归 |
 
