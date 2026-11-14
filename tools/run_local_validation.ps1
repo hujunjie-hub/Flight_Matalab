@@ -142,13 +142,51 @@ Write-Stage '1.5/6 检查本地验证脚本与验收清单一致性'
 $contractTestPath = Join-Path $repoRoot 'tools\test_local_validation_contract.py'
 $contractLogPath = Join-Path $validationRoot 'local_validation_contract_test.txt'
 if (-not (Test-Path -LiteralPath $contractTestPath -PathType Leaf)) {
-    throw "Local validation contract test is missing: $contractTestPath"
+    $contractOutput = @("Local validation contract test is missing: $contractTestPath")
+    $contractExitCode = 1
+} else {
+    $contractOutput = @(& $pythonExe -B $contractTestPath 2>&1)
+    $contractExitCode = $LASTEXITCODE
 }
-$contractOutput = @(& $pythonExe -B $contractTestPath 2>&1)
-$contractExitCode = $LASTEXITCODE
 $contractOutput | Set-Content -LiteralPath $contractLogPath -Encoding utf8
 if ($contractExitCode -ne 0) {
-    throw "Local validation contract test failed (exit $contractExitCode). Keep work\validation and terminal output."
+    $preflightRunId = $runStarted.ToString('yyyyMMddTHHmmssfffZ') + '_' + $projectCommit.Substring(0,7)
+    $preflightSummaryPath = Join-Path $validationRoot ($preflightRunId + '_DELIVERY.txt')
+    $preflightSummary = @(
+        "RUN_ID: $preflightRunId",
+        'Overall status: FAIL',
+        'Failure stage: LOCAL_VALIDATION_CONTRACT_PREFLIGHT',
+        "Flight_Matlab commit: $projectCommit",
+        "Flight commit: $flightCommit",
+        "Python executable: $pythonExe",
+        "Contract test exit code: $contractExitCode",
+        "Contract test log: $contractLogPath",
+        'MATLAB was not started; no MATLAB result is claimed.'
+    )
+    $preflightSummary | Set-Content -LiteralPath $preflightSummaryPath -Encoding utf8
+    $preflightDeliveryZip = Join-Path $archiveRoot ($preflightRunId + '_DELIVERY.zip')
+    $preflightItems = @($contractLogPath, $preflightSummaryPath)
+    $preflightManifestPath = Join-Path $repoRoot 'spec\validation\matlab_acceptance_manifest.json'
+    if (Test-Path -LiteralPath $preflightManifestPath -PathType Leaf) {
+        $preflightItems += $preflightManifestPath
+    }
+    Compress-Archive -LiteralPath $preflightItems -DestinationPath $preflightDeliveryZip -CompressionLevel Optimal
+    if (-not (Test-Path -LiteralPath $preflightDeliveryZip -PathType Leaf)) {
+        throw "Preflight failure package was not created. Keep work\validation and terminal output."
+    }
+    $preflightChecksum = $preflightDeliveryZip + '.sha256'
+    $preflightHash = (Get-FileHash -LiteralPath $preflightDeliveryZip -Algorithm SHA256).Hash.ToLowerInvariant()
+    $preflightChecksumLine = "$preflightHash  $(Split-Path $preflightDeliveryZip -Leaf)"
+    $preflightChecksumLine | Set-Content -LiteralPath $preflightChecksum -Encoding ascii
+    $preflightVerifiedHash = (Get-FileHash -LiteralPath $preflightDeliveryZip -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($preflightVerifiedHash -ne $preflightHash -or
+        (Get-Content -LiteralPath $preflightChecksum -Raw).Trim() -ne $preflightChecksumLine) {
+        throw "Preflight failure package SHA-256 verification failed. Keep work\validation and terminal output."
+    }
+    Write-Host 'Local validation contract preflight failed; MATLAB was not started.' -ForegroundColor Red
+    Write-Host "ONE FILE TO SEND: $preflightDeliveryZip" -ForegroundColor Green
+    Write-Host "CHECKSUM: $preflightChecksum" -ForegroundColor Green
+    exit 1
 }
 $contractOutput | ForEach-Object { Write-Host $_ }
 Write-Host 'Local validation script/manifest contract: PASS' -ForegroundColor Green
