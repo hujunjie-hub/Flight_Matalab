@@ -383,10 +383,13 @@ try {
         throw 'Acceptance manifest does not declare full_project_pass_allowed.'
     }
     $fullProjectPassAllowed = [bool]$acceptanceManifest.full_project_pass_allowed
-    if (-not $fullProjectPassAllowed -and @($acceptanceManifest.full_project_pass_blockers).Count -eq 0) {
+    $fullProjectPassBlockers = @($acceptanceManifest.full_project_pass_blockers)
+    if (-not $fullProjectPassAllowed -and $fullProjectPassBlockers.Count -eq 0) {
         throw 'Full project PASS is disabled but no blockers are recorded in the acceptance manifest.'
     }
-    $fullProjectPassBlockers = @($acceptanceManifest.full_project_pass_blockers)
+    if ($fullProjectPassAllowed -and $fullProjectPassBlockers.Count -gt 0) {
+        throw 'Full project PASS cannot be authorized while unresolved blockers remain in the acceptance manifest.'
+    }
 }
 catch {
     $manifestReadStatus = 'FAIL'
