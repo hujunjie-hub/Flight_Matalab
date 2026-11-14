@@ -8,6 +8,8 @@ on:
       - "tools/*.ps1"
       - "tools/test_local_validation_contract.py"
       - "spec/validation/*.json"
+      - "spec/tools/*.py"
+      - "spec/*.md"
       - "spec/quality/issue-workflow.json"
       - ".github/workflows/static-validation.yml"
   workflow_dispatch:
@@ -58,3 +60,8 @@ jobs:
 
       - name: Validate one-click delivery contract
         run: python -B tools/test_local_validation_contract.py
+
+      - name: Validate executable spec references and validator fixtures
+        run: |
+          python -B spec/tools/check_semantic_references.py
+          python -B spec/tools/test_check_specs.py
