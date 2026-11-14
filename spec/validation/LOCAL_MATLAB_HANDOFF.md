@@ -41,7 +41,7 @@
 | PowerShell | PowerShell 7，命令名 pwsh |
 | Host SIL 编译器 | MinGW-w64 GCC；默认 D:\STM32CubeCLT\mingw64\bin |
 | MATLAB MEX 编译器 | MATLAB 支持的 C 编译器，先执行 mex -setup C |
-| ABI ARM 编译器（仅 FMAT-0018） | GNU Arm Embedded；默认 D:\\STM32CubeCLT\\GNU-tools-for-STM32\\bin |
+| ABI ARM 编译器（仅 FMAT-0018） | GNU Arm Embedded；默认 D:\STM32CubeCLT\GNU-tools-for-STM32\bin |
 | Python | Python 3，可执行 python |
 | 上游仓库 | 同级 Flight，commit 必须满足 config/flight_baseline.json 与 external_dependencies.lock.json |
 
@@ -174,7 +174,7 @@ ZIP 正常时，不需要再单独发送 ZIP 内已有的每一份 JSON 或 MAT 
 
 - 如果 generated_assets.json 显示本轮修改了某个原先已存在的模型/字典，且问题与该模型/字典有关，再按要求额外提供对应 .slx 或 .sldd 文件。
 - 如果 component_checks 在归档前中断，发送第 5 节列出的原始报告和完整 Diary。
-- 对 FMAT-0018，先完成并归档 MATLAB 运行，再在 Flight 仓库根目录运行 `python -B tests\\abi\\abi_report.py --arm-bin D:\\STM32CubeCLT\\GNU-tools-for-STM32\\bin --host-bin D:\\STM32CubeCLT\\mingw64\\bin`（不要加 `--emit-lock`）。额外交付完整终端输出及 `tests/abi/evidence/abi_arm.json`、`abi_host.json`、`abi_compare.json`、`abi_report.md`、`commands.json`、`artifact_sha256.json`、`abi_probe.c`、`abi_canonical_arm.txt`、`abi_canonical_host.txt`。这组 ABI 证据不包含在 Flight_Matlab 的 MATLAB ZIP 中。该命令会改写 Flight 工作区中的证据文件；完成后先不要启动下一轮 MATLAB，也不要提交 abi_lock/revision 修改，等独立审查确认后再处理。
+- 对 FMAT-0018，先完成并归档 MATLAB 运行，再在 Flight 仓库根目录运行 `python -B tests\abi\abi_report.py --arm-bin D:\STM32CubeCLT\GNU-tools-for-STM32\bin --host-bin D:\STM32CubeCLT\mingw64\bin`（不要加 `--emit-lock`）。额外交付完整终端输出及 `tests/abi/evidence/abi_arm.json`、`abi_host.json`、`abi_compare.json`、`abi_report.md`、`commands.json`、`artifact_sha256.json`、`abi_probe.c`、`abi_canonical_arm.txt`、`abi_canonical_host.txt`。这组 ABI 证据不包含在 Flight_Matlab 的 MATLAB ZIP 中。该命令会改写 Flight 工作区中的证据文件；完成后先不要启动下一轮 MATLAB，也不要提交 abi_lock/revision 修改，等独立审查确认后再处理。
 - 截图只能辅助定位，不能替代报告、日志、数据文件和 SHA-256。
 
 ## 7. 如何登记 MATLAB 发现的问题
@@ -220,10 +220,10 @@ ZIP 正常时，不需要再单独发送 ZIP 内已有的每一份 JSON 或 MAT 
 
 ### FMAT-0018 的独立 ABI 验证（与 MATLAB 完整运行分开）
 
-在同级 Flight 仓库切换并同步 main 后，从 Flight 根目录执行：
+在同级 Flight 仓库切换并同步 main 后，先完成并归档 Flight_Matlab 的 MATLAB 运行，再从 Flight 根目录执行：
 
 ~~~powershell
-python -B tests\abi\abi_report.py
+python -B tests\abi\abi_report.py --arm-bin D:\STM32CubeCLT\GNU-tools-for-STM32\bin --host-bin D:\STM32CubeCLT\mingw64\bin
 ~~~
 
 不要添加 `--emit-lock`，不要手工改 abi_lock.h 或 Product/Port revision。该命令会刷新 ARM/Host 编译证据、比较报告和 artifact SHA 清单，并对当前 abi_lock 做校验。预期应明确显示 144 public types、993 fields、56/56 message registry，ARM 与 Host 证据来自同一轮运行，ABI lock 和 spec layout 检查 PASS。若不是该结果，保留完整终端输出及生成的 evidence 文件并交回；不要用旧的 143/986、55-message 报告关闭 FMAT-0018。即使该命令通过，Product/Port revision 是否保持 0x00010906 仍需独立审查结论。
