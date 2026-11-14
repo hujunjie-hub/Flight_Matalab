@@ -434,7 +434,7 @@
   "overall_status_rules": {
     "FAIL": "Any build/test failure, early stop, missing report, incomplete run, or changed input fingerprint.",
     "PARTIAL_PASS": "All implemented gates pass, the three entries/replays pass, and known unimplemented scope remains explicit.",
-    "PASS": "Not permitted on main until P-10 Host MIL PPS/RECTIME end-to-end integration and all current phase requirements are implemented and validated."
+    "PASS": "Only when full_project_pass_allowed=true, every required gate passes on the exact current main commits, P-10 Host MIL PPS/RECTIME end-to-end integration and all current phase requirements are implemented and validated."
   },
   "known_gaps": [
     "P-10 Host MIL TIM2 capture, UM982 UART/DMA and sensor_gnss_poll end-to-end integration.",
@@ -490,5 +490,11 @@
       "pre_package_error": "If synchronization, MATLAB evidence archival, or package creation itself fails, preserve work/validation and terminal output; do not clean or reset."
     },
     "failure_policy": "Never delete or overwrite user changes. A nonzero test exit must not suppress delivery evidence."
-  }
+  },
+  "full_project_pass_allowed": false,
+  "full_project_pass_blockers": [
+    "P-10 Host MIL physical PPS capture, UART/DMA and sensor_gnss_poll end-to-end integration is incomplete.",
+    "Board-level TIM2/PPS, UM982 UART/DMA, HIL and hardware evidence is not present in the current main validation baseline.",
+    "Current main has not yet completed a fresh local MATLAB/Simulink run."
+  ]
 }
