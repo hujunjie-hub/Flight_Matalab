@@ -122,6 +122,7 @@ Flight_Matlab/work/validation/archives/RUN_ID_DELIVERY.zip.sha256
 - RUN_ID_ABI.zip：FMAT-0018 ARM/Host ABI 报告、编译证据、命令清单、规范化布局文本及哈希清单（工具链可用时）。
 - RUN_ID_ABI.zip.sha256：ABI 证据包校验文件（工具链可用时）。
 - RUN_ID_DELIVERY.txt：本轮 commit、MATLAB 状态、ABI 状态和交付文件说明。
+- `matlab_acceptance_manifest.json`：本轮完整验收范围及是否允许完整项目 PASS 的机器可读规则。
 
 **你只需把 _DELIVERY.zip 和 _DELIVERY.zip.sha256 两个文件交给我。** 不需要逐个找 JSON、MAT、SLX、SLDD 文件，也不需要手工复制 commit SHA。
 
