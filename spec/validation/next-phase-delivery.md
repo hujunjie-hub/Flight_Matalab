@@ -59,9 +59,10 @@
 | #17 / FMAT-0017 | VERIFIED（Issue 仍 Open） | P-10b 同 RUN_ID 对账有历史证据；当前 main 回归后再结案 |
 | #18 / FMAT-0018 | BLOCKED | 当前 Flight/main HEAD 为 `3270cff5`，比旧配套基线前进 631 个提交；GroundStopCertificate 为 message ID 56，当前 lock 为 144/993，但 ARM/Host/compare 仍是 143/986、55 messages。须重跑 ABI 证据并审查 Product/Port revision policy；当前 MATLAB/Simulink 配套回归也未完成 |
 | #19 / FMAT-0019 | FIXED_WAITING_RETEST | M6 汇总与逐 job outcome 对账、covered_us=solved×20,000 us、job ID 连续性和 coverage 超出整轮时长的拒绝用例已提交；等待本地 MATLAB 回归 |
+| #20 / FMAT-0020 | FIXED_WAITING_RETEST | 一键脚本失败退出码误报已修复；当前 8 项 Python 交接合同测试和 PowerShell Parser 静态 CI 通过，预检失败/验收失败均保留交付证据；等待用户本地 MATLAB 回归 |
 | #20 / FMAT-0020 | FIXED_WAITING_RETEST | 一键验收脚本失败时非零退出、manifest 完整 PASS 授权门和交付包校验已修复；静态 CI 3 个 PS1 解析、5/5 合同测试通过，等待用户本地完整脚本回归 |
 
-#12、#13 的用户决策仍是阻塞条件；继续处理与其无依赖的代码、测试和文档，不得绕过决策。#14 的 Host 核心通过不能替代板级证据。
+#12、#13 的用户决策仍是阻塞条件；继续处理与其无依赖的代码、测试和文档，不得绕过决策。#14 的 Host 核心通过不能替代板级证据。 #20 的静态合同 CI 通过不等于 MATLAB 运行验证，仍需当前 main 的本地 RUN_ID 证据。
 
 ## 用户下一步
 
