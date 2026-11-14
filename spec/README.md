@@ -1,4 +1,4 @@
-# Flight_Matalab 独立工程规格入口
+# Flight_Matlab（MATLAB 仿真工程）规格入口
 
 ## Agent 唯一操作入口
 
@@ -6,11 +6,11 @@
 
 **本地执行统一原则：** 需要用户在本地操作时，优先提供“一个脚本、一条可复制命令、一个交付包”；双方职责和强制要求见[问题登记、状态流转与闭环规范第 7 节](quality/ISSUE_WORKFLOW.md#7-双方分工与固定工作循环)，MATLAB 具体入口见[本地 MATLAB 验证交接说明](validation/LOCAL_MATLAB_HANDOFF.md)。
 
-基线：`FLIGHT-MATLAB-SPEC-1.3-DRAFT`；日期：2026-11-05；状态：`SPEC_REVIEWED_MODEL_NOT_STARTED`。
+当前基线：`hujunjie-hub/Flight_Matlab` 的 `main`（唯一工作分支），接管日期：2026-11-14。原 PR #1 已合并，GitHub 当前仅保留 `main`；最新代码、测试、SPEC 和交接脚本均以 main 为准。MATLAB Project 文件仍因历史兼容保留名称 `Flight_Matalab.prj`。
 
-当前为规格阶段，工程已从Flight目录移出，与Flight和FMT-Model同级。独立工程根目录为 `D:/STM32Project/FMT-Firmware-1.2.0/Flight_Matalab`；原 `FMT-Model` 保留，用户已明确不回写原工程。三个目标 `.slx` 尚未生成，编译/仿真/代码生成结果均为 `NOT_RUN`。
+工程已从纯规格阶段进入 Host SIL、Simulink 模型、MEX/参数构建和 MATLAB 验收实现阶段。三个入口模型 `FMT_DataSIM.slx`、`FMT_MILSIM.slx`、`FMT_ExtINS_DataSIM.slx` 已生成并注册到 MATLAB Project；Flight 固件任务和 M2～M7 中间件由同级 `../Flight` 提供。**当前 main 的完整 MATLAB/Simulink 本地复测仍为 `NOT_RUN`**：历史归档不是当前 main HEAD 的通过证据，必须由用户本地执行一键脚本并提交总交付包。
 
-本机UM982 GNSS与PPS是固定主要器件，目标QUAD_X4配置固定安装并启用；“信号中途丢失”是运行故障，不能改写成可选安装或无GNSS产品。GNSS PVT、PPS边沿和UTC历元分别建模、分别丢失/恢复；本地单调时钟与IMU不能因此停机。准确协议见[GNSS/PPS运行语义](FlightSIM-execution-protocol.md#8-固定gnsspps与运行中失锁)。最新核对UART4/RX DMA及PPS已强制启用，原生GNSS协议/UTC适配仍未完成，见[现状证据](validation/gnss_pps_configuration_observation.json)。最初观察到的固件关闭状态已在并行工作中被替换，只保留历史证据。
+UM982 GNSS/PPS 是固定配置。GNSS PVT、PPS capture 和 UTC mapping 分开处理；TimeService、GNSS 失锁恢复和真实 UM982 RECTIMEA 解析已有独立 Host 测试入口。但 Host MIL 的物理 PPS capture、UART/DMA、`sensor_gnss_poll` 端到端链路及板级证据尚未完成，P-10 整体仍为 `PARTIAL`，不能把核心单元测试或合成 capture event 当成板级通过。
 
 ## 阅读顺序
 
@@ -34,11 +34,11 @@
 
 ## 与固件规格的关系
 
-[固件00](../../Flight/spec/00_工程基线与唯一权威规范.md)及[ICD02](../../Flight/spec/02_接口契约与公共数据规范.md)是上位输入，本次读入的02末尾CR-V191-M45-01及实际宏声明Schema6.0、QUAD Product/Port0x00010905（旧0x00010904摘要属历史）；准确文件Hash见validation/upstream_review_snapshot.json。本目录补充MATLAB模型组织、仿真调度、数据集与验证设计，不自行修改固件ABI、驱动或实机放行状态。
+[固件00](../../Flight/spec/00_工程基线与唯一权威规范.md)及[ICD02](../../Flight/spec/02_接口契约与公共数据规范.md)是上位输入；当前配套合同为 Schema 6.0、QUAD Product/Port `0x00010906`。准确文件 Hash 和上游快照见 `validation/upstream_review_snapshot.json` 与 `validation/next-phase-delivery.md`。本目录补充 MATLAB 模型组织、仿真调度、数据集与验证设计，不自行修改固件 ABI、驱动或实机放行状态。
 
 Stateflow负责状态/权限/故障/参考生命周期；Simulink负责离散数值数据流、控制器和Plant。MATLAB函数只承担导入、配置、离线参考及有限数值内核；不能用一个脚本包住整套FMS和Control后称为Simulink实现。
 
-本规格的SIM_ONLY参数不代表用户实物参数。源码调研与API存在性检查不等于模型能编译；依赖核验和现有路径/配置警告见研究文档。全部未来目录、脚本、字典和模型在正文标为“规划”，不提供尚不存在脚本已运行的结论。
+本工程的 `SIM_ONLY` 参数不代表用户实物参数。源码调研与 API 存在性检查不等于 MATLAB/Simulink 实测通过；依赖核验、路径和配置约束见研究文档。当前代码、模型与脚本已进入实现状态，但每轮 main 更新后都必须重新运行完整验收，不能沿用旧报告或旧 manifest。
 
 规格自检从独立工程根目录Flight_Matalab依次运行以下三个入口，分别重建反例证据、自测证据和总报告：
 
@@ -52,7 +52,7 @@ python -B spec/tools/check_specs.py
 
 本次新增R4～R6三轮13项，连同此前22项累计35项，详见[逐轮复审](FlightSIM-review-log.md)。除文档检查外，新增[可执行规格参考](validation/semantic_reference_report.json)，覆盖13项数学/协议反例及192组多项式导数界。
 
-Host方案统一标HOST_NATIVE_V2：约束驱动retimer/GoalConnector、固定grid与未来交接、PREPARE/COMMIT、双时间轴和完整World证据。G0-HOST检查实际依赖/输入，G1验证模型拓扑；固件数值/时序等价另经FirmwareConformanceGate。模型实施仍未开始，任何规格PASS都不自动代替模型仿真。
+Host SIL 当前运行 Flight 生产任务和中间件，并通过 MIL/DataSIM/ExtINS DataSIM 三入口共享核心。Host SIL 构建、输入预检、MEX/字典/模型生成、组件 gate 和三入口回放由 `run_component_checks` 统一执行；Plant 报告按设计保持 `PARTIAL`，P-10 板级/端到端缺口也必须显式保留。规格静态检查、Host 单元测试和历史归档都不能代替当前 main 的 MATLAB/Simulink 完整复测。
 
 独立目录关系和外部只读路径见[工程组织](FlightSIM-architecture.md#4-工程规划目录)。本次迁移保留所有历史证据的原始内容和原观察路径；它们不作为当前工作目录。当前迁移和逐文件核对见[迁移记录](validation/project_relocation_report.json)。
 
