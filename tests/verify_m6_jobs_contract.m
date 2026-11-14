@@ -38,7 +38,7 @@ expect_failure(tempRoot,'FAIL');
 
 % Aggregate counters must also reconcile to the actual per-job outcomes.
 badOutcomeRecords=records;
-badOutcomeRecords(1).outcome=8; % RESIDUAL, not OK
+badOutcomeRecords(1).outcome=7; % MPC_OUTCOME_RESIDUAL, not OK
 write_fixture(validation,stats,badOutcomeRecords);
 expect_failure(tempRoot,'FAIL');
 
