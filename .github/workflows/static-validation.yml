@@ -1,0 +1,60 @@
+name: static-validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/**/*.ps1"
+      - "tools/*.ps1"
+      - "tools/test_local_validation_contract.py"
+      - "spec/validation/*.json"
+      - "spec/quality/issue-workflow.json"
+      - ".github/workflows/static-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+
+      - name: Parse PowerShell scripts
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem -LiteralPath tools -Filter '*.ps1' -File -Recurse)
+          if ($files.Count -eq 0) {
+            throw 'No PowerShell scripts were found under tools/.'
+          }
+
+          $parseFailures = @()
+          foreach ($file in $files) {
+            $tokens = $null
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $file.FullName,
+              [ref]$tokens,
+              [ref]$parseErrors
+            ) | Out-Null
+
+            foreach ($parseError in $parseErrors) {
+              $parseFailures += [pscustomobject]@{
+                File = $file.FullName
+                Line = $parseError.Extent.StartLineNumber
+                Message = $parseError.Message
+              }
+            }
+          }
+
+          if ($parseFailures.Count -gt 0) {
+            $parseFailures | Format-Table -AutoSize | Out-String | Write-Error
+            throw 'PowerShell syntax validation failed.'
+          }
+
+          Write-Host "Parsed $($files.Count) PowerShell scripts successfully."
+
+      - name: Validate one-click delivery contract
+        run: python -B tools/test_local_validation_contract.py
