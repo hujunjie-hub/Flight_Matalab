@@ -136,14 +136,55 @@ $projectCommit = Sync-MainRepository $repoRoot 'Flight_Matlab'
 $flightCommit = Sync-MainRepository $flightRoot 'Flight'
 
 New-Item -ItemType Directory -Force -Path $validationRoot,$archiveRoot | Out-Null
+$runStarted = (Get-Date).ToUniversalTime()
 $pendingValidationFiles = @(Get-ChildItem -LiteralPath $validationRoot -Force |
     Where-Object { $_.Name -ne 'archives' })
 if ($pendingValidationFiles.Count -gt 0) {
-    Write-Host 'Unarchived validation evidence already exists; refusing to overwrite it:' -ForegroundColor Red
-    $pendingValidationFiles | ForEach-Object { Write-Host "  $($_.FullName)" -ForegroundColor Red }
-    throw 'Refusing to overwrite prior work/validation evidence. Hand off the existing files first.'
+    Write-Host 'Unarchived validation evidence already exists; packaging it without deleting or overwriting the originals:' -ForegroundColor Yellow
+    $pendingRunId = $runStarted.ToString('yyyyMMddTHHmmssfffZ') + '_' + $projectCommit.Substring(0,7)
+    $pendingSummaryPath = Join-Path $archiveRoot ($pendingRunId + '_DELIVERY.txt')
+    $pendingDeliveryZip = Join-Path $archiveRoot ($pendingRunId + '_DELIVERY.zip')
+    $pendingChecksum = $pendingDeliveryZip + '.sha256'
+    if ((Test-Path -LiteralPath $pendingSummaryPath) -or
+        (Test-Path -LiteralPath $pendingDeliveryZip) -or
+        (Test-Path -LiteralPath $pendingChecksum)) {
+        throw "Refusing to overwrite an existing pending-evidence package for RUN_ID $pendingRunId."
+    }
+    $pendingNames = @($pendingValidationFiles | ForEach-Object { $_.Name })
+    $pendingSummary = @(
+        "RUN_ID: $pendingRunId",
+        'Overall status: INCOMPLETE',
+        'Failure stage: PENDING_UNARCHIVED_EVIDENCE',
+        "Flight_Matlab commit: $projectCommit",
+        "Flight commit: $flightCommit",
+        'MATLAB was not started in this invocation.',
+        'Existing validation files were packaged as-is; originals were not deleted or modified.',
+        "Pending items: $($pendingNames -join '; ')"
+    )
+    $pendingSummary | Set-Content -LiteralPath $pendingSummaryPath -Encoding utf8
+    $pendingItems = @($pendingValidationFiles | ForEach-Object { $_.FullName })
+    $pendingItems += $pendingSummaryPath
+    $pendingManifestPath = Join-Path $repoRoot 'spec\validation\matlab_acceptance_manifest.json'
+    if (Test-Path -LiteralPath $pendingManifestPath -PathType Leaf) {
+        $pendingItems += $pendingManifestPath
+    }
+    Compress-Archive -LiteralPath $pendingItems -DestinationPath $pendingDeliveryZip -CompressionLevel Optimal
+    if (-not (Test-Path -LiteralPath $pendingDeliveryZip -PathType Leaf)) {
+        throw 'Pending-evidence delivery package was not created. Originals remain in work\validation.'
+    }
+    $pendingHash = (Get-FileHash -LiteralPath $pendingDeliveryZip -Algorithm SHA256).Hash.ToLowerInvariant()
+    $pendingChecksumLine = "$pendingHash  $(Split-Path $pendingDeliveryZip -Leaf)"
+    $pendingChecksumLine | Set-Content -LiteralPath $pendingChecksum -Encoding ascii
+    $pendingVerifiedHash = (Get-FileHash -LiteralPath $pendingDeliveryZip -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($pendingVerifiedHash -ne $pendingHash -or
+        (Get-Content -LiteralPath $pendingChecksum -Raw).Trim() -ne $pendingChecksumLine) {
+        throw 'Pending-evidence delivery package SHA-256 verification failed. Originals remain in work\validation.'
+    }
+    Write-Host "ONE FILE TO SEND: $pendingDeliveryZip" -ForegroundColor Green
+    Write-Host "CHECKSUM: $pendingChecksum" -ForegroundColor Green
+    Write-Host 'The original pending validation files were not removed. MATLAB was not started.' -ForegroundColor Yellow
+    exit 1
 }
-$runStarted = (Get-Date).ToUniversalTime()
 
 Write-Stage '1.5/6 检查本地验证脚本与验收清单一致性'
 $contractTestPath = Join-Path $repoRoot 'tools\test_local_validation_contract.py'
