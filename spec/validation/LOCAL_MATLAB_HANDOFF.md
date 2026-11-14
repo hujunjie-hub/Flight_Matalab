@@ -97,7 +97,9 @@ MatlabExe 可省略，只在 MATLAB 不在 PATH 且自动查找不到时填写�
 - **提示仓库有本地修改：** 不要删除或覆盖。把提示的 git status 内容交回，先确认这些文件是否为上一轮生成的待审查证据。
 - **提示找不到 MATLAB：** 把实际 matlab.exe 完整路径填入 -MatlabExe。
 - **提示 MEX C 编译器未配置：** 首次在 MATLAB Desktop 执行一次 mex -setup C，选定可用 C 编译器；之后重新复制上面的一键命令即可。
-- **MATLAB 测试失败：** 脚本仍会尝试归档。不要只发截图，交付总包和 SHA-256。
+- **MATLAB 测试失败：** 脚本仍会尝试归档并生成总包。不要只发截图，交付总包和 SHA-256。
+- **验收失败退出码：** MATLAB 进程失败、组件报告不是 PASS/PARTIAL_PASS，或 ABI 检查 FAIL 时，脚本会先生成总交付 ZIP 和 SHA-256，再以非零退出码结束。即使命令显示失败，也先检查交付包是否已生成并交回。
+- **PARTIAL_PASS：** 属于当前已知未完成范围的部分通过，命令退出码可以为 0，但绝不等于完整 PASS；以总包内 RUN_ID_DELIVERY.txt 和 component_checks.json 为准。
 - **ABI 工具链缺失：** MATLAB 验证仍会完成；总包说明中会写 SKIPPED_TOOLCHAIN_MISSING。补齐 ARM/Host 工具链后再做 ABI 专项复测。
 - **归档脚本本身失败：** 不要删除 work/validation/，把整个目录交回。
 
@@ -130,6 +132,7 @@ Flight_Matlab/work/validation/archives/RUN_ID_DELIVERY.zip.sha256
 - FMAT-0012 的 coverage_90 可能仍 FAIL，这是已知阻塞；不允许为了变绿而修改 90% 门槛或整轮分母。
 - ABI FAIL 也必须保留报告交回，不能用旧证据覆盖新证据。
 - ABI SKIPPED_TOOLCHAIN_MISSING 表示本轮没有生成新的 ABI 证据，不能视为通过。
+- 一键命令退出码 0 表示本轮流程完成且总包已生成，不代表一定是完整 PASS；退出码 1 表示 MATLAB/组件/ABI 至少一项失败，但总包通常已在退出前生成。归档或打包本身失败时不会有完整总包，必须保留整个 work/validation/ 和终端输出。
 
 ### 4.3 下一轮运行前
 
