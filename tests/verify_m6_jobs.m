@@ -1,122 +1,174 @@
-function report=verify_m6_jobs
-%VERIFY_M6_JOBS Summarise the real MPC job set produced by the MIL run.
-%   The counters are written by the Flight runtime at shutdown
-%   (applications/tasks/mpc/task_mpc.c owns them); this gate only aggregates and
-%   applies the acceptance thresholds, so a fallback window can never be counted
-%   as coverage.
-%
-%   Since FMAT-0012 the runtime also records one row per job (first failing
-%   stage, solver status, unscaled residuals, independent violations and the
-%   snapshot timestamps) plus one counter per consumer fallback clause.  The
-%   distributions below are therefore measured over every job, not read off the
-%   last sample of the run.
-root=fileparts(fileparts(mfilename('fullpath')));
-statsFile=fullfile(root,'work','validation','m6_runtime_stats_mil.json');
-assert(isfile(statsFile),'Flight:M6Jobs', ...
-    'The MIL run did not produce m6_runtime_stats_mil.json; MPC accounting is missing.');
-stats=jsondecode(fileread(statsFile));
-
-entriesFile=fullfile(root,'work','validation','flight_entries.json');
-assert(isfile(entriesFile),'Flight:M6Jobs', ...
-    'flight_entries.json is required to weight the MPC coverage by run duration.');
-entries=jsondecode(fileread(entriesFile));
-durationUs=max(1,round(entries.duration_s*1e6));
-
-% The adapter has used both key sets; accept either so a stale DLL cannot make
-% the gate read the wrong field.
-if isfield(stats,'jobs')
-    jobs=double(stats.jobs); solved=double(stats.solved);
-    rejected=double(stats.rejected); coveredUs=double(stats.covered_us);
-else
-    jobs=double(stats.mpc_updates); solved=double(stats.mpc_solved);
-    rejected=double(stats.mpc_rejected); coveredUs=double(stats.mpc_covered_us);
+function report=verify_m6_jobs(root)
+%VERIFY_M6_JOBS Validate the real MPC job set and its complete per-job evidence.
+%   Coverage remains measured over the whole MIL duration. The gate fails
+%   closed when no jobs ran, counters disagree, or the per-job evidence is
+%   missing/incomplete. No acceptance threshold or denominator is changed.
+if nargin<1 || isempty(root)
+    root=fileparts(fileparts(mfilename('fullpath')));
 end
-assert(solved+rejected==jobs,'Flight:M6Jobs', ...
-    'MPC counters are inconsistent: jobs=%d solved=%d rejected=%d.',jobs,solved,rejected);
-
-records=job_records(root);
-evidence=evidence_summary(records,stats);
-if jobs==0
-    % The MIL scenario never entered the trajectory MPC path, so there is no
-    % job set to judge. Report NOT_RUN rather than a fake 0 % success rate.
-    blocked=struct();
-    names={'blocked_uninitialized','blocked_validation','blocked_mode', ...
-        'blocked_clock','blocked_stale','blocked_throttle','blocked_lock'};
-    for k=1:numel(names)
-        if isfield(stats,names{k}), blocked.(names{k})=double(stats.(names{k})); end
-    end
-    if isfield(stats,'last_validation_status')
-        blocked.last_validation_status=double(stats.last_validation_status);
-    end
-    report=struct('scope','M6_MPC_JOBS','status','NOT_RUN','jobs',0, ...
-        'blocked',blocked,'evidence',evidence, ...
-        'reason','the 50 Hz MPC worker never reached mpc_solve(); see blocked counters');
-    write_report(root,report);
-    return;
-end
-
-successRate=solved/jobs;
-coverage=min(1,coveredUs/durationUs);
-
-% The acceptance threshold is unchanged: covered_us over the whole run. Issue #12
-% also asks what the denominator should be, because the worker can only solve
-% while guidance is in the trajectory mode. Report both bases so the difference
-% is visible instead of being argued about, but keep judging on the same one.
-eligibleTicks=NaN;
-if isfield(stats,'worker_ticks')
-    eligibleTicks=double(stats.worker_ticks);
-    if isfield(stats,'blocked_mode')
-        eligibleTicks=max(0,eligibleTicks-double(stats.blocked_mode));
-    end
-end
-coverageBasis=struct('duration_s',entries.duration_s, ...
-    'coverage_over_total_run',coverage, ...
-    'gate_denominator','whole run (unchanged)', ...
-    'worker_ticks',double(field_or(stats,'worker_ticks',NaN)), ...
-    'blocked_mode_ticks',double(field_or(stats,'blocked_mode',NaN)), ...
-    'trajectory_eligible_ticks',eligibleTicks, ...
-    'note','coverage_over_eligible_window is informational only; it is never used for the verdict.');
-if ~isnan(eligibleTicks) && eligibleTicks>0
-    coverageBasis.eligible_window_us=eligibleTicks*20000;
-    coverageBasis.coverage_over_eligible_window=min(1,coveredUs/coverageBasis.eligible_window_us);
-end
-
-jobsGate=jobs>=100;
-successGate=successRate>=0.99;
-coverageGate=coverage>=0.90;
-
-report=struct('scope','M6_MPC_JOBS','status','PASS', ...
-    'jobs',jobs,'solved',solved,'rejected',rejected, ...
-    'success_rate',successRate,'time_weighted_coverage',coverage, ...
-    'duration_s',entries.duration_s, ...
-    'coverage_basis',coverageBasis, ...
-    'minimum_jobs_100',ternary(jobsGate,'PASS','FAIL'), ...
-    'success_rate_99',ternary(successGate,'PASS','FAIL'), ...
-    'coverage_90',ternary(coverageGate,'PASS','FAIL'), ...
-    'fallback_counted_as_uncovered',true, ...
-    'evidence',evidence);
-if ~(jobsGate && successGate && coverageGate)
-    report.status='FAIL';
-end
+root=char(root);
+report=struct('scope','M6_MPC_JOBS','status','IN_PROGRESS');
 write_report(root,report);
-assert(strcmp(report.status,'PASS'),'Flight:M6Jobs', ...
-    'MPC job set misses an acceptance threshold: jobs=%d success=%.4f coverage=%.4f; %s.', ...
-    jobs,successRate,coverage,evidence.verdict);
+try
+    statsFile=fullfile(root,'work','validation','m6_runtime_stats_mil.json');
+    assert(isfile(statsFile),'Flight:M6Jobs', ...
+        'The MIL run did not produce m6_runtime_stats_mil.json; MPC accounting is missing.');
+    stats=jsondecode(fileread(statsFile));
+    assert(isfield(stats,'schema') && strcmp(char(stats.schema),'fmat-m6-runtime-stats/1.0'), ...
+        'Flight:M6JobsSchema','MPC runtime statistics schema is missing or unsupported.');
+
+    jobs=nonnegative_integer(stats,'jobs');
+    solved=nonnegative_integer(stats,'solved');
+    rejected=nonnegative_integer(stats,'rejected');
+    coveredUs=nonnegative_integer(stats,'covered_us');
+    declaredRecords=nonnegative_integer(stats,'job_record_count');
+
+    entriesFile=fullfile(root,'work','validation','flight_entries.json');
+    assert(isfile(entriesFile),'Flight:M6Jobs', ...
+        'flight_entries.json is required to weight MPC coverage by run duration.');
+    entries=jsondecode(fileread(entriesFile));
+    assert(isfield(entries,'duration_s') && isscalar(entries.duration_s) && ...
+        isfinite(double(entries.duration_s)) && double(entries.duration_s)>0, ...
+        'Flight:M6Duration','MIL duration must be a finite positive scalar.');
+    durationUs=round(double(entries.duration_s)*1e6);
+    assert(isfinite(durationUs) && durationUs>0, ...
+        'Flight:M6Duration','MIL duration is outside the supported microsecond range.');
+    assert(coveredUs<=durationUs,'Flight:M6CoverageRange', ...
+        'MPC covered_us (%g) exceeds the full MIL duration (%g).',coveredUs,durationUs);
+    assert(solved+rejected==jobs,'Flight:M6Jobs', ...
+        'MPC counters are inconsistent: jobs=%d solved=%d rejected=%d.',jobs,solved,rejected);
+
+    if jobs==0
+        blocked=blocked_counters(stats);
+        report=struct('scope','M6_MPC_JOBS','status','NOT_RUN','jobs',0, ...
+            'blocked',blocked,'job_record_count',declaredRecords, ...
+            'reason','The required MIL scenario produced no MPC solve jobs; acceptance cannot pass.');
+        write_report(root,report);
+        error('Flight:M6JobsNotRun', ...
+            'MPC job gate was NOT_RUN: the required MIL scenario produced zero solve jobs.');
+    end
+
+    assert(declaredRecords==jobs,'Flight:M6JobRecords', ...
+        'Runtime reports %d jobs but only declares %d per-job records.',jobs,declaredRecords);
+    records=job_records(root,jobs);
+    evidence=evidence_summary(records,stats);
+
+    successRate=solved/jobs;
+    coverage=coveredUs/durationUs;
+
+    % FMAT-0012 is still blocked on the denominator decision. Keep the
+    % existing whole-run denominator and 90% threshold unchanged.
+    eligibleTicks=NaN;
+    if isfield(stats,'worker_ticks')
+        eligibleTicks=double(stats.worker_ticks);
+        if isfield(stats,'blocked_mode')
+            eligibleTicks=max(0,eligibleTicks-double(stats.blocked_mode));
+        end
+    end
+    coverageBasis=struct('duration_s',entries.duration_s, ...
+        'coverage_over_total_run',coverage, ...
+        'gate_denominator','whole run (unchanged; FMAT-0012 decision pending)', ...
+        'worker_ticks',double(field_or(stats,'worker_ticks',NaN)), ...
+        'blocked_mode_ticks',double(field_or(stats,'blocked_mode',NaN)), ...
+        'trajectory_eligible_ticks',eligibleTicks, ...
+        'note','coverage_over_eligible_window is informational only; it is never used for the verdict.');
+    if ~isnan(eligibleTicks) && eligibleTicks>0
+        coverageBasis.eligible_window_us=eligibleTicks*20000;
+        coverageBasis.coverage_over_eligible_window=min(1,coveredUs/coverageBasis.eligible_window_us);
+    end
+
+    jobsGate=jobs>=100;
+    successGate=successRate>=0.99;
+    coverageGate=coverage>=0.90;
+
+    report=struct('scope','M6_MPC_JOBS','status','PASS', ...
+        'jobs',jobs,'solved',solved,'rejected',rejected, ...
+        'job_record_count',numel(records),'job_records_complete',true, ...
+        'success_rate',successRate,'time_weighted_coverage',coverage, ...
+        'duration_s',entries.duration_s, ...
+        'coverage_basis',coverageBasis, ...
+        'minimum_jobs_100',ternary(jobsGate,'PASS','FAIL'), ...
+        'success_rate_99',ternary(successGate,'PASS','FAIL'), ...
+        'coverage_90',ternary(coverageGate,'PASS','FAIL'), ...
+        'fallback_counted_as_uncovered',true, ...
+        'evidence',evidence);
+    if ~(jobsGate && successGate && coverageGate)
+        report.status='FAIL';
+    end
+    write_report(root,report);
+    assert(strcmp(report.status,'PASS'),'Flight:M6Jobs', ...
+        'MPC job set misses an acceptance threshold: jobs=%d success=%.4f coverage=%.4f; %s.', ...
+        jobs,successRate,coverage,evidence.verdict);
+catch exception
+    if strcmp(report.status,'IN_PROGRESS')
+        report.status='FAIL';
+    end
+    report.error=struct('identifier',exception.identifier,'message',exception.message);
+    write_report(root,report);
+    rethrow(exception);
+end
 end
 
-function records=job_records(root)
-%Per-job rows, snapshotted right after the MIL (the replays overwrite the live
-%file with an empty record set).
-records=[];
+function value=nonnegative_integer(source,name)
+assert(isfield(source,name),'Flight:M6StatsField', ...
+    'MPC runtime statistics are missing required field %s.',name);
+value=double(source.(name));
+assert(isscalar(value) && isfinite(value) && value>=0 && value==fix(value), ...
+    'Flight:M6StatsValue','MPC runtime field %s must be a finite nonnegative integer.',name);
+end
+
+function blocked=blocked_counters(stats)
+blocked=struct();
+names={'blocked_uninitialized','blocked_validation','blocked_mode', ...
+    'blocked_clock','blocked_stale','blocked_throttle','blocked_lock', ...
+    'last_validation_status'};
+for k=1:numel(names)
+    if isfield(stats,names{k})
+        blocked.(names{k})=double(stats.(names{k}));
+    end
+end
+end
+
+function records=job_records(root,expectedCount)
+% Per-job rows are captured immediately after MIL, before replay sessions.
 file=fullfile(root,'work','validation','m6_jobs_mil.json');
-if ~isfile(file)
-    return;
-end
+assert(isfile(file),'Flight:M6JobRecords', ...
+    'm6_jobs_mil.json is missing; aggregate counters cannot substitute for per-job evidence.');
 raw=jsondecode(fileread(file));
-if ~isfield(raw,'records') || isempty(raw.records)
-    return;
-end
+assert(isfield(raw,'schema') && strcmp(char(raw.schema),'fmat-m6-jobs/1.0'), ...
+    'Flight:M6JobRecordsSchema','Per-job record schema is missing or unsupported.');
+assert(isfield(raw,'record_count'),'Flight:M6JobRecordsCount', ...
+    'Per-job record file is missing record_count.');
+declared=double(raw.record_count);
+assert(isscalar(declared) && isfinite(declared) && declared==fix(declared) && ...
+    declared==expectedCount,'Flight:M6JobRecordsCount', ...
+    'Per-job record file declares %g records; expected %d.',declared,expectedCount);
+assert(isfield(raw,'records') && ~isempty(raw.records),'Flight:M6JobRecords', ...
+    'Per-job record array is missing or empty.');
 records=raw.records;
+assert(numel(records)==expectedCount,'Flight:M6JobRecordsCount', ...
+    'Per-job record array contains %d records; expected %d.',numel(records),expectedCount);
+
+required={'job','outcome','solver_status','prim_res','dual_res', ...
+    'primal_violation','thrust_excess_n','sample_us','eval_us','expires_us'};
+jobIds=zeros(1,numel(records));
+for k=1:numel(records)
+    for j=1:numel(required)
+        assert(isfield(records(k),required{j}),'Flight:M6JobRecordField', ...
+            'Per-job record %d is missing field %s.',k,required{j});
+        value=double(records(k).(required{j}));
+        assert(isscalar(value) && isfinite(value),'Flight:M6JobRecordValue', ...
+            'Per-job record %d field %s is not finite.',k,required{j});
+    end
+    jobIds(k)=double(records(k).job);
+    outcome=double(records(k).outcome);
+    assert(jobIds(k)>=0 && jobIds(k)==fix(jobIds(k)), ...
+        'Flight:M6JobRecordId','Per-job record %d has an invalid job ID.',k);
+    assert(outcome>=0 && outcome<=10 && outcome==fix(outcome), ...
+        'Flight:M6JobRecordOutcome','Per-job record %d has an unknown outcome code.',k);
+end
+assert(numel(unique(jobIds))==expectedCount,'Flight:M6JobRecordId', ...
+    'Per-job record IDs are not unique.');
 end
 
 function evidence=evidence_summary(records,stats)
@@ -129,7 +181,7 @@ prim=zeros(1,recordCount); dual=prim; violation=prim; excess=prim;
 life=zeros(1,recordCount); evalAge=prim; expiryAge=prim;
 for k=1:recordCount
     index=double(records(k).outcome)+1;
-    if index>=1 && index<=numel(counts), counts(index)=counts(index)+1; end
+    counts(index)=counts(index)+1;
     prim(k)=double(records(k).prim_res);
     dual(k)=double(records(k).dual_res);
     violation(k)=double(records(k).primal_violation);
@@ -223,7 +275,7 @@ end
 end
 
 function value=quantile_of(sorted,q)
-%Linear interpolation between order statistics; avoids a toolbox dependency.
+% Linear interpolation between order statistics; avoids a toolbox dependency.
 n=numel(sorted);
 if n==1
     value=sorted(1);
@@ -237,9 +289,12 @@ end
 
 function write_report(root,report)
 file=fullfile(root,'work','validation','m6_report.json');
-fid=fopen(file,'w'); cleanup=onCleanup(@()fclose(fid));
+folder=fileparts(file);
+if ~isfolder(folder), mkdir(folder); end
+fid=fopen(file,'w');
+assert(fid>=0,'Flight:M6Report','Cannot write M6 report: %s',file);
+cleanup=onCleanup(@()fclose(fid));
 fprintf(fid,'%s\n',jsonencode(report,PrettyPrint=true));
-disp(report);
 end
 
 function value=field_or(source,name,default)
