@@ -41,6 +41,18 @@ class LocalValidationContractTests(unittest.TestCase):
         self.assertIn("$pythonExe -B $contractTestPath", self.script)
         self.assertIn("$contractExitCode -ne 0", self.script)
         self.assertIn("local_validation_contract_status = 'PASS'", self.script)
+        self.assertEqual(
+            self.manifest["local_execution"]["preflight_contract_test"],
+            "tools/test_local_validation_contract.py",
+        )
+        self.assertEqual(
+            self.manifest["local_execution"]["preflight_contract_log"],
+            "work/validation/local_validation_contract_test.txt",
+        )
+        self.assertIn(
+            "local_validation_contract_test.txt",
+            self.issue_workflow["archive_contains"][-1],
+        )
 
     def test_failure_is_reported_after_delivery_package_is_created(self) -> None:
         package = self.script.index("Compress-Archive -LiteralPath $deliveryItems")
