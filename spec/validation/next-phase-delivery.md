@@ -30,7 +30,7 @@
 
 1. M6 runtime stats 新增 schema 标识 fmat-m6-runtime-stats/1.0，避免误读旧格式统计文件。
 2. verify_m6_jobs 增加 fail-closed 校验：零 job 保持 NOT_RUN 并使完整验收失败；统计计数必须是有限非负整数；solved + rejected 必须等于 jobs；covered_us 不得超过整轮时长；逐 job 记录必须存在、schema 正确、记录数量与 job 数一致、job ID 必须完整覆盖 1..jobs、outcome 在定义范围内且 solved/rejected 必须与逐 job outcome 汇总一致。
-3. 新增 verify_m6_jobs_contract，并接入 run_component_checks，使用隔离临时目录覆盖有效 100-job、零 job、缺失记录、aggregate counter mismatch、aggregate-vs-outcome mismatch、非连续 job ID、覆盖时间越界和旧 schema 八类情况。verify_m6_jobs 还要求 outcome=OK 的数量等于 solved，其余 outcome 数量等于 rejected，job ID 必须完整连续 1..N。
+3. 新增 verify_m6_jobs_contract，并接入 run_component_checks，使用隔离临时目录覆盖有效 100-job、零 job、缺失记录、aggregate counter mismatch、aggregate-vs-outcome mismatch、非连续 job ID、covered_us 记账不一致、覆盖时间越界和旧 schema 九类情况。verify_m6_jobs 还要求 outcome=OK 的数量等于 solved，其余 outcome 数量等于 rejected，job ID 必须完整连续 1..N，且 covered_us 必须等于 solved × 20,000 us（Flight mpc.c 每个成功 job 记账一个 20 ms 周期）。
 4. external_dependencies.lock.json 已由 commit 249d8a3 对齐 Flight/main 的 product contract headers 与 OSQP runtime lock（42 个运行时文件）；run_component_checks 在 build_native_kernels 后读取 input_preflight.json 并将其纳入 component_checks.checks，缺失或非 PASS 会阻断。
 5. tools/write_implementation_manifest.py 已修正证据状态合同：input_preflight/flight_entries/cold_start 必须 PASS，Plant 必须 PARTIAL、component_checks 必须 PARTIAL_PASS，并校验 M6 与 P-10b gate；生成状态为 PARTIAL_PASS_HOST_SIL，不再错误要求所有子报告均为 PASS。
 6. 上述 MATLAB/Simulink 代码尚未在当前环境执行。它们只有在用户本地运行完整 run_component_checks 并归档后才可标记为通过。
