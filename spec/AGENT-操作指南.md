@@ -53,7 +53,7 @@ MATLAB 内部唯一验收入口仍为 run_component_checks；用户本地唯一�
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\run_local_validation.ps1
 ~~~
 
-用户从 Flight_Matlab 仓库根目录执行这一条命令即可。脚本负责同步两个 main、环境检查、MATLAB 启动、MEX 检查、完整 run_component_checks、Diary/控制台日志、失败归档、可用时的 FMAT-0018 ARM/Host ABI 检查，以及最终总交付包生成。详细步骤和参数见 [本地 MATLAB 验证交接说明](validation/LOCAL_MATLAB_HANDOFF.md)。
+用户从 Flight_Matlab 仓库根目录执行这一条命令即可。脚本负责同步两个 main、环境检查、MATLAB 启动、MEX 检查、完整 run_component_checks、Diary/控制台日志、失败归档、可用时的 FMAT-0018 ARM/Host ABI 检查，以及最终总交付包生成。详细步骤和参数见 [本地 MATLAB 验证交接说明](validation/LOCAL_MATLAB_HANDOFF.md)。 脚本在生成总交付包后，若 MATLAB 进程/组件报告或 ABI 检查失败会返回非零退出码；`PARTIAL_PASS` 是已知缺口下的部分通过，不是完整 PASS。归档或打包失败时必须保留 `work/validation/` 和终端输出。
 
 执行与验收时必须：
 
