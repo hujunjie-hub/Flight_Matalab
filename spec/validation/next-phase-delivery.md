@@ -13,6 +13,7 @@
 | MATLAB 对当前 main 的完整复测 | NOT_RUN；必须由用户本地拉取最新 main 执行 |
 | 最近一份历史完整 MATLAB 归档 | RUN_ID 20261113T092308651Z_34e57d0；当时测试的是合并前分支 commit 34e57d0，不是当前 main HEAD |
 | implementation_manifest.json | BASELINE_EVIDENCE_STALE_REQUIRES_REFRESH；不得作为当前 main 的 PASS 证据 |
+| 本地一键入口 | `tools/run_local_validation.ps1`（一条 PowerShell 命令完成同步、MATLAB、归档和 ABI 检查） |
 | 本地运行交接 | [LOCAL_MATLAB_HANDOFF.md](LOCAL_MATLAB_HANDOFF.md) |
 
 ## 2026-11-14 上游 Flight/main 同步复核
