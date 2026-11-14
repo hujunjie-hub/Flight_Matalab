@@ -96,6 +96,7 @@ MatlabExe 可省略，只在 MATLAB 不在 PATH 且自动查找不到时填写�
 
 - **提示仓库有本地修改：** 不要删除或覆盖。把提示的 git status 内容交回，先确认这些文件是否为上一轮生成的待审查证据。
 - **本地交接合同预检失败：** MATLAB 尚未启动；脚本会自动生成 `_DELIVERY.zip` 和同名 `.sha256`，其中包含 `local_validation_contract_test.txt`、失败摘要和可用时的验收 manifest。只需交回这两个文件，不要自行修改脚本或 manifest。
+- **发现未归档的上一轮报告：** 脚本会在写入任何新报告前停止，列出 `work/validation/` 中现有文件，不会覆盖它们。先把整个目录交回审查，不要自行删除或改名后强行重跑。
 - **提示找不到 MATLAB：** 把实际 matlab.exe 完整路径填入 -MatlabExe。
 - **提示 MEX C 编译器未配置：** 首次在 MATLAB Desktop 执行一次 mex -setup C，选定可用 C 编译器；之后重新复制上面的一键命令即可。
 - **MATLAB 测试失败：** 脚本仍会尝试归档并生成总包。不要只发截图，交付总包和 SHA-256。
