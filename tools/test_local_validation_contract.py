@@ -36,6 +36,12 @@ class LocalValidationContractTests(unittest.TestCase):
         self.assertIn("cannot be authorized while unresolved blockers remain", self.script)
         self.assertIn("Full project PASS blockers:", self.script)
 
+    def test_one_click_entry_runs_the_local_contract_test(self) -> None:
+        self.assertIn("tools\\test_local_validation_contract.py", self.script)
+        self.assertIn("$pythonExe -B $contractTestPath", self.script)
+        self.assertIn("$contractExitCode -ne 0", self.script)
+        self.assertIn("local_validation_contract_status = 'PASS'", self.script)
+
     def test_failure_is_reported_after_delivery_package_is_created(self) -> None:
         package = self.script.index("Compress-Archive -LiteralPath $deliveryItems")
         checksum = self.script.index("$verifiedHash =")
