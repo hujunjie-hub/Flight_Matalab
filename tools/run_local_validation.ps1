@@ -198,8 +198,7 @@ if ($pendingValidationFiles.Count -gt 0 -or $dirtyWorktreeIssues.Count -gt 0) {
         "Worktree findings: $($dirtyWorktreeIssues -join '; ')"
     )
     $pendingSummary | Set-Content -LiteralPath $pendingSummaryPath -Encoding utf8
-    $pendingItems = @($pendingStatusPath)
-    $pendingItems += $pendingSummaryPath
+    $pendingItems = @($pendingStatusPath, $pendingSummaryPath)
     $pendingItems += @($pendingValidationFiles | ForEach-Object { $_.FullName })
     $pendingManifestPath = Join-Path $repoRoot 'spec\validation\matlab_acceptance_manifest.json'
     if (Test-Path -LiteralPath $pendingManifestPath -PathType Leaf) {
