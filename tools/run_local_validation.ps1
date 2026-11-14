@@ -415,6 +415,7 @@ if ($overallStatus -eq 'FAIL') {
     $scriptExitCode = 1
 }
 
+$manifestIncluded = Test-Path -LiteralPath $manifestPath -PathType Leaf
 $summaryPath = Join-Path $archiveRoot ($runId + '_DELIVERY.txt')
 $summaryLines = @(
     "RUN_ID: $runId",
@@ -425,6 +426,7 @@ $summaryLines = @(
     "Full project PASS blockers: $($fullProjectPassBlockers -join '; ')",
     "Acceptance manifest read status: $manifestReadStatus",
     "Acceptance manifest read error: $manifestReadError",
+    "Acceptance manifest included in delivery: $manifestIncluded",
     "Acceptance manifest: $manifestPath",
     "Flight_Matlab commit: $projectCommit",
     "Flight commit: $flightCommit",
@@ -443,7 +445,10 @@ $summaryLines = @(
 $summaryLines | Set-Content -LiteralPath $summaryPath -Encoding utf8
 
 $deliveryZip = Join-Path $archiveRoot ($runId + '_DELIVERY.zip')
-$deliveryItems = @($matlabZip.FullName, $matlabChecksum, $summaryPath, $manifestPath)
+$deliveryItems = @($matlabZip.FullName, $matlabChecksum, $summaryPath)
+if ($manifestIncluded) {
+    $deliveryItems += $manifestPath
+}
 if ($abiZip -and (Test-Path -LiteralPath $abiZip)) {
     $deliveryItems += $abiZip
     $deliveryItems += $abiChecksum
