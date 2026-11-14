@@ -749,7 +749,7 @@ static void write_m6_job_stats(void)
     file = fopen("work/validation/m6_runtime_stats.json", "w");
     if (!file) return;
     fprintf(file,
-            "{\n  \"jobs\": %u,\n  \"solved\": %u,\n  \"rejected\": %u,\n"
+            "{\n  \"schema\": \"fmat-m6-runtime-stats/1.0\",\n  \"jobs\": %u,\n  \"solved\": %u,\n  \"rejected\": %u,\n"
             "  \"covered_us\": %llu,\n  \"blocked_uninitialized\": %u,\n"
             "  \"blocked_validation\": %u,\n  \"blocked_mode\": %u,\n"
             "  \"blocked_clock\": %u,\n  \"blocked_stale\": %u,\n"
