@@ -213,7 +213,7 @@ ZIP 正常时，不需要再单独发送 ZIP 内已有的每一份 JSON 或 MAT 
 | FMAT-0016 / 0017 | VERIFIED（Issue 仍 Open） | 归档分类和 P-10b 数字对账已有历史证据；当前 main 完整复测后再按关闭清单结案 |
 | FMAT-0018 | BLOCKED | Flight/main 的 ABI inventory 从 143/986 到 144/993，静态对照显示主要是既有 GroundStopCertificate 纳入 registry/ABI inventory；但 abi_arm/host/compare 仍是旧 143/986、55 messages，当前编译证据不同步。需同轮重跑 ABI 工具并独立审查 revision policy；当前 Flight_Matlab main MATLAB 复测也未执行 |
 | FMAT-0018 | BLOCKED | Flight/main 比旧 MATLAB 基线前进 618 个提交；契约头/OSQP 锁已更新。GroundStopCertificate 已进入 ABI registry，但 abi_lock.h 为 144/993、abi_report.md 仍为 143/986，且 registry SHA 不一致；当前 main MATLAB 验收 NOT_RUN |
-| FMAT-0019 | FIXED_WAITING_RETEST | M6 汇总 solved/rejected 现必须与逐 job outcome 数量一致，job ID 必须完整连续 1..N；新增两项负向夹具，等待 MATLAB 本地执行 |
+| FMAT-0019 | FIXED_WAITING_RETEST | M6 汇总 solved/rejected 现必须与逐 job outcome 数量一致，covered_us 必须等于 solved×20,000 us，job ID 必须完整连续 1..N；新增三项负向夹具，等待 MATLAB 本地执行 |
 
 因此，本轮 component_checks.json 仍可能因 FMAT-0012 的 coverage_90 返回 FAIL。这是当前未解决的验收合同问题，不代表可以跳过 M6，也不应通过修改门槛来消除。plant_open_loop_report.json.status=PARTIAL 和 P-10 overall PARTIAL 是当前设计边界的如实记录。
 
