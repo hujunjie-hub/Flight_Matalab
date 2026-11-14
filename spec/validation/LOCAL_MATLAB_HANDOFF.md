@@ -1,6 +1,6 @@
 # MATLAB 本地验证交接说明
 
-版本：1.0  
+版本：1.1  
 更新日期：2026-11-14  
 适用仓库：**hujunjie-hub/Flight_Matlab**  
 唯一工作分支：**main**  
@@ -170,7 +170,7 @@ python -B .\tools\verify_inputs.py
 
 ---
 
-## 7. 如何登记 MATLAB 发现的问题
+## 6. 如何登记 MATLAB 发现的问题
 
 唯一登记位置：本仓库 GitHub Issues。模板位于：
 
@@ -195,7 +195,7 @@ python -B .\tools\verify_inputs.py
 
 用户可以直接把 ZIP 和 SHA-256 文件交给验收方；验收方负责检查证据、建立/更新 FMAT Issue、安排修复并更新 SPEC。
 
-## 8. 本轮已知问题与结果解释
+## 7. 本轮已知问题与结果解释
 
 当前仍需按以下边界判断，不能为了得到绿色结果而绕过：
 
@@ -221,7 +221,7 @@ ABI 命令的固定规则：不得添加 --emit-lock，不得手工改 abi_lock.
 
 implementation_manifest.json 当前仍是旧证据，不能作为本轮交付 PASS。只有 input_preflight、flight_entries、cold_start_report 为 PASS，Plant 为 PARTIAL、component_checks 为 PARTIAL_PASS 且 M6/P-10b gate 通过后，才可运行 tools/write_implementation_manifest.py 生成 PARTIAL_PASS_HOST_SIL 清单；它不是本轮必须单独发送的文件。
 
-## 9. 验收方收到文件后会做什么
+## 8. 验收方收到文件后会做什么
 
 1. 校验 ZIP SHA-256、RUN_ID、run_manifest.json、两个仓库 commit 和所有源/产物指纹。
 2. 核对同一 RUN_ID 下所有报告是否齐全、是否有旧报告混入、是否与被测 commit 一致。
