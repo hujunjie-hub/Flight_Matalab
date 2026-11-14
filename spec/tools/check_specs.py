@@ -168,7 +168,7 @@ def project_artifacts(project, allow_implementation=False):
     outside = [p.relative_to(project).as_posix() for p in project.rglob('*')
                if p.is_file() and p.relative_to(project).parts[0] != 'spec']
     allowed_roots = {
-        '.git', '.gitignore', 'README.md', 'IMPLEMENTATION_STATUS.md',
+        '.git', '.github', '.gitignore', 'README.md', 'IMPLEMENTATION_STATUS.md',
         'external_dependencies.lock.json', 'Flight_Matalab.prj', 'implementation_manifest.json',
         'adapters', 'config', 'dictionaries', 'interfaces', 'models', 'resources',
         'scenarios', 'simulation', 'tests', 'third_party_notices', 'tools', 'work', 'slprj',
