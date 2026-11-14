@@ -9,7 +9,7 @@
 - Flight 当前 abi_lock.h inventory 为 144 types / 993 fields，历史锁为 143 / 986；Schema/Product revision 未变。该差异已登记为需审查的 ABI inventory drift，未声称 ABI 审查通过。
 - external_dependencies.lock.json 已由 main 上的 commit 249d8a3 对齐 Flight/main 的 product contract headers 与 OSQP runtime lock（42 个运行时文件）；run_component_checks 会将 input_preflight.json 纳入 component_checks.checks 并在预检缺失/失败时阻断。
 - M6 统计适配器已加入版本化 JSON schema；M6 验收 gate 已增加零 job、统计不一致、缺少逐 job 记录、重复 job ID、非法 outcome 和覆盖时长越界的 fail-closed 检查。新增 verify_m6_jobs_contract 并接入 run_component_checks。该 MATLAB 测试尚待用户本地执行。
-- FMAT-0012 的 90% 门槛与整轮时长分母没有改变；当前统计合同仍等待用户裁定。FMAT-0013 仍需本项目 Host MIL 端到端回执断言。FMAT-0014 的 Host MIL 与真实板级链路继续分开标记。
+- FMAT-0012 的 90% 门槛与整轮时长分母没有改变；当前统计合同仍等待用户裁定。FMAT-0013 的 Flight M7 执行器证书/回执事务已有 230/230 Host 检查，但 FMS PRODUCT_CMD_DISARM 仍缺真实回执驱动的 DISARMING→DISARMED 状态闭环；等待用户批准公共契约/异步 ACK 语义，批准前不改 ICD/ABI。闭环实现后再补本项目 Host MIL 端到端断言。FMAT-0014 的 Host MIL 与真实板级链路继续分开标记。
 - 本地运行命令、环境要求、归档、问题登记及必须交付的文件统一见 [MATLAB 本地验证交接说明](spec/validation/LOCAL_MATLAB_HANDOFF.md)。
 
 
