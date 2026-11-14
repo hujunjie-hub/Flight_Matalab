@@ -2,7 +2,6 @@ function report=verify_m6_jobs_contract
 %VERIFY_M6_JOBS_CONTRACT Exercise the M6 evidence gate with isolated fixtures.
 %   These tests use a temporary repository-shaped directory and never touch
 %   the user's active work/validation reports or generated Simulink artifacts.
-projectRoot=fileparts(fileparts(mfilename('fullpath')));
 tempRoot=tempname;
 mkdir(tempRoot);
 cleanup=onCleanup(@()remove_tree(tempRoot));
@@ -39,7 +38,7 @@ expect_failure(tempRoot,'FAIL');
 
 % Coverage cannot exceed the actual full-run duration.
 badCoverage=stats;
-badCoverage.covered_us=1000001;
+badCoverage.covered_us=2100001;
 write_fixture(validation,badCoverage,records);
 expect_failure(tempRoot,'FAIL');
 
@@ -58,7 +57,7 @@ end
 
 function [stats,records]=valid_fixture
 stats=struct('schema','fmat-m6-runtime-stats/1.0', ...
-    'jobs',100,'solved',100,'rejected',0,'covered_us',950000, ...
+    'jobs',100,'solved',100,'rejected',0,'covered_us',1995000, ...
     'job_record_count',100,'worker_ticks',50,'blocked_mode',0);
 record=struct('job',0,'outcome',0,'solver_status',1, ...
     'prim_res',1e-4,'dual_res',1e-4,'primal_violation',0, ...
@@ -73,7 +72,7 @@ end
 end
 
 function write_fixture(validation,stats,records)
-entries=struct('duration_s',1);
+entries=struct('duration_s',2.1);
 jobs=struct('schema','fmat-m6-jobs/1.0', ...
     'record_count',numel(records),'records',records);
 write_json(fullfile(validation,'m6_runtime_stats_mil.json'),stats);
