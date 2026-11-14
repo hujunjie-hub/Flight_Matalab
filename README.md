@@ -4,6 +4,16 @@
 
 首次同步后，完整入口会先重建同级 Flight Host SIL 并重新记录 flight_baseline.json，随后执行契约头、OSQP、KF-GINS 和 SIM_ONLY 输入预检；预检不通过时停止后续 MATLAB 编译/仿真。不要在首次重建前单独运行 verify_inputs.py。操作步骤见上方本地验证交接说明。
 
+## 一键本地验证
+
+在 Flight_Matlab 仓库根目录打开 PowerShell 7，只需复制执行这一条命令：
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\run_local_validation.ps1
+```
+
+脚本自动同步 Flight_Matlab/main 与 Flight/main，运行 MATLAB 完整验收、生成不可覆盖归档，并在 ARM/Host 工具链可用时完成 FMAT-0018 ABI 检查。最后只需交付 `work/validation/archives/<RUN_ID>_DELIVERY.zip` 和同名 `.sha256` 文件。遇到本地未提交修改时脚本会停止，不会 reset/clean。详细行为见 [一键本地验证交接说明](spec/validation/LOCAL_MATLAB_HANDOFF.md)。
+
 本工程使用同级 `../Flight` 的现行固件作为飞控实现来源。三个入口共用 `FMT_FlightCore`，通过 Windows Host SIL 运行生产任务和 M2～M7 中间件，包括 KF-GINS、FMS、制导、控制、OSQP 和执行器保护。飞控使用 Flight 的 Host SIL 默认配置和运行参数，执行器设备端落在内存记录桩。
 
 | 模型 | 运行方式 |
