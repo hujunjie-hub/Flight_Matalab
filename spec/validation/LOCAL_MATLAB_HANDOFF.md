@@ -159,6 +159,7 @@ pwsh -NoProfile -File .\tools\archive_validation_run.ps1
 |---|---|---|
 | RUN_ID.zip | 是 | 本轮完整证据包 |
 | RUN_ID.zip.sha256 | 是 | 校验 ZIP 未损坏或被替换 |
+| config/flight_baseline.json | 若本轮重建后发生变化则必须单独交付 | 由当前 Flight/main Host SIL 构建重新生成；ZIP 只保存指纹不保存该源码文件。交给验收方审查后提交 main，不要自行提交 |
 | RUN_ID | 是 | 关联报告与问题记录 |
 | Flight_Matlab 完整 commit SHA | 是 | 确认被测源码 |
 | Flight 完整 commit SHA | 是 | 确认固件上游基线 |
