@@ -131,46 +131,516 @@ if (-not (Test-Path -LiteralPath (Join-Path $repoRoot 'Flight_Matalab.prj') -Pat
     throw 'Flight_Matalab.prj was not found in the repository root.'
 }
 
-Write-Stage '1/6 同步 Flight_Matlab/main 与 Flight/main'
-$projectCommit = Sync-MainRepository $repoRoot 'Flight_Matlab'
-$flightCommit = Sync-MainRepository $flightRoot 'Flight'
-
 New-Item -ItemType Directory -Force -Path $validationRoot,$archiveRoot | Out-Null
 $runStarted = (Get-Date).ToUniversalTime()
 $pendingValidationFiles = @(Get-ChildItem -LiteralPath $validationRoot -Force |
     Where-Object { $_.Name -ne 'archives' })
-if ($pendingValidationFiles.Count -gt 0) {
-    Write-Host 'Unarchived validation evidence already exists; packaging it without deleting or overwriting the originals:' -ForegroundColor Yellow
-    $pendingRunId = $runStarted.ToString('yyyyMMddTHHmmssfffZ') + '_' + $projectCommit.Substring(0,7)
+$repositoryChecks = @(
+    [pscustomobject]@{ Label = 'Flight_Matlab'; Path = $repoRoot },
+    [pscustomobject]@{ Label = 'Flight'; Path = $flightRoot }
+)
+$repositoryStatusLines = @()
+$dirtyWorktreeIssues = @()
+$projectHeadForRunId = 'UNKNOWN'
+foreach ($entry in $repositoryChecks) {
+    $branchOutput = @(& git -C $entry.Path branch --show-current 2>&1)
+    $branchExit = $LASTEXITCODE
+    $headOutput = @(& git -C $entry.Path rev-parse HEAD 2>&1)
+    $headExit = $LASTEXITCODE
+    $dirtyOutput = @(& git -C $entry.Path status --porcelain 2>&1)
+    $dirtyExit = $LASTEXITCODE
+
+    $branchText = if ($branchExit -eq 0) { ($branchOutput -join ' ').Trim() } else { 'UNAVAILABLE' }
+    $headText = if ($headExit -eq 0) { ($headOutput -join ' ').Trim() } else { 'UNAVAILABLE' }
+    $repositoryStatusLines += "$($entry.Label) branch=$branchText HEAD=$headText"
+    if ($entry.Label -eq 'Flight_Matlab' -and $headExit -eq 0 -and $headText -match '^[0-9a-f]{40}
+
+Write-Stage '1.5/6 检查本地验证脚本与验收清单一致性'
+$contractTestPath = Join-Path $repoRoot 'tools\test_local_validation_contract.py'
+$contractLogPath = Join-Path $validationRoot 'local_validation_contract_test.txt'
+if (-not (Test-Path -LiteralPath $contractTestPath -PathType Leaf)) {
+    $contractOutput = @("Local validation contract test is missing: $contractTestPath")
+    $contractExitCode = 1
+} else {
+    $contractOutput = @(& $pythonExe -B $contractTestPath 2>&1)
+    $contractExitCode = $LASTEXITCODE
+}
+$contractOutput | Set-Content -LiteralPath $contractLogPath -Encoding utf8
+if ($contractExitCode -ne 0) {
+    $preflightRunId = $runStarted.ToString('yyyyMMddTHHmmssfffZ') + '_' + $projectCommit.Substring(0,7)
+    $preflightSummaryPath = Join-Path $validationRoot ($preflightRunId + '_DELIVERY.txt')
+    $preflightDeliveryZip = Join-Path $archiveRoot ($preflightRunId + '_DELIVERY.zip')
+    $preflightChecksum = $preflightDeliveryZip + '.sha256'
+    if ((Test-Path -LiteralPath $preflightSummaryPath) -or
+        (Test-Path -LiteralPath $preflightDeliveryZip) -or
+        (Test-Path -LiteralPath $preflightChecksum)) {
+        throw "Refusing to overwrite an existing preflight delivery artifact for RUN_ID $preflightRunId."
+    }
+    $preflightSummary = @(
+        "RUN_ID: $preflightRunId",
+        'Overall status: FAIL',
+        'Failure stage: LOCAL_VALIDATION_CONTRACT_PREFLIGHT',
+        "Flight_Matlab commit: $projectCommit",
+        "Flight commit: $flightCommit",
+        "Python executable: $pythonExe",
+        "Contract test exit code: $contractExitCode",
+        "Contract test log: $contractLogPath",
+        'MATLAB was not started; no MATLAB result is claimed.'
+    )
+    $preflightSummary | Set-Content -LiteralPath $preflightSummaryPath -Encoding utf8
+    $preflightItems = @($contractLogPath, $preflightSummaryPath)
+    $preflightManifestPath = Join-Path $repoRoot 'spec\validation\matlab_acceptance_manifest.json'
+    if (Test-Path -LiteralPath $preflightManifestPath -PathType Leaf) {
+        $preflightItems += $preflightManifestPath
+    }
+    Compress-Archive -LiteralPath $preflightItems -DestinationPath $preflightDeliveryZip -CompressionLevel Optimal
+    if (-not (Test-Path -LiteralPath $preflightDeliveryZip -PathType Leaf)) {
+        throw "Preflight failure package was not created. Keep work\validation and terminal output."
+    }
+    $preflightChecksum = $preflightDeliveryZip + '.sha256'
+    $preflightHash = (Get-FileHash -LiteralPath $preflightDeliveryZip -Algorithm SHA256).Hash.ToLowerInvariant()
+    $preflightChecksumLine = "$preflightHash  $(Split-Path $preflightDeliveryZip -Leaf)"
+    $preflightChecksumLine | Set-Content -LiteralPath $preflightChecksum -Encoding ascii
+    $preflightVerifiedHash = (Get-FileHash -LiteralPath $preflightDeliveryZip -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($preflightVerifiedHash -ne $preflightHash -or
+        (Get-Content -LiteralPath $preflightChecksum -Raw).Trim() -ne $preflightChecksumLine) {
+        throw "Preflight failure package SHA-256 verification failed. Keep work\validation and terminal output."
+    }
+    Write-Host 'Local validation contract preflight failed; MATLAB was not started.' -ForegroundColor Red
+    Write-Host "ONE FILE TO SEND: $preflightDeliveryZip" -ForegroundColor Green
+    Write-Host "CHECKSUM: $preflightChecksum" -ForegroundColor Green
+    exit 1
+}
+$contractOutput | ForEach-Object { Write-Host $_ }
+Write-Host 'Local validation script/manifest contract: PASS' -ForegroundColor Green
+
+$gccVersion = Get-FirstVersionLine (Join-Path $GccDir 'gcc.exe') @('--version')
+$armGcc = Join-Path $ArmBin 'arm-none-eabi-gcc.exe'
+$armGxx = Join-Path $ArmBin 'arm-none-eabi-g++.exe'
+$armObjcopy = Join-Path $ArmBin 'arm-none-eabi-objcopy.exe'
+$hostObjcopy = Join-Path $GccDir 'objcopy.exe'
+$abiToolchainReady = (Test-Path -LiteralPath $armGcc -PathType Leaf) -and
+    (Test-Path -LiteralPath $armGxx -PathType Leaf) -and
+    (Test-Path -LiteralPath $armObjcopy -PathType Leaf) -and
+    (Test-Path -LiteralPath $hostObjcopy -PathType Leaf)
+
+$context = [ordered]@{
+    started_at_utc = $runStarted.ToString('o')
+    project_branch = 'main'
+    project_commit = $projectCommit
+    flight_branch = 'main'
+    flight_commit = $flightCommit
+    matlab_executable = $matlabExecutable
+    operating_system = [System.Runtime.InteropServices.RuntimeInformation]::OSDescription
+    powershell_version = $PSVersionTable.PSVersion.ToString()
+    python_executable = $pythonExe
+    gcc_directory = $GccDir
+    gcc_version = $gccVersion
+    arm_compiler_directory = $ArmBin
+    arm_toolchain_available = $abiToolchainReady
+    local_validation_contract_status = 'PASS'
+    local_validation_contract_log = $contractLogPath
+}
+$context | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $validationRoot 'local_run_context.json') -Encoding utf8
+
+Write-Stage '2/6 启动 MATLAB 完整验收'
+$matlabRoot = $repoRoot.Replace('\', '/').Replace("'", "''")
+$gccMatlab = $GccDir.Replace('\', '/').Replace("'", "''")
+$diaryPath = (Join-Path $validationRoot 'matlab_acceptance_diary.txt').Replace('\', '/').Replace("'", "''")
+$matlabScriptPath = Join-Path $env:TEMP ("flight_matlab_acceptance_" + [Guid]::NewGuid().ToString('N') + '.m')
+$matlabScript = @"
+cd('$matlabRoot');
+reportDir = fullfile('$matlabRoot', 'work', 'validation');
+if ~isfolder(reportDir)
+    mkdir(reportDir);
+end
+diaryFile = '$diaryPath';
+diary(diaryFile);
+diary on;
+try
+    disp(['MATLAB release: ' version('-release')]);
+    disp(['MATLAB version: ' version]);
+    selectedMex = mex.getCompilerConfigurations('C', 'Selected');
+    if isempty(selectedMex)
+        disp('No selected MEX C compiler; invoking mex -setup C.');
+        mex -setup C;
+        selectedMex = mex.getCompilerConfigurations('C', 'Selected');
+    end
+    assert(~isempty(selectedMex), 'Flight:MexCompilerMissing', ...
+        'No C MEX compiler is selected. Run mex -setup C in MATLAB Desktop once, then rerun this script.');
+    disp(['Selected MEX C compiler: ' selectedMex(1).Name]);
+    root = flight_startup;
+    cd(root);
+    run_component_checks('$gccMatlab');
+catch ME
+    disp(getReport(ME, 'extended', 'hyperlinks', 'off'));
+    diary off;
+    rethrow(ME);
+end
+diary off;
+"@
+Set-Content -LiteralPath $matlabScriptPath -Value $matlabScript -Encoding utf8
+
+$matlabConsoleLog = Join-Path $validationRoot 'matlab_batch_console.txt'
+$matlabExitCode = 9009
+try {
+    $matlabRunPath = $matlabScriptPath.Replace('\', '/').Replace("'", "''")
+    $matlabOutput = @(& $matlabExecutable -batch "run('$matlabRunPath')" 2>&1)
+    $matlabExitCode = $LASTEXITCODE
+    $matlabOutput | ForEach-Object { Write-Host $_ }
+    $matlabOutput | Out-File -LiteralPath $matlabConsoleLog -Encoding utf8
+}
+catch {
+    $_ | Out-String | Set-Content -LiteralPath $matlabConsoleLog -Encoding utf8
+    Write-Host $_ -ForegroundColor Red
+}
+finally {
+    if (Test-Path -LiteralPath $matlabScriptPath) {
+        Remove-Item -LiteralPath $matlabScriptPath -Force
+    }
+}
+$context['matlab_exit_code'] = $matlabExitCode
+$context | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $validationRoot 'local_run_context.json') -Encoding utf8
+if ($matlabExitCode -eq 0) {
+    Write-Host 'MATLAB process completed. The component report still determines PASS/PARTIAL/FAIL.' -ForegroundColor Green
+} else {
+    Write-Host "MATLAB exited with code $matlabExitCode. The script will archive the failure evidence before stopping." -ForegroundColor Yellow
+}
+
+Write-Stage '3/6 归档 MATLAB 本轮证据（即使测试失败也执行）'
+$existingArchives = @()
+if (Test-Path -LiteralPath $archiveRoot -PathType Container) {
+    $existingArchives = @(Get-ChildItem -LiteralPath $archiveRoot -Filter '*.zip' -File | ForEach-Object Name)
+}
+& $pwshExe -NoProfile -File (Join-Path $repoRoot 'tools\archive_validation_run.ps1') -RepoRoot $repoRoot
+$archiveExitCode = $LASTEXITCODE
+if ($archiveExitCode -ne 0) {
+    throw "MATLAB evidence archive failed (exit $archiveExitCode). Keep the entire work\validation folder and send it for diagnosis."
+}
+$newMatlabArchives = @(Get-ChildItem -LiteralPath $archiveRoot -Filter '*.zip' -File |
+    Where-Object { $existingArchives -notcontains $_.Name -and $_.Name -notmatch '_ABI|_DELIVERY' } |
+    Sort-Object LastWriteTime -Descending)
+if ($newMatlabArchives.Count -eq 0) {
+    throw "No new MATLAB archive was created in $archiveRoot."
+}
+$matlabZip = $newMatlabArchives[0]
+$runId = [System.IO.Path]::GetFileNameWithoutExtension($matlabZip.Name)
+$matlabChecksum = $matlabZip.FullName + '.sha256'
+if (-not (Test-Path -LiteralPath $matlabChecksum -PathType Leaf)) {
+    throw "MATLAB archive checksum is missing: $matlabChecksum"
+}
+Write-Host "MATLAB archive: $($matlabZip.FullName)" -ForegroundColor Green
+
+Write-Stage '4/6 运行 FMAT-0018 ARM/Host ABI 检查'
+$abiStatus = 'SKIPPED_TOOLCHAIN_MISSING'
+$abiExitCode = $null
+$abiZip = $null
+$abiChecksum = $null
+$abiConsole = @()
+$evidenceDir = Join-Path $flightRoot 'tests\abi\evidence'
+$backupEvidenceDir = Join-Path $env:TEMP ("flight_abi_evidence_backup_" + $runId)
+
+if ($abiToolchainReady) {
+    if (Test-Path -LiteralPath $backupEvidenceDir) {
+        throw "Temporary ABI evidence backup already exists: $backupEvidenceDir"
+    }
+    if (Test-Path -LiteralPath $evidenceDir) {
+        Move-Item -LiteralPath $evidenceDir -Destination $backupEvidenceDir
+    }
+
+    try {
+        Push-Location $flightRoot
+        try {
+            $abiConsole = @(& $pythonExe -B 'tests\abi\abi_report.py' --arm-bin $ArmBin --host-bin $GccDir 2>&1)
+            $abiExitCode = $LASTEXITCODE
+        }
+        finally {
+            Pop-Location
+        }
+
+        $abiConsole | ForEach-Object { Write-Host $_ }
+        $freshCompare = Join-Path $evidenceDir 'abi_compare.json'
+        if (Test-Path -LiteralPath $freshCompare -PathType Leaf) {
+            $compareData = Get-Content -LiteralPath $freshCompare -Raw | ConvertFrom-Json
+            $abiStatus = [string]$compareData.status
+            if ($abiExitCode -ne 0 -and $abiStatus -eq 'PASS') {
+                $abiStatus = 'FAIL_PROCESS_EXIT'
+            }
+            if (Test-Path -LiteralPath $backupEvidenceDir) {
+                Remove-Item -LiteralPath $backupEvidenceDir -Recurse -Force
+            }
+        } else {
+            $abiStatus = 'FAIL_NO_FRESH_REPORT'
+            if (Test-Path -LiteralPath $evidenceDir) {
+                Remove-Item -LiteralPath $evidenceDir -Recurse -Force
+            }
+            if (Test-Path -LiteralPath $backupEvidenceDir) {
+                Move-Item -LiteralPath $backupEvidenceDir -Destination $evidenceDir
+            }
+        }
+    }
+    catch {
+        $abiStatus = 'FAIL_SCRIPT'
+        $abiConsole += ($_ | Out-String)
+        if ((Test-Path -LiteralPath $evidenceDir) -and
+            -not (Test-Path -LiteralPath (Join-Path $evidenceDir 'abi_compare.json'))) {
+            Remove-Item -LiteralPath $evidenceDir -Recurse -Force
+        }
+        if ((Test-Path -LiteralPath $backupEvidenceDir) -and
+            -not (Test-Path -LiteralPath $evidenceDir)) {
+            Move-Item -LiteralPath $backupEvidenceDir -Destination $evidenceDir
+        }
+    }
+
+    $abiStage = Join-Path $archiveRoot ($runId + '_ABI_payload')
+    New-Item -ItemType Directory -Force -Path $abiStage | Out-Null
+    $abiLogPath = Join-Path $abiStage 'abi_console.txt'
+    $abiConsole | Out-File -LiteralPath $abiLogPath -Encoding utf8
+    $abiSummary = [ordered]@{
+        run_id = $runId
+        flight_commit = $flightCommit
+        status = $abiStatus
+        process_exit_code = $abiExitCode
+        arm_bin = $ArmBin
+        host_bin = $GccDir
+        lock_regeneration = 'NOT_REQUESTED'
+    }
+    $abiSummary | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $abiStage 'abi_summary.json') -Encoding utf8
+
+    $abiFiles = @(
+        'abi_arm.json', 'abi_host.json', 'abi_compare.json', 'abi_report.md',
+        'commands.json', 'artifact_sha256.json', 'abi_probe.c',
+        'abi_canonical_arm.txt', 'abi_canonical_host.txt'
+    )
+    foreach ($name in $abiFiles) {
+        $source = Join-Path $evidenceDir $name
+        if (Test-Path -LiteralPath $source -PathType Leaf) {
+            Copy-Item -LiteralPath $source -Destination $abiStage -Force
+        }
+    }
+
+    $abiZip = Join-Path $archiveRoot ($runId + '_ABI.zip')
+    if (Test-Path -LiteralPath $abiZip) { throw "ABI archive already exists: $abiZip" }
+    Compress-Archive -Path (Join-Path $abiStage '*') -DestinationPath $abiZip -CompressionLevel Optimal
+    Remove-Item -LiteralPath $abiStage -Recurse -Force
+    $abiChecksum = $abiZip + '.sha256'
+    $abiHash = (Get-FileHash -LiteralPath $abiZip -Algorithm SHA256).Hash.ToLowerInvariant()
+    "$abiHash  $(Split-Path $abiZip -Leaf)" | Set-Content -LiteralPath $abiChecksum -Encoding ascii
+    $abiColor = 'Yellow'
+    if ($abiStatus -eq 'PASS') { $abiColor = 'Green' }
+    Write-Host "ABI evidence: $abiZip ($abiStatus)" -ForegroundColor $abiColor
+} else {
+    Write-Warning "ARM/Host ABI toolchain not found. MATLAB archive is complete; FMAT-0018 ABI check was skipped. Expected ARM tools in $ArmBin and objcopy in $GccDir."
+}
+
+Write-Stage '5/6 生成一个总交付包'
+$flightWorktree = @(& git -C $flightRoot status --porcelain)
+$projectWorktree = @(& git -C $repoRoot status --porcelain)
+$componentStatus = 'REPORT_NOT_FOUND'
+$componentPath = Join-Path $archiveRoot ($runId + '\component_checks.json')
+if (Test-Path -LiteralPath $componentPath -PathType Leaf) {
+    try {
+        $componentStatus = [string]((Get-Content -LiteralPath $componentPath -Raw | ConvertFrom-Json).status)
+    } catch { $componentStatus = 'INVALID_REPORT' }
+}
+
+$manifestPath = Join-Path $repoRoot 'spec\validation\matlab_acceptance_manifest.json'
+$manifestReadStatus = 'PASS'
+$manifestReadError = ''
+$fullProjectPassAllowed = $false
+$fullProjectPassBlockers = @()
+try {
+    if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+        throw "Acceptance manifest is missing: $manifestPath"
+    }
+    $acceptanceManifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    if ([string]$acceptanceManifest.branch -ne 'main' -or
+        [string]$acceptanceManifest.repository -ne 'hujunjie-hub/Flight_Matlab') {
+        throw 'Acceptance manifest repository/branch does not match the synchronized main worktree.'
+    }
+    if ($null -eq $acceptanceManifest.full_project_pass_allowed) {
+        throw 'Acceptance manifest does not declare full_project_pass_allowed.'
+    }
+    $fullProjectPassAllowed = [bool]$acceptanceManifest.full_project_pass_allowed
+    $fullProjectPassBlockers = @($acceptanceManifest.full_project_pass_blockers)
+    if (-not $fullProjectPassAllowed -and $fullProjectPassBlockers.Count -eq 0) {
+        throw 'Full project PASS is disabled but no blockers are recorded in the acceptance manifest.'
+    }
+    if ($fullProjectPassAllowed -and $fullProjectPassBlockers.Count -gt 0) {
+        throw 'Full project PASS cannot be authorized while unresolved blockers remain in the acceptance manifest.'
+    }
+}
+catch {
+    $manifestReadStatus = 'FAIL'
+    $manifestReadError = $_.Exception.Message
+}
+
+$failureReasons = @()
+if ($manifestReadStatus -ne 'PASS') {
+    $failureReasons += 'ACCEPTANCE_MANIFEST_INVALID'
+}
+
+if ($matlabExitCode -ne 0) {
+    $failureReasons += "MATLAB_PROCESS_EXIT_$matlabExitCode"
+}
+if ($componentStatus -notin @('PASS', 'PARTIAL_PASS')) {
+    $failureReasons += "MATLAB_COMPONENT_STATUS_$componentStatus"
+}
+if ($abiStatus -notin @('PASS', 'SKIPPED_TOOLCHAIN_MISSING')) {
+    $failureReasons += "ABI_STATUS_$abiStatus"
+}
+
+$overallStatus = 'PASS'
+if ($componentStatus -eq 'PARTIAL_PASS' -or
+    $abiStatus -eq 'SKIPPED_TOOLCHAIN_MISSING' -or
+    -not $fullProjectPassAllowed) {
+    $overallStatus = 'PARTIAL_PASS'
+}
+if ($failureReasons.Count -gt 0) {
+    $overallStatus = 'FAIL'
+}
+$scriptExitCode = 0
+if ($overallStatus -eq 'FAIL') {
+    $scriptExitCode = 1
+}
+
+$manifestIncluded = Test-Path -LiteralPath $manifestPath -PathType Leaf
+$summaryPath = Join-Path $archiveRoot ($runId + '_DELIVERY.txt')
+$summaryLines = @(
+    "RUN_ID: $runId",
+    "Overall status: $overallStatus",
+    "Script exit code: $scriptExitCode",
+    "Failure reasons: $($failureReasons -join '; ')",
+    "Full project PASS authorized: $fullProjectPassAllowed",
+    "Full project PASS blockers: $($fullProjectPassBlockers -join '; ')",
+    "Acceptance manifest read status: $manifestReadStatus",
+    "Acceptance manifest read error: $manifestReadError",
+    "Acceptance manifest included in delivery: $manifestIncluded",
+    "Acceptance manifest: $manifestPath",
+    "Flight_Matlab commit: $projectCommit",
+    "Flight commit: $flightCommit",
+    "MATLAB process exit code: $matlabExitCode",
+    "MATLAB component_checks status: $componentStatus",
+    "FMAT-0018 ABI status: $abiStatus",
+    "ABI process exit code: $abiExitCode",
+    "MATLAB archive: $($matlabZip.FullName)",
+    "MATLAB SHA256 file: $matlabChecksum",
+    "ABI archive: $(if ($abiZip) { $abiZip } else { 'NOT_CREATED' })",
+    "ABI SHA256 file: $(if ($abiChecksum) { $abiChecksum } else { 'NOT_CREATED' })",
+    "Flight worktree status after ABI check: $($flightWorktree -join '; ')",
+    "Flight_Matlab worktree status after validation: $($projectWorktree -join '; ')",
+    "Do not reset, clean, or commit generated ABI evidence. Send this delivery package to the maintainer for review."
+)
+$summaryLines | Set-Content -LiteralPath $summaryPath -Encoding utf8
+
+$deliveryZip = Join-Path $archiveRoot ($runId + '_DELIVERY.zip')
+$deliveryItems = @($matlabZip.FullName, $matlabChecksum, $summaryPath)
+if ($manifestIncluded) {
+    $deliveryItems += $manifestPath
+}
+if ($abiZip -and (Test-Path -LiteralPath $abiZip)) {
+    $deliveryItems += $abiZip
+    $deliveryItems += $abiChecksum
+}
+if (Test-Path -LiteralPath $deliveryZip) { throw "Delivery package already exists: $deliveryZip" }
+Compress-Archive -LiteralPath $deliveryItems -DestinationPath $deliveryZip -CompressionLevel Optimal
+if (-not (Test-Path -LiteralPath $deliveryZip -PathType Leaf)) {
+    throw "Delivery package was not created: $deliveryZip"
+}
+
+$deliveryChecksum = $deliveryZip + '.sha256'
+$deliveryHash = (Get-FileHash -LiteralPath $deliveryZip -Algorithm SHA256).Hash.ToLowerInvariant()
+$checksumLine = "$deliveryHash  $(Split-Path $deliveryZip -Leaf)"
+$checksumLine | Set-Content -LiteralPath $deliveryChecksum -Encoding ascii
+if (-not (Test-Path -LiteralPath $deliveryChecksum -PathType Leaf)) {
+    throw "Delivery checksum was not created: $deliveryChecksum"
+}
+$verifiedHash = (Get-FileHash -LiteralPath $deliveryZip -Algorithm SHA256).Hash.ToLowerInvariant()
+$storedChecksum = (Get-Content -LiteralPath $deliveryChecksum -Raw).Trim()
+if ($verifiedHash -ne $deliveryHash -or $storedChecksum -ne $checksumLine) {
+    throw "Delivery ZIP SHA-256 verification failed: $deliveryZip"
+}
+
+Write-Stage '6/6 完成：只需交付一个总包'
+Write-Host "RUN_ID: $runId" -ForegroundColor Green
+Write-Host "OVERALL STATUS: $overallStatus" -ForegroundColor $(if ($overallStatus -eq 'FAIL') { 'Red' } elseif ($overallStatus -eq 'PARTIAL_PASS') { 'Yellow' } else { 'Green' })
+Write-Host "Full project PASS authorized: $fullProjectPassAllowed"
+if ($fullProjectPassBlockers.Count -gt 0) {
+    Write-Host "Full project PASS blockers: $($fullProjectPassBlockers -join '; ')" -ForegroundColor Yellow
+}
+Write-Host "MATLAB status: $componentStatus (process exit $matlabExitCode)"
+Write-Host "FMAT-0018 ABI status: $abiStatus"
+Write-Host "ONE FILE TO SEND: $deliveryZip" -ForegroundColor Green
+Write-Host "CHECKSUM: $deliveryChecksum" -ForegroundColor Green
+
+if ($scriptExitCode -ne 0) {
+    Write-Host "The delivery package was created, but one or more acceptance checks failed: $($failureReasons -join '; ')" -ForegroundColor Red
+    exit $scriptExitCode
+}
+
+if ($overallStatus -eq 'PARTIAL_PASS') {
+    Write-Host 'The package is complete with explicit known gaps or skipped optional ABI checks. This is not a full PASS.' -ForegroundColor Yellow
+} else {
+    Write-Host 'All configured acceptance and ABI checks passed.' -ForegroundColor Green
+}
+Write-Host 'Do not commit or discard generated files. The maintainer will review them and update main/SPEC/Issues.'
+exit 0
+) {
+        $projectHeadForRunId = $headText.Substring(0,7)
+    }
+    if ($dirtyExit -ne 0) {
+        $dirtyWorktreeIssues += "$($entry.Label): git status failed: $($dirtyOutput -join ' ')"
+    } elseif ($dirtyOutput.Count -gt 0) {
+        $dirtyWorktreeIssues += "$($entry.Label) has local changes:"
+        $dirtyWorktreeIssues += $dirtyOutput
+    }
+}
+
+if ($pendingValidationFiles.Count -gt 0 -or $dirtyWorktreeIssues.Count -gt 0) {
+    Write-Host 'Preflight found pending evidence or a dirty worktree; packaging diagnostics without changing originals:' -ForegroundColor Yellow
+    $pendingRunId = $runStarted.ToString('yyyyMMddTHHmmssfffZ') + '_' + $projectHeadForRunId
     $pendingSummaryPath = Join-Path $archiveRoot ($pendingRunId + '_DELIVERY.txt')
+    $pendingStatusPath = Join-Path $archiveRoot ($pendingRunId + '_WORKTREE_STATUS.txt')
     $pendingDeliveryZip = Join-Path $archiveRoot ($pendingRunId + '_DELIVERY.zip')
     $pendingChecksum = $pendingDeliveryZip + '.sha256'
     if ((Test-Path -LiteralPath $pendingSummaryPath) -or
+        (Test-Path -LiteralPath $pendingStatusPath) -or
         (Test-Path -LiteralPath $pendingDeliveryZip) -or
         (Test-Path -LiteralPath $pendingChecksum)) {
-        throw "Refusing to overwrite an existing pending-evidence package for RUN_ID $pendingRunId."
+        throw "Refusing to overwrite an existing preflight package for RUN_ID $pendingRunId."
     }
+
     $pendingNames = @($pendingValidationFiles | ForEach-Object { $_.Name })
+    $pendingStatusLines = @(
+        'Repository branch/HEAD/status:',
+        $repositoryStatusLines,
+        'Dirty worktree findings:',
+        $dirtyWorktreeIssues,
+        'Pending unarchived validation items:',
+        $pendingNames
+    )
+    $pendingStatusLines | Set-Content -LiteralPath $pendingStatusPath -Encoding utf8
     $pendingSummary = @(
         "RUN_ID: $pendingRunId",
         'Overall status: INCOMPLETE',
-        'Failure stage: PENDING_UNARCHIVED_EVIDENCE',
-        "Flight_Matlab commit: $projectCommit",
-        "Flight commit: $flightCommit",
+        'Failure stage: DIRTY_WORKTREE_OR_PENDING_UNARCHIVED_EVIDENCE',
+        "Flight_Matlab HEAD: $(($repositoryStatusLines | Where-Object { $_ -like 'Flight_Matlab *' }) -join '')",
+        "Flight HEAD: $(($repositoryStatusLines | Where-Object { $_ -like 'Flight *' }) -join '')",
         'MATLAB was not started in this invocation.',
-        'Existing validation files were packaged as-is; originals were not deleted or modified.',
-        "Pending items: $($pendingNames -join '; ')"
+        'Existing validation files and Git worktrees were not deleted, reset, cleaned, or overwritten.',
+        "Pending items: $($pendingNames -join '; ')",
+        "Worktree findings: $($dirtyWorktreeIssues -join '; ')"
     )
     $pendingSummary | Set-Content -LiteralPath $pendingSummaryPath -Encoding utf8
-    $pendingItems = @($pendingValidationFiles | ForEach-Object { $_.FullName })
-    $pendingItems += $pendingSummaryPath
+    $pendingItems = @($pendingStatusPath, $pendingSummaryPath)
+    $pendingItems += @($pendingValidationFiles | ForEach-Object { $_.FullName })
     $pendingManifestPath = Join-Path $repoRoot 'spec\validation\matlab_acceptance_manifest.json'
     if (Test-Path -LiteralPath $pendingManifestPath -PathType Leaf) {
         $pendingItems += $pendingManifestPath
     }
     Compress-Archive -LiteralPath $pendingItems -DestinationPath $pendingDeliveryZip -CompressionLevel Optimal
     if (-not (Test-Path -LiteralPath $pendingDeliveryZip -PathType Leaf)) {
-        throw 'Pending-evidence delivery package was not created. Originals remain in work\validation.'
+        throw 'Preflight delivery package was not created. Original worktrees and validation files remain untouched.'
     }
     $pendingHash = (Get-FileHash -LiteralPath $pendingDeliveryZip -Algorithm SHA256).Hash.ToLowerInvariant()
     $pendingChecksumLine = "$pendingHash  $(Split-Path $pendingDeliveryZip -Leaf)"
@@ -178,13 +648,17 @@ if ($pendingValidationFiles.Count -gt 0) {
     $pendingVerifiedHash = (Get-FileHash -LiteralPath $pendingDeliveryZip -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($pendingVerifiedHash -ne $pendingHash -or
         (Get-Content -LiteralPath $pendingChecksum -Raw).Trim() -ne $pendingChecksumLine) {
-        throw 'Pending-evidence delivery package SHA-256 verification failed. Originals remain in work\validation.'
+        throw 'Preflight delivery package SHA-256 verification failed. Original worktrees and validation files remain untouched.'
     }
     Write-Host "ONE FILE TO SEND: $pendingDeliveryZip" -ForegroundColor Green
     Write-Host "CHECKSUM: $pendingChecksum" -ForegroundColor Green
-    Write-Host 'The original pending validation files were not removed. MATLAB was not started.' -ForegroundColor Yellow
+    Write-Host 'Original Git changes and pending validation files were not removed. MATLAB was not started.' -ForegroundColor Yellow
     exit 1
 }
+
+Write-Stage '1/6 同步 Flight_Matlab/main 与 Flight/main'
+$projectCommit = Sync-MainRepository $repoRoot 'Flight_Matlab'
+$flightCommit = Sync-MainRepository $flightRoot 'Flight'
 
 Write-Stage '1.5/6 检查本地验证脚本与验收清单一致性'
 $contractTestPath = Join-Path $repoRoot 'tools\test_local_validation_contract.py'
