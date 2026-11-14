@@ -1,7 +1,7 @@
 {
   "schema": "flight-matlab-acceptance/1.0",
-  "branch": "optimize/sil-physical-parameter-alignment",
-  "repository": "hujunjie-hub/Flight_Matalab",
+  "branch": "main",
+  "repository": "hujunjie-hub/Flight_Matlab",
   "acceptance_document": "spec/MATLAB-验收与结果提交.md",
   "generated_by": "run_component_checks",
   "run_sequence": [
@@ -434,7 +434,7 @@
   "overall_status_rules": {
     "FAIL": "Any build/test failure, early stop, missing report, incomplete run, or changed input fingerprint.",
     "PARTIAL_PASS": "All implemented gates pass, the three entries/replays pass, and known unimplemented scope remains explicit.",
-    "PASS": "Not permitted for this branch until P-10 Host MIL PPS/RECTIME end-to-end integration and all current phase requirements are implemented and validated."
+    "PASS": "Not permitted on main until P-10 Host MIL PPS/RECTIME end-to-end integration and all current phase requirements are implemented and validated."
   },
   "known_gaps": [
     "P-10 Host MIL TIM2 capture, UM982 UART/DMA and sensor_gnss_poll end-to-end integration.",
@@ -452,18 +452,43 @@
     "status_manifest": "spec/quality/issue-workflow.json",
     "archive_script": "tools/archive_validation_run.ps1",
     "run_archive_root": "work/validation/archives",
-    "agent_entrypoint": "spec/AGENT-操作指南.md"
+    "agent_entrypoint": "spec/AGENT-操作指南.md",
+    "local_validation_entrypoint": "tools/run_local_validation.ps1",
+    "archive_command": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\tools\\run_local_validation.ps1"
   },
   "agent_workflow": {
     "entrypoint": "spec/AGENT-操作指南.md",
     "spec_index": "spec/README.md",
     "rules": [
       "Read the Agent guide before modifying files or changing issue status.",
-      "Inspect branch, commit, PR and existing Issues before writes.",
-      "Do not merge to main without explicit user authorization.",
+      "Use main as the only active branch in Flight_Matlab and Flight; inspect exact HEADs and existing Issues before writes.",
+      "Do not create or restore long-lived development branches; normal authorized fixes and SPEC updates are committed directly to main.",
+      "Do not force-push, rewrite history, reset, clean, or overwrite user data.",
       "Do not claim MATLAB execution unless the target MATLAB environment actually ran the acceptance command.",
       "Every actionable issue must reference a RUN_ID and evidence hashes.",
-      "A fix cannot be closed before a new MATLAB regression run is verified."
+      "A fix cannot be closed before a new MATLAB regression run is verified.",
+      "For local execution, provide one script, one copyable command, and one delivery package."
     ]
+  },
+  "local_execution": {
+    "entrypoint": "tools/run_local_validation.ps1",
+    "working_directory": "Flight_Matlab repository root",
+    "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\tools\\run_local_validation.ps1",
+    "synchronized_repositories": [
+      "hujunjie-hub/Flight_Matlab:main",
+      "hujunjie-hub/Flight:main"
+    ],
+    "matlab_entrypoint": "run_component_checks",
+    "internal_archive_script": "tools/archive_validation_run.ps1",
+    "delivery_files": [
+      "work/validation/archives/<RUN_ID>_DELIVERY.zip",
+      "work/validation/archives/<RUN_ID>_DELIVERY.zip.sha256"
+    ],
+    "exit_code": {
+      "0": "The run completed and the delivery package was created; PASS or PARTIAL_PASS is stated in the package summary. PARTIAL_PASS is not a full PASS.",
+      "1": "MATLAB process/component checks or the optional ABI check failed; the delivery package is still created first when archiving and packaging succeed.",
+      "pre_package_error": "If synchronization, MATLAB evidence archival, or package creation itself fails, preserve work/validation and terminal output; do not clean or reset."
+    },
+    "failure_policy": "Never delete or overwrite user changes. A nonzero test exit must not suppress delivery evidence."
   }
 }
