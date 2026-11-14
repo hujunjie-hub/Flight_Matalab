@@ -15,7 +15,7 @@
 - GitHub Issue 创建后，按编号生成项目问题 ID：`FMAT-0001` 对应 GitHub Issue `#1`，`FMAT-0027` 对应 `#27`。编号不复用。
 - Issue 标题格式：`[FMAT-0001][S1][PLANT] 电机动态响应偏差`。创建前可暂用 `[MATLAB]`，创建后补齐正式 ID。
 - Issue 正文中的 **Current status** 是当前状态；每次状态变化必须追加一条评论，记录日期、原状态、新状态、原因和证据。GitHub 原生 Open/Closed 只表示是否结案，不替代下面的细分状态。
-- 当前已登记的主要问题为 FMAT-0012～FMAT-0018：#12 BLOCKED、#13 BLOCKED、#14 IN_PROGRESS、#15 FIXED_WAITING_RETEST、#16/#17 VERIFIED（GitHub Issue 仍保持 Open，待当前 main 回归后按关闭清单结案）、#18 BLOCKED（ABI inventory/证据同步与 revision policy 独立审查）。#2/#3/#4/#6/#10/#11 的正文曾记录 VERIFIED，但 GitHub Issue 仍 Open；#5 为 FIXED_WAITING_RETEST。每次处理前必须重新读取 Issue 正文和最新评论，不得仅凭本清单关闭问题。
+- 当前已登记的主要问题为 FMAT-0012～FMAT-0019：#12 BLOCKED、#13 BLOCKED、#14 IN_PROGRESS、#15 FIXED_WAITING_RETEST、#16/#17 VERIFIED（GitHub Issue 仍保持 Open，待当前 main 回归后按关闭清单结案）、#18 BLOCKED（ABI inventory/证据同步与 revision policy 独立审查）、#19 FIXED_WAITING_RETEST（M6 汇总与逐 job 证据对账，等待当前 main MATLAB 回归）。#2/#3/#4/#6/#10/#11 的正文曾记录 VERIFIED，但 GitHub Issue 仍 Open；#5 为 FIXED_WAITING_RETEST。每次处理前必须重新读取 Issue 正文和最新评论，不得仅凭本清单关闭问题。
 
 ## 2. 问题类型与严重级别
 
