@@ -365,7 +365,32 @@ if (Test-Path -LiteralPath $componentPath -PathType Leaf) {
     } catch { $componentStatus = 'INVALID_REPORT' }
 }
 
+$manifestPath = Join-Path $repoRoot 'spec\validation\matlab_acceptance_manifest.json'
+$manifestReadStatus = 'PASS'
+$manifestReadError = ''
+$fullProjectPassAllowed = $false
+$fullProjectPassBlockers = @()
+try {
+    if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+        throw "Acceptance manifest is missing: $manifestPath"
+    }
+    $acceptanceManifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    if ($null -eq $acceptanceManifest.full_project_pass_allowed) {
+        throw 'Acceptance manifest does not declare full_project_pass_allowed.'
+    }
+    $fullProjectPassAllowed = [bool]$acceptanceManifest.full_project_pass_allowed
+    $fullProjectPassBlockers = @($acceptanceManifest.full_project_pass_blockers)
+}
+catch {
+    $manifestReadStatus = 'FAIL'
+    $manifestReadError = $_.Exception.Message
+}
+
 $failureReasons = @()
+if ($manifestReadStatus -ne 'PASS') {
+    $failureReasons += 'ACCEPTANCE_MANIFEST_INVALID'
+}
+
 if ($matlabExitCode -ne 0) {
     $failureReasons += "MATLAB_PROCESS_EXIT_$matlabExitCode"
 }
@@ -377,7 +402,9 @@ if ($abiStatus -notin @('PASS', 'SKIPPED_TOOLCHAIN_MISSING')) {
 }
 
 $overallStatus = 'PASS'
-if ($componentStatus -eq 'PARTIAL_PASS' -or $abiStatus -eq 'SKIPPED_TOOLCHAIN_MISSING') {
+if ($componentStatus -eq 'PARTIAL_PASS' -or
+    $abiStatus -eq 'SKIPPED_TOOLCHAIN_MISSING' -or
+    -not $fullProjectPassAllowed) {
     $overallStatus = 'PARTIAL_PASS'
 }
 if ($failureReasons.Count -gt 0) {
@@ -394,6 +421,10 @@ $summaryLines = @(
     "Overall status: $overallStatus",
     "Script exit code: $scriptExitCode",
     "Failure reasons: $($failureReasons -join '; ')",
+    "Full project PASS authorized: $fullProjectPassAllowed",
+    "Full project PASS blockers: $($fullProjectPassBlockers -join '; ')",
+    "Acceptance manifest read status: $manifestReadStatus",
+    "Acceptance manifest read error: $manifestReadError",
     "Flight_Matlab commit: $projectCommit",
     "Flight commit: $flightCommit",
     "MATLAB process exit code: $matlabExitCode",
@@ -438,6 +469,10 @@ if ($verifiedHash -ne $deliveryHash -or $storedChecksum -ne $checksumLine) {
 Write-Stage '6/6 完成：只需交付一个总包'
 Write-Host "RUN_ID: $runId" -ForegroundColor Green
 Write-Host "OVERALL STATUS: $overallStatus" -ForegroundColor $(if ($overallStatus -eq 'FAIL') { 'Red' } elseif ($overallStatus -eq 'PARTIAL_PASS') { 'Yellow' } else { 'Green' })
+Write-Host "Full project PASS authorized: $fullProjectPassAllowed"
+if ($fullProjectPassBlockers.Count -gt 0) {
+    Write-Host "Full project PASS blockers: $($fullProjectPassBlockers -join '; ')" -ForegroundColor Yellow
+}
 Write-Host "MATLAB status: $componentStatus (process exit $matlabExitCode)"
 Write-Host "FMAT-0018 ABI status: $abiStatus"
 Write-Host "ONE FILE TO SEND: $deliveryZip" -ForegroundColor Green
