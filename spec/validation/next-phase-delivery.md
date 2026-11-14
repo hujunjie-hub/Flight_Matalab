@@ -55,7 +55,7 @@
 
 ## 用户下一步
 
-按 [本地 MATLAB 验证交接说明](LOCAL_MATLAB_HANDOFF.md) 执行。必须交回 RUN_ID ZIP、同名 SHA-256 校验文件、Flight_Matlab/Flight 两个 commit、MATLAB Release 和完整组件总状态；若 Host SIL 重建修改了 config/flight_baseline.json，还必须把该文件单独发回，不要自行提交。不要单独发送截图代替归档。
+在 Flight_Matlab 根目录只需复制执行 `pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\run_local_validation.ps1`。脚本自动同步两个 main、运行 MATLAB、归档、在 ARM/Host 工具链可用时运行 ABI 检查，并生成一个 `_DELIVERY.zip` 与同名 `.sha256`。flight_baseline.json 已包含在 MATLAB 归档的 inputs/ 内，不用单独找文件。不要单独发送截图代替归档；完整说明见 [本地 MATLAB 验证交接说明](LOCAL_MATLAB_HANDOFF.md)。
 
 ---
 
