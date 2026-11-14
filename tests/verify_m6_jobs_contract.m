@@ -36,6 +36,18 @@ badCounters.solved=99;
 write_fixture(validation,badCounters,records);
 expect_failure(tempRoot,'FAIL');
 
+% Aggregate counters must also reconcile to the actual per-job outcomes.
+badOutcomeRecords=records;
+badOutcomeRecords(1).outcome=8; % RESIDUAL, not OK
+write_fixture(validation,stats,badOutcomeRecords);
+expect_failure(tempRoot,'FAIL');
+
+% Job IDs must be the complete 1-based sequence, not merely unique.
+badJobIds=records;
+badJobIds(1).job=0;
+write_fixture(validation,stats,badJobIds);
+expect_failure(tempRoot,'FAIL');
+
 % Coverage cannot exceed the actual full-run duration.
 badCoverage=stats;
 badCoverage.covered_us=2100001;
@@ -51,6 +63,7 @@ expect_failure(tempRoot,'FAIL');
 report=struct('scope','M6_JOB_EVIDENCE_CONTRACT','status','PASS', ...
     'valid_100_job_fixture','PASS','zero_job_not_run','PASS', ...
     'missing_record_rejected','PASS','counter_mismatch_rejected','PASS', ...
+    'aggregate_outcome_mismatch_rejected','PASS','invalid_job_id_rejected','PASS', ...
     'coverage_overflow_rejected','PASS','legacy_schema_rejected','PASS');
 disp(report);
 end
