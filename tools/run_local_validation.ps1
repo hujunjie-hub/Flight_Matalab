@@ -136,6 +136,13 @@ $projectCommit = Sync-MainRepository $repoRoot 'Flight_Matlab'
 $flightCommit = Sync-MainRepository $flightRoot 'Flight'
 
 New-Item -ItemType Directory -Force -Path $validationRoot,$archiveRoot | Out-Null
+$pendingValidationFiles = @(Get-ChildItem -LiteralPath $validationRoot -Force |
+    Where-Object { $_.Name -ne 'archives' })
+if ($pendingValidationFiles.Count -gt 0) {
+    Write-Host 'Unarchived validation evidence already exists; refusing to overwrite it:' -ForegroundColor Red
+    $pendingValidationFiles | ForEach-Object { Write-Host "  $($_.FullName)" -ForegroundColor Red }
+    throw 'Refusing to overwrite prior work/validation evidence. Hand off the existing files first.'
+}
 $runStarted = (Get-Date).ToUniversalTime()
 
 Write-Stage '1.5/6 检查本地验证脚本与验收清单一致性'
