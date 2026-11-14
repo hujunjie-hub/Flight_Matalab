@@ -8,6 +8,7 @@
 |---|---|
 | GitHub 仓库 | hujunjie-hub/Flight_Matlab |
 | 工作分支 | main（当前只保留 main） |
+| Flight_Matlab 当前 main HEAD | `2a6b89bdafbb0ad9165e70a2b5b3036d822f39a8` |
 | 接管起点 HEAD | 0cdfe3a41432834d424e4ecceec37977ffe837d5 |
 | PR #1 | 已合并；不得再按旧记录中的 Draft 状态处理 |
 | MATLAB 对当前 main 的完整复测 | NOT_RUN；必须由用户本地拉取最新 main 执行 |
@@ -18,14 +19,14 @@
 
 ## 2026-11-14 上游 Flight/main 同步复核
 
-本节覆盖前述 2026-11-13 历史归档之后的上游变化，优先级高于历史交付记录：
+本节覆盖前述历史归档之后的最新 Flight 上游状态，优先级高于后文历史交付记录：
 
-- 当前核对的 Flight/main 为 e470f00cd539f438b1923b0faa844456ba2d3b59。历史文档所引用的 1c7a72a 已落后 618 个提交；不能继续将该 commit 或它的 MATLAB 归档当作当前配套固件证据。
-- 这段上游变化涉及 applications/runtime/runtime_data.c、runtime_internal.h、Mission/Actuator task、MPC 和 FMS 等运行路径。必须在本地使用当前 Flight/main 重建 Host SIL 并重新运行完整 MATLAB 验收。
-- external_dependencies.lock.json 已更新为当前 Flight/main 的两个契约头 SHA-256，以及 OSQP UPSTREAM_LOCK.json 的规范化 CRLF SHA-256 91e6b16fbd39a1f8e407bb9056d82adbea192b45f2673e5855377b2c94cde37e；当前锁覆盖 42 个运行时文件（此前为 47）。OSQP/qdldl 上游版本和来源仍保持 v1.0.0 / v0.1.8。
-- 当前 Flight abi_lock.h 的生成清单为 144 types / 993 fields，新增项是 GroundStopCertificate（message registry ID 56，112 bytes / 7 fields）。但已提交的 tests/abi/evidence/abi_report.md 仍报告 143 / 986 和旧 registry SHA，与 abi_lock.h 不一致。Schema 6.0 / Product-Port 0x00010906 未变；上游需重新生成 ARM/Host ABI 报告并完成 revision review。见 FMAT-0018。
-- config/flight_baseline.json 的旧 sources_sha256 是历史记录。标准 run_component_checks 会先构建 Flight Host SIL 并重新记录当前源文件，再由 build_native_kernels 执行 verify_inputs.py。预检 PASS 才能继续 MATLAB gate。
-- 当前 main 的 MATLAB/Simulink 完整复测仍为 NOT_RUN。本轮锁文件和运行入口的修改只属于静态/仓库层变更，不构成 MATLAB 编译或仿真通过。
+- 当前 Flight/main HEAD：`3270cff5aec26e3ae0717c62d2d78e9f30752020`（`test: initialize FMS before missing-navigation regression`）。相较旧配套基线 `1c7a72a15f82979d0bee9cdd87b7f14f91ae9f78`，当前 main 已前进 631 个提交；不得再将旧 commit 或旧 MATLAB 归档作为当前配套固件证据。
+- 这段上游变化涉及 runtime 数据、Mission/Actuator task、MPC、FMS、Guidance、TimeService/Host SIL 等运行路径。必须在本地使用当前 Flight/main 重建 Host SIL 并重新运行完整 MATLAB 验收。
+- Flight_Matlab 的 `external_dependencies.lock.json` 已锁定 Flight 的契约头和 OSQP runtime lock（42 个运行时文件）；复核确认 `UPSTREAM_LOCK.json`、`abi_lock.h`、`product_contract.h` 自 e470f00 基线以来在当前 Flight/main 未再变化，因此本轮没有发现这三项输入的新增 Hash 漂移。完整 Host SIL 构建仍必须由本地一键验收实测。
+- ABI 证据冲突仍存在：当前 `abi_lock.h` 为 144 types / 993 fields，registry SHA-256 为 `27738a85e59d7232256158fe9ce70563e41c35fb074c2f2c0871eea1b678c148`；当前 `message_registry.json` 有 56 条消息，`GroundStopCertificate` 为 message ID 56。可是已提交的 `tests/abi/evidence/abi_report.md` 仍报告 143 / 986、55 registry entries，并绑定旧 SHA-256 `dd06554c240567d5f81b51e4aed39336ccf3e469c6c95a952d1a2d766bbc49e7`。旧报告的 PASS 不能代表当前锁和注册表已验证。见 FMAT-0018。
+- `config/flight_baseline.json` 的旧 `sources_sha256` 仍是历史快照。标准 `run_component_checks` 会先构建 Flight Host SIL 并重新记录当前源文件，再由 `build_native_kernels` 执行 `verify_inputs.py`；预检 PASS 才能继续 MATLAB gate。
+- 当前 main 的 MATLAB/Simulink 完整复测仍为 NOT_RUN。本轮代码、测试、SPEC 与一键脚本更新均属于仓库层变更，不构成 MATLAB 编译或仿真通过。
 
 ## 本轮代码与验证门禁更新
 
@@ -48,8 +49,8 @@
 | #15 / FMAT-0015 | FIXED_WAITING_RETEST | 上游数组边界修复已有结构化测试；等待当前配套基线的本地复测确认 |
 | #16 / FMAT-0016 | VERIFIED（Issue 仍 Open） | 归档分类有历史 8/8 证据；当前 main 回归后再结案 |
 | #17 / FMAT-0017 | VERIFIED（Issue 仍 Open） | P-10b 同 RUN_ID 对账有历史证据；当前 main 回归后再结案 |
-| #18 / FMAT-0018 | BLOCKED | Flight/main 比旧配套基线前进 618 个提交；GroundStopCertificate 是已存在类型新纳入 registry/ABI inventory，当前 lock 为 144/993，但 ARM/Host/compare 仍是 143/986、55 messages。须重跑 ABI 证据并审查 Product/Port revision policy；当前 MATLAB/Simulink 配套回归也未完成 |
-| #19 / FMAT-0019 | FIXED_WAITING_RETEST | M6 汇总 solved/rejected 与逐 job outcome 对账、covered_us=solved×20,000 us、job ID 连续性检查已提交；新增三项负向测试，等待本地 MATLAB 回归 |
+| #18 / FMAT-0018 | BLOCKED | 当前 Flight/main HEAD 为 `3270cff5`，比旧配套基线前进 631 个提交；GroundStopCertificate 为 message ID 56，当前 lock 为 144/993，但 ARM/Host/compare 仍是 143/986、55 messages。须重跑 ABI 证据并审查 Product/Port revision policy；当前 MATLAB/Simulink 配套回归也未完成 |
+| #19 / FMAT-0019 | FIXED_WAITING_RETEST | M6 汇总与逐 job outcome 对账、covered_us=solved×20,000 us、job ID 连续性和 coverage 超出整轮时长的拒绝用例已提交；等待本地 MATLAB 回归 |
 
 #12、#13 的用户决策仍是阻塞条件；继续处理与其无依赖的代码、测试和文档，不得绕过决策。#14 的 Host 核心通过不能替代板级证据。
 
