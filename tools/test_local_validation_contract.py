@@ -32,6 +32,8 @@ class LocalValidationContractTests(unittest.TestCase):
         self.assertIn("[string]$acceptanceManifest.branch -ne 'main'", self.script)
         self.assertIn("[string]$acceptanceManifest.repository -ne 'hujunjie-hub/Flight_Matlab'", self.script)
         self.assertIn("-not $fullProjectPassAllowed", self.script)
+        self.assertIn("$fullProjectPassAllowed -and $fullProjectPassBlockers.Count -gt 0", self.script)
+        self.assertIn("cannot be authorized while unresolved blockers remain", self.script)
         self.assertIn("Full project PASS blockers:", self.script)
 
     def test_failure_is_reported_after_delivery_package_is_created(self) -> None:
