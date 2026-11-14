@@ -51,7 +51,8 @@
     "inputs/flight_sil_recording.mat when present",
     "inputs/flight_baseline.json when present",
     "run_manifest.json with exact Flight_Matlab and Flight commit metadata",
-    "SHA-256 for each archived artifact"
+    "SHA-256 for each archived artifact",
+    "local_validation_contract_test.txt: local script/manifest contract preflight result"
   ],
   "canonical_locations": {
     "policy": "spec/quality/ISSUE_WORKFLOW.md",
