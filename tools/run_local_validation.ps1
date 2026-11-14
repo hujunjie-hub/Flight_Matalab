@@ -425,6 +425,7 @@ $summaryLines = @(
     "Full project PASS blockers: $($fullProjectPassBlockers -join '; ')",
     "Acceptance manifest read status: $manifestReadStatus",
     "Acceptance manifest read error: $manifestReadError",
+    "Acceptance manifest: $manifestPath",
     "Flight_Matlab commit: $projectCommit",
     "Flight commit: $flightCommit",
     "MATLAB process exit code: $matlabExitCode",
@@ -442,7 +443,7 @@ $summaryLines = @(
 $summaryLines | Set-Content -LiteralPath $summaryPath -Encoding utf8
 
 $deliveryZip = Join-Path $archiveRoot ($runId + '_DELIVERY.zip')
-$deliveryItems = @($matlabZip.FullName, $matlabChecksum, $summaryPath)
+$deliveryItems = @($matlabZip.FullName, $matlabChecksum, $summaryPath, $manifestPath)
 if ($abiZip -and (Test-Path -LiteralPath $abiZip)) {
     $deliveryItems += $abiZip
     $deliveryItems += $abiChecksum
