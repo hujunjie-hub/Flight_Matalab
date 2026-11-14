@@ -36,6 +36,13 @@ class LocalValidationContractTests(unittest.TestCase):
         self.assertIn("cannot be authorized while unresolved blockers remain", self.script)
         self.assertIn("Full project PASS blockers:", self.script)
 
+    def test_runner_refuses_to_overwrite_unarchived_evidence(self) -> None:
+        guard = self.script.index("$pendingValidationFiles = @(")
+        contract_log_write = self.script.index("Set-Content -LiteralPath $contractLogPath")
+        self.assertLess(guard, contract_log_write)
+        self.assertIn("$pendingValidationFiles.Count -gt 0", self.script)
+        self.assertIn("Refusing to overwrite prior work/validation evidence", self.script)
+
     def test_one_click_entry_runs_the_local_contract_test(self) -> None:
         self.assertIn("tools\\test_local_validation_contract.py", self.script)
         self.assertIn("$pythonExe -B $contractTestPath", self.script)
