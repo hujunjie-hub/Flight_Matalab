@@ -41,7 +41,7 @@
 ## 一键验证脚本静态 CI 结果（2026-11-14）
 
 - 新增 GitHub Actions workflow：`.github/workflows/static-validation.yml`，仅针对 main 推送/手动触发。
-- 最新 Run：`43596972875`，HEAD `4bc23e4890942836df81c3af004cb29754c6c24a`，结论 SUCCESS。
+- 最新 Run：`43597057167`，HEAD `0d1f184a3cc201ffe4c207538df6bcb5836312e4`，结论 SUCCESS。
 - PowerShell Parser：tools/ 下 3 个 `.ps1` 全部语法解析通过。
 - Python delivery contract：10/10 通过，覆盖 main-only、完整 PASS 授权门、manifest 身份/阻塞条件、未归档证据原样打包且不覆盖原件、dirty worktree 先打包再停止、本地预检失败包、失败先归档打包再返回非零、总包包含实际 manifest、PARTIAL_PASS 不冒充 PASS。
 - 可执行 SPEC 引用检查：13 个 case、192 次多项式极值检查 PASS。
