@@ -131,8 +131,8 @@ pwsh -NoProfile -File .\tools\archive_validation_run.ps1
 
 - 唯一 RUN_ID，格式为 YYYYMMDDTHHMMSSfffZ_<commit-short>；
 - work/validation/archives/<RUN_ID>/ 归档目录；
-- work/validation/archives/<RUN_ID>.zip；
-- work/validation/archives/<RUN_ID>.zip.sha256。
+- work/validation/archives/RUN_ID.zip；
+- work/validation/archives/RUN_ID.zip.sha256。
 
 归档包含本轮 JSON 报告、MATLAB Diary、源码/产物指纹、运行前后 Git 状态、生成资产分类、run_manifest.json 和本轮 scenarios/flight_sil_recording.mat 副本。模型、字典和 MEX 的文件哈希会登记在 artifact fingerprint；默认不把所有 .slx/.sldd 二进制文件重复塞入 ZIP。
 
@@ -150,8 +150,8 @@ pwsh -NoProfile -File .\tools\archive_validation_run.ps1
 
 | 文件/信息 | 必须 | 用途 |
 |---|---|---|
-| <RUN_ID>.zip | 是 | 本轮完整证据包 |
-| <RUN_ID>.zip.sha256 | 是 | 校验 ZIP 未损坏或被替换 |
+| RUN_ID.zip | 是 | 本轮完整证据包 |
+| RUN_ID.zip.sha256 | 是 | 校验 ZIP 未损坏或被替换 |
 | RUN_ID | 是 | 关联报告与问题记录 |
 | Flight_Matlab 完整 commit SHA | 是 | 确认被测源码 |
 | Flight 完整 commit SHA | 是 | 确认固件上游基线 |
