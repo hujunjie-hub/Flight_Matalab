@@ -112,10 +112,11 @@ diary off;
 完整入口会自动：
 
 1. 重建同级 Flight 的 Windows Host SIL 运行库。
-2. 重建本项目 MEX、参数字典、Plant、Flight、PID/Actuation 模型。
-3. 运行 26 s 默认 MIL 闭环并刷新 DataSIM、ExtINS DataSIM 回放。
-4. 运行 M6 job 证据完整性、OSQP、Plant、传感器事件队列、TimeService、GNSS、RECTIMEA、真值隔离、PID 和执行器等组件 gate。
-5. 生成当前运行的 JSON 报告、源码指纹、模型/字典/MEX/录制文件指纹及运行前后 Git 状态。
+2. 重建本项目 MEX；build_native_kernels 会重新执行 verify_inputs.py，input_preflight.json 必须为 PASS，且会登记到 component_checks.checks.input_preflight。
+3. 重建参数字典、Plant、Flight、PID/Actuation 模型。
+4. 运行 26 s 默认 MIL 闭环并刷新 DataSIM、ExtINS DataSIM 回放。
+5. 运行 M6 job 证据完整性、OSQP、Plant、传感器事件队列、TimeService、GNSS、RECTIMEA、真值隔离、PID 和执行器等组件 gate。
+6. 生成当前运行的 JSON 报告、源码指纹、模型/字典/MEX/录制文件指纹及运行前后 Git 状态。
 
 不要用单独的 verify_flight_entries 或单个 Plant 测试代替完整验收。单项调试可以额外执行，但正式交付仍需完整入口。
 
