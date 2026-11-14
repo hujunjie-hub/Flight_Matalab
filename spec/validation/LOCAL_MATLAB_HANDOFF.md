@@ -206,7 +206,7 @@ ZIP 正常时，不需要再单独发送 ZIP 内已有的每一份 JSON 或 MAT 
 | Issue | 当前状态 | 当前约束 |
 |---|---|---|
 | FMAT-0012 | BLOCKED | 488/488 MPC job 求解通过、消费点使用率 95.0%，但现有整轮覆盖率分母为 37.54%；等待用户确认口径，不改 90% 阈值或当前分母 |
-| FMAT-0013 | BLOCKED | Flight M7 执行器侧 Ground Stop 证书、限速降推力和 ZERO_TARGET_APPLIED 回执已有 230/230 Host 检查；但 FMS PRODUCT_CMD_DISARM 仍缺少由真实回执驱动的 DISARMING→DISARMED 状态闭环。该固件契约/异步 ACK 变更等待用户批准，批准前不修改公共 ICD/ABI；闭环实现后再补本项目 Host MIL 端到端断言 |
+| FMAT-0013 | BLOCKED | Flight M7 执行器侧 Ground Stop 证书、限速降推力和 ZERO_TARGET_APPLIED 回执已有 230/230 Host 检查；但当前 FMS 仍未用该回执驱动状态迁移：fms_build_ground_stop_certificate 要求快照已是 DISARMED，而 PRODUCT_CMD_DISARM 会在同一 handler 内从 DISARMING 直接转 DISARMED 并返回 COMPLETED。需先获用户批准异步 ACK/公共契约变更，再实现真实回执驱动闭环，之后补本项目 Host MIL 端到端断言 |
 | FMAT-0014 | IN_PROGRESS | Host 时间服务核心证据与板级 TIM2、真实 UART/DMA、sensor_gnss_poll 全链路证据分开记录；P-10 overall 保持 PARTIAL |
 | FMAT-0015 | FIXED_WAITING_RETEST | 上游数组边界修复及结构化边界测试需随当前固件基线回归确认 |
 | FMAT-0016 / 0017 | VERIFIED（Issue 仍 Open） | 归档分类和 P-10b 数字对账已有历史证据；当前 main 完整复测后再按关闭清单结案 |
