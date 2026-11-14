@@ -36,12 +36,16 @@ class LocalValidationContractTests(unittest.TestCase):
         self.assertIn("cannot be authorized while unresolved blockers remain", self.script)
         self.assertIn("Full project PASS blockers:", self.script)
 
-    def test_runner_refuses_to_overwrite_unarchived_evidence(self) -> None:
+    def test_runner_packages_pending_evidence_without_overwriting(self) -> None:
         guard = self.script.index("$pendingValidationFiles = @(")
-        contract_log_write = self.script.index("Set-Content -LiteralPath $contractLogPath")
-        self.assertLess(guard, contract_log_write)
+        package = self.script.index("Compress-Archive -LiteralPath $pendingItems")
+        checksum = self.script.index("$pendingVerifiedHash =")
+        pending_exit = self.script.index("exit 1", guard)
+        self.assertLess(guard, package)
+        self.assertLess(package, checksum)
+        self.assertLess(checksum, pending_exit)
         self.assertIn("$pendingValidationFiles.Count -gt 0", self.script)
-        self.assertIn("Refusing to overwrite prior work/validation evidence", self.script)
+        self.assertIn("Existing validation files were packaged as-is; originals were not deleted or modified.", self.script)
 
     def test_runner_packages_pending_evidence_without_deleting_it(self) -> None:
         self.assertIn("$pendingValidationFiles.Count -gt 0", self.script)
@@ -73,9 +77,10 @@ class LocalValidationContractTests(unittest.TestCase):
         self.assertIn("preflight failure summary", self.issue_workflow["archive_contains"][-1])
 
     def test_preflight_failure_packages_evidence_before_nonzero_exit(self) -> None:
-        package = self.script.index("Compress-Archive -LiteralPath $preflightItems")
-        checksum = self.script.index("$preflightVerifiedHash =")
-        preflight_exit = self.script.index("exit 1")
+        preflight_start = self.script.index("if ($contractExitCode -ne 0)")
+        package = self.script.index("Compress-Archive -LiteralPath $preflightItems", preflight_start)
+        checksum = self.script.index("$preflightVerifiedHash =", preflight_start)
+        preflight_exit = self.script.index("exit 1", preflight_start)
         self.assertLess(package, checksum)
         self.assertLess(checksum, preflight_exit)
         self.assertIn("LOCAL_VALIDATION_CONTRACT_PREFLIGHT", self.script)
