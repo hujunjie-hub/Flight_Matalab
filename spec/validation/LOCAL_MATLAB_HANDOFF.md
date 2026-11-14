@@ -211,15 +211,13 @@ python -B .\tools\verify_inputs.py
 
 因此，本轮 component_checks.json 仍可能因 FMAT-0012 的 coverage_90 返回 FAIL。这是当前未解决的验收合同问题，不代表可以跳过 M6，也不应通过修改门槛来消除。plant_open_loop_report.json.status=PARTIAL 和 P-10 overall PARTIAL 是当前设计边界的如实记录。
 
-### FMAT-0018 的独立 ABI 验证（与 MATLAB 完整运行分开）
+### FMAT-0018 的独立 ABI 验证
 
-在同级 Flight 仓库切换并同步 main 后，先完成并归档 Flight_Matlab 的 MATLAB 运行，再从 Flight 根目录执行：
+正常情况下，tools/run_local_validation.ps1 已在 MATLAB 证据归档之后自动运行 ARM/Host ABI 检查，并把新证据打包进 RUN_ID_ABI.zip。无需再次手工运行。
 
-~~~powershell
-python -B tests\abi\abi_report.py --arm-bin D:\STM32CubeCLT\GNU-tools-for-STM32\bin --host-bin D:\STM32CubeCLT\mingw64\bin
-~~~
+只有总包显示 ABI 为 SKIPPED_TOOLCHAIN_MISSING 时，才需要补齐 ARM/Host 工具链后重新运行一键脚本。工具链路径不同，使用第 3.3 节的带参数命令。
 
-不要添加 `--emit-lock`，不要手工改 abi_lock.h 或 Product/Port revision。该命令会刷新 ARM/Host 编译证据、比较报告和 artifact SHA 清单，并对当前 abi_lock 做校验。预期应明确显示 144 public types、993 fields、56/56 message registry，ARM 与 Host 证据来自同一轮运行，ABI lock 和 spec layout 检查 PASS。若不是该结果，保留完整终端输出及生成的 evidence 文件并交回；不要用旧的 143/986、55-message 报告关闭 FMAT-0018。即使该命令通过，Product/Port revision 是否保持 0x00010906 仍需独立审查结论。
+ABI 命令的固定规则：不得添加 --emit-lock，不得手工改 abi_lock.h 或 Product/Port revision。预期应明确显示 144 public types、993 fields、56/56 message registry，ARM 与 Host 证据来自同一轮运行，ABI lock 和 spec layout 检查 PASS。若不是该结果，保留报告交回；不要用旧的 143/986、55-message 报告关闭 FMAT-0018。即使该命令通过，Product/Port revision 是否保持 0x00010906 仍需独立审查结论。
 
 implementation_manifest.json 当前仍是旧证据，不能作为本轮交付 PASS。只有 input_preflight、flight_entries、cold_start_report 为 PASS，Plant 为 PARTIAL、component_checks 为 PARTIAL_PASS 且 M6/P-10b gate 通过后，才可运行 tools/write_implementation_manifest.py 生成 PARTIAL_PASS_HOST_SIL 清单；它不是本轮必须单独发送的文件。
 
