@@ -166,7 +166,7 @@ pwsh -NoProfile -File .\tools\archive_validation_run.ps1
 | GCC 路径/版本及 MEX 编译器 | 是 | 定位构建差异 |
 | component_checks.json 顶层状态 | 是 | 快速判断本轮 PASS/FAIL/PARTIAL_PASS |
 
-ZIP 正常时，不需要再单独发送 ZIP 内已有的每一份 JSON 或 MAT 文件。
+ZIP 正常时，不需要再单独发送 ZIP 内已有的每一份 JSON 或 MAT 文件。唯一例外是本轮重建后发生变化的 config/flight_baseline.json：它是需要纳入 Git 的配套源码基线，必须另行交付给验收方审查。
 
 ### 6.2 需要额外发送的文件
 
