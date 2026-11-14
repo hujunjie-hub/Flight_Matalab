@@ -8,7 +8,6 @@
 |---|---|
 | GitHub 仓库 | hujunjie-hub/Flight_Matlab |
 | 工作分支 | main（当前只保留 main） |
-| Flight_Matlab 当前 main HEAD | `2a6b89bdafbb0ad9165e70a2b5b3036d822f39a8` |
 | 接管起点 HEAD | 0cdfe3a41432834d424e4ecceec37977ffe837d5 |
 | PR #1 | 已合并；不得再按旧记录中的 Draft 状态处理 |
 | MATLAB 对当前 main 的完整复测 | NOT_RUN；必须由用户本地拉取最新 main 执行 |
