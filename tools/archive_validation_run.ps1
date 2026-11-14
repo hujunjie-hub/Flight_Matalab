@@ -112,10 +112,16 @@ foreach ($item in $payloadItems) {
     Copy-Item -LiteralPath $item.FullName -Destination $runDirectory -Recurse -Force
 }
 
+$inputDirectory = Join-Path $runDirectory "inputs"
+New-Item -ItemType Directory -Force -Path $inputDirectory | Out-Null
 if (Test-Path -LiteralPath $scenarioPath -PathType Leaf) {
-    $inputDirectory = Join-Path $runDirectory "inputs"
-    New-Item -ItemType Directory -Force -Path $inputDirectory | Out-Null
     Copy-Item -LiteralPath $scenarioPath -Destination (Join-Path $inputDirectory "flight_sil_recording.mat") -Force
+}
+$baselinePath = Join-Path $repoRoot "config/flight_baseline.json"
+if (Test-Path -LiteralPath $baselinePath -PathType Leaf) {
+    # Include the exact regenerated upstream baseline in the run archive so
+    # the user does not need to locate or send this file separately.
+    Copy-Item -LiteralPath $baselinePath -Destination (Join-Path $inputDirectory "flight_baseline.json") -Force
 }
 
 $componentStatus = "NO_COMPONENT_REPORT"
