@@ -34,17 +34,17 @@ function Sync-MainRepository([string]$RepoPath, [string]$Label) {
         throw "Commit or hand off these local changes first, then rerun. The script never resets or cleans a worktree."
     }
 
-    Invoke-Git $RepoPath @('fetch', 'origin', '--prune')
+    Invoke-Git -RepoPath $RepoPath -GitArgs @('fetch', 'origin', '--prune')
 
     $mainBranch = @(& git -C $RepoPath branch --list main)
     if ($LASTEXITCODE -ne 0) { throw "Cannot inspect $Label local branches." }
     if ($mainBranch.Count -eq 0) {
-        Invoke-Git $RepoPath @('switch', '--track', '-c', 'main', 'origin/main')
+        Invoke-Git -RepoPath $RepoPath -GitArgs @('switch', '--track', '-c', 'main', 'origin/main')
     } else {
-        Invoke-Git $RepoPath @('switch', 'main')
+        Invoke-Git -RepoPath $RepoPath -GitArgs @('switch', 'main')
     }
 
-    Invoke-Git $RepoPath @('pull', '--ff-only', 'origin', 'main')
+    Invoke-Git -RepoPath $RepoPath -GitArgs @('pull', '--ff-only', 'origin', 'main')
 
     $branch = (& git -C $RepoPath branch --show-current).Trim()
     if ($LASTEXITCODE -ne 0 -or $branch -ne 'main') {
