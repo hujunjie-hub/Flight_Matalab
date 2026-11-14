@@ -489,7 +489,10 @@
       "1": "MATLAB process/component checks or the optional ABI check failed; the delivery package is still created first when archiving and packaging succeed.",
       "pre_package_error": "If synchronization, MATLAB evidence archival, or package creation itself fails, preserve work/validation and terminal output; do not clean or reset."
     },
-    "failure_policy": "Never delete or overwrite user changes. A nonzero test exit must not suppress delivery evidence."
+    "failure_policy": "Never delete or overwrite user changes. A nonzero test exit must not suppress delivery evidence.",
+    "preflight_contract_test": "tools/test_local_validation_contract.py",
+    "preflight_contract_log": "work/validation/local_validation_contract_test.txt",
+    "preflight_required": true
   },
   "full_project_pass_allowed": false,
   "full_project_pass_blockers": [
