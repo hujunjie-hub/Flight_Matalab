@@ -42,7 +42,7 @@
 | Issue | 当前状态 | 本轮处理边界 |
 |---|---|---|
 | #12 / FMAT-0012 | BLOCKED | 488/488 MPC jobs、95.0% 消费点使用率已有历史证据；整轮口径 37.54%，等待用户确认合同分母。当前代码仍按整轮口径判定，不得自行改为消费点口径 |
-| #13 / FMAT-0013 | BLOCKED | Flight M7 执行器侧证书→限速降推力→ZERO_TARGET_APPLIED 回执已有 230/230 Host 检查；但 FMS PRODUCT_CMD_DISARM 仍缺少真实回执驱动的 DISARMING→DISARMED 状态闭环。等待用户批准公共契约/异步 ACK 语义；批准前不改 ICD/ABI，闭环实现后再补本项目 Host MIL 端到端断言 |
+| #13 / FMAT-0013 | BLOCKED | Flight M7 执行器侧证书→限速降推力→ZERO_TARGET_APPLIED 回执已有 230/230 Host 检查；但 fms_build_ground_stop_certificate 要求快照已是 DISARMED，而 PRODUCT_CMD_DISARM 在同一 handler 内从 DISARMING 直接转 DISARMED 并返回 COMPLETED，未等待真实回执。等待用户批准公共契约/异步 ACK 语义；批准前不改 ICD/ABI，闭环实现后再补本项目 Host MIL 端到端断言 |
 | #14 / FMAT-0014 | IN_PROGRESS | Host 时间服务/GNSS 核心测试与真实 TIM2、UART/DMA、sensor_gnss_poll 和板级证据分开；P-10 overall 保持 PARTIAL |
 | #15 / FMAT-0015 | FIXED_WAITING_RETEST | 上游数组边界修复已有结构化测试；等待当前配套基线的本地复测确认 |
 | #16 / FMAT-0016 | VERIFIED（Issue 仍 Open） | 归档分类有历史 8/8 证据；当前 main 回归后再结案 |
