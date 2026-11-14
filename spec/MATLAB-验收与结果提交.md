@@ -11,7 +11,13 @@
 
 ## 1. 唯一验收入口
 
-当前分支统一使用以下命令完成构建、组件测试、Plant 测试、传感器事件测试、Flight 三入口回放和数据指纹记录：
+用户本地的唯一一键入口为以下 PowerShell 命令；它会自动同步两个 main、启动 MATLAB、保存 Diary、执行验收、归档并在工具链可用时运行 ABI 检查：
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\\tools\\run_local_validation.ps1
+```
+
+MATLAB 内部唯一验收入口仍为 `run_component_checks`，用于完成构建、组件测试、Plant 测试、传感器事件测试、Flight 三入口回放和数据指纹记录。需要手工调试时可直接在 MATLAB 调用：
 
 ```matlab
 run_component_checks
@@ -31,7 +37,7 @@ run_component_checks
 run_component_checks('C:\STM32CubeCLT\mingw64\bin')
 ```
 
-默认编译器目录为 `D:\STM32CubeCLT\mingw64\bin`。运行前需打开 `Flight_Matalab.prj`，确认 `mex -setup C` 已选择可用 C 编译器，并确保 Windows `pwsh` 可执行。
+默认编译器目录为 `D:\STM32CubeCLT\mingw64\bin`。一键脚本会通过 `flight_startup` 配置工程路径，并检查 MEX C 编译器；未选择时会尝试执行 `mex -setup C`。首次自动配置失败时，再在 MATLAB Desktop 手工选择一次。
 
 ## 2. 工程和依赖前提
 
@@ -199,25 +205,13 @@ Flight 入口诊断约定：`verify_flight_entries` 在 MIL 断言之前写出 `
 5. Flight 三入口当前集成验收为 26 s 默认任务，不等于旧版系统规格中所有 30 s、故障矩阵、MPC RMS 和覆盖率要求均已实现。
 6. 当前所有结果仅是 PC MATLAB/Simulink + Windows Host SIL/SIM_ONLY 模型验证，不构成 MCU 实时性、PIL/HIL、传感器实物标定或实飞放行。
 
-每次运行后，先关闭 Diary，再归档；不要直接覆盖上一轮证据。
-
-```matlab
-root=flight_startup;
-reportDir=fullfile(root,'work','validation');
-if ~isfolder(reportDir), mkdir(reportDir); end
-diary(fullfile(reportDir,'matlab_acceptance_diary.txt'));
-diary on;
-run_component_checks;
-diary off;
-```
-
-然后在仓库根目录执行：
+正常情况下不要再分别复制 MATLAB 和归档命令；在 Flight_Matlab 根目录只执行一次：
 
 ```powershell
-pwsh -File .\\tools\\archive_validation_run.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\\tools\\run_local_validation.ps1
 ```
 
-归档脚本会生成唯一 `RUN_ID`，把本轮所有 JSON 报告、Diary、源数据指纹和本次 `flight_sil_recording.mat` 副本放入 `work/validation/archives/<RUN_ID>/`，生成 `<RUN_ID>.zip`，并记录 Flight_Matalab/Flight commit、运行状态及各证据文件的 SHA-256；ZIP 自身的 SHA-256 写入同名 `.sha256` 校验文件。归档成功后只清空当前工作区顶层临时文件，历史 `archives/` 不会被删除。每个 RUN_ID 不可覆盖；失败或中断的运行也要归档，状态保留为 FAIL/INCOMPLETE。
+该脚本会保存 MATLAB Diary 和 batch 控制台日志；无论测试通过还是失败都尝试归档。归档脚本会生成唯一 `RUN_ID`，将本轮 JSON 报告、源码/产物指纹、`flight_sil_recording.mat` 和准确的 `config/flight_baseline.json` 放入 `work/validation/archives/<RUN_ID>/`，生成 MATLAB 证据 ZIP。之后一键脚本会运行 FMAT-0018 ABI 检查（工具链可用时），并将 MATLAB ZIP、ABI ZIP、各自 SHA-256 和运行摘要合并成唯一 `<RUN_ID>_DELIVERY.zip` 及其 `.sha256`。用户只需交付总包和校验文件。失败或中断的运行也要归档，状态保留为 FAIL/INCOMPLETE。
 ### 归档证据模型（manifest schema 1.1）
 
 `run_manifest.json` 从 1.1 起把"源码输入"和"生成产物"分开记录，详见 [验收归档证据模型](validation/archive-evidence-model.md)：
