@@ -1,5 +1,5 @@
 {
-  "schema": "flight-matalab-issue-workflow/1.0",
+  "schema": "flight-matalab-issue-workflow/1.1",
   "issue_system_of_record": "GitHub Issues",
   "issue_id_format": "FMAT-{github_issue_number:04d}",
   "no_duplicate_csv_or_markdown_ledger": true,
@@ -44,14 +44,14 @@
   "test_result_and_issue_status_are_independent": true,
   "run_id_format": "YYYYMMDDTHHMMSSfffZ_<project-commit-short>",
   "evidence_root": "work/validation/archives",
-  "archive_command": "pwsh -File ./tools/archive_validation_run.ps1",
+  "archive_command": "pwsh -NoProfile -ExecutionPolicy Bypass -File .\\tools\\run_local_validation.ps1",
   "archive_contains": [
-    "all work/validation reports",
-    "matlab_acceptance_diary.txt",
-    "scenarios/flight_sil_recording.mat",
-    "run_manifest.json",
-    "SHA-256 for each archived artifact",
-    "Flight_Matalab and Flight commit metadata"
+    "all current work/validation reports and logs",
+    "matlab_acceptance_diary.txt when produced",
+    "inputs/flight_sil_recording.mat when present",
+    "inputs/flight_baseline.json when present",
+    "run_manifest.json with exact Flight_Matlab and Flight commit metadata",
+    "SHA-256 for each archived artifact"
   ],
   "canonical_locations": {
     "policy": "spec/quality/ISSUE_WORKFLOW.md",
@@ -61,7 +61,9 @@
     "versioned_test_manifest": "spec/validation/matlab_acceptance_manifest.json",
     "transient_reports": "work/validation/",
     "immutable_run_archives": "work/validation/archives/<RUN_ID>/",
-    "run_zip": "work/validation/archives/<RUN_ID>.zip"
+    "run_zip": "work/validation/archives/<RUN_ID>.zip",
+    "delivery_zip": "work/validation/archives/<RUN_ID>_DELIVERY.zip",
+    "delivery_checksum": "work/validation/archives/<RUN_ID>_DELIVERY.zip.sha256"
   },
   "closure_requires": [
     "confirmed root cause or accepted explicit disposition",
@@ -74,5 +76,15 @@
   ],
   "issue_numbering_note": "GitHub Issues and Pull Requests share the repository issue-number sequence; derive FMAT ID from the actual GitHub Issue number. Do not assume the first issue is #1.",
   "zip_checksum_sidecar": "work/validation/archives/<RUN_ID>.zip.sha256",
-  "agent_entrypoint": "spec/AGENT-操作指南.md"
+  "agent_entrypoint": "spec/AGENT-操作指南.md",
+  "internal_archive_command": "pwsh -NoProfile -File .\\tools\\archive_validation_run.ps1",
+  "delivery_files": [
+    "work/validation/archives/<RUN_ID>_DELIVERY.zip",
+    "work/validation/archives/<RUN_ID>_DELIVERY.zip.sha256"
+  ],
+  "exit_code_policy": {
+    "0": "Package created; acceptance result is PASS or PARTIAL_PASS as stated in the summary. PARTIAL_PASS is not a full PASS.",
+    "1": "MATLAB process/component checks or ABI checks failed; package is still created when archive and package steps succeed.",
+    "pre_package_error": "If archive/package creation fails, preserve work/validation and terminal output."
+  }
 }
