@@ -74,7 +74,10 @@ class LocalValidationContractTests(unittest.TestCase):
             "local_validation_contract_test.txt" in item
             for item in self.issue_workflow["archive_contains"]
         ))
-        self.assertIn("preflight failure summary", self.issue_workflow["archive_contains"][-1])
+        self.assertTrue(any(
+            "summary" in item and ("MATLAB_NOT_STARTED" in item or "MATLAB was not started" in item)
+            for item in self.issue_workflow["archive_contains"]
+        ))
 
     def test_preflight_failure_packages_evidence_before_nonzero_exit(self) -> None:
         preflight_start = self.script.index("if ($contractExitCode -ne 0)")
