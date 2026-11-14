@@ -46,6 +46,7 @@
 | #15 / FMAT-0015 | FIXED_WAITING_RETEST | 上游数组边界修复已有结构化测试；等待当前配套基线的本地复测确认 |
 | #16 / FMAT-0016 | VERIFIED（Issue 仍 Open） | 归档分类有历史 8/8 证据；当前 main 回归后再结案 |
 | #17 / FMAT-0017 | VERIFIED（Issue 仍 Open） | P-10b 同 RUN_ID 对账有历史证据；当前 main 回归后再结案 |
+| #18 / FMAT-0018 | BLOCKED | Flight/main 比旧配套基线前进 618 个提交；依赖锁已更新，ABI inventory 差异和当前 MATLAB/Simulink 配套回归仍待确认 |
 
 #12、#13 的用户决策仍是阻塞条件；继续处理与其无依赖的代码、测试和文档，不得绕过决策。#14 的 Host 核心通过不能替代板级证据。
 
