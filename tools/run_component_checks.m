@@ -3,6 +3,10 @@ function report=run_component_checks(gccDir)
 if nargin<1, gccDir='D:\STM32CubeCLT\mingw64\bin'; end
 root=flight_startup;
 file=fullfile(root,'work','validation','component_checks.json');
+preflightFile=fullfile(root,'work','validation','input_preflight.json');
+% A previous run must have been archived before starting another run. Remove
+% its preflight snapshot so a runtime-build failure cannot inherit an old PASS.
+if isfile(preflightFile), delete(preflightFile); end
 report=struct('scope','IMPLEMENTED_COMPONENTS_AND_ENTRY_REPLAY','status','IN_PROGRESS', ...
     'acceptance_profile','CURRENT_BRANCH_MATLAB_HOST_MIL', ...
     'checks',struct);
@@ -23,7 +27,6 @@ try
     % build_native_kernels runs verify_inputs.py after the upstream Host SIL
     % rebuild has regenerated flight_baseline.json. Keep that preflight in the
     % archived component report so stale headers/OSQP/KF-GINS inputs fail closed.
-    preflightFile=fullfile(root,'work','validation','input_preflight.json');
     assert(isfile(preflightFile),'Flight:InputPreflightReport', ...
         'verify_inputs.py did not produce input_preflight.json.');
     report.checks.input_preflight=jsondecode(fileread(preflightFile));
@@ -71,6 +74,16 @@ try
 catch exception
     report.status='FAIL';
     report.error=struct('identifier',exception.identifier,'message',exception.message);
+    % Preserve the current run's input preflight even if a later MEX/model build
+    % fails. The old file was removed before the run, so this cannot be stale.
+    if isfile(preflightFile)
+        try
+            report.checks.input_preflight=jsondecode(fileread(preflightFile));
+        catch preflightException
+            report.checks.input_preflight=struct('status','UNREADABLE', ...
+                'error',preflightException.message);
+        end
+    end
     % A failing run must still explain what it changed, otherwise the archive
     % cannot distinguish a broken build from a dirty worktree.
     try
