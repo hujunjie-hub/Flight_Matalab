@@ -375,10 +375,17 @@ try {
         throw "Acceptance manifest is missing: $manifestPath"
     }
     $acceptanceManifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    if ([string]$acceptanceManifest.branch -ne 'main' -or
+        [string]$acceptanceManifest.repository -ne 'hujunjie-hub/Flight_Matlab') {
+        throw 'Acceptance manifest repository/branch does not match the synchronized main worktree.'
+    }
     if ($null -eq $acceptanceManifest.full_project_pass_allowed) {
         throw 'Acceptance manifest does not declare full_project_pass_allowed.'
     }
     $fullProjectPassAllowed = [bool]$acceptanceManifest.full_project_pass_allowed
+    if (-not $fullProjectPassAllowed -and @($acceptanceManifest.full_project_pass_blockers).Count -eq 0) {
+        throw 'Full project PASS is disabled but no blockers are recorded in the acceptance manifest.'
+    }
     $fullProjectPassBlockers = @($acceptanceManifest.full_project_pass_blockers)
 }
 catch {
