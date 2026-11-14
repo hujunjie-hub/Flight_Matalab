@@ -37,6 +37,7 @@ run_component_checks('C:\STM32CubeCLT\mingw64\bin')
 
 - `Flight_Matalab` 与 `Flight` 必须处于同级目录；本项目从 `../Flight` 读取固件权威参数、Host SIL 源码、TimeService、GNSS 和 UM982 协议实现。
 - `config/firmware_sources.json`、`config/flight_baseline.json`、`external_dependencies.lock.json` 是依赖与版本核验依据。不要用不匹配的 Flight 工作树运行后再把结果作为本分支验收。
+- 首次同步新的 Flight/main 后，先由 build_flight_runtime.ps1 重建 Host SIL 并重录 flight_baseline.json；随后 build_native_kernels 会运行 verify_inputs.py 检查契约头、OSQP 运行时锁、KF-GINS 文件和 SIM_ONLY 参数。run_component_checks 已将 input_preflight.json 纳入 component_checks.json。不要在首次重建之前先运行旧基线预检，也不要手工改 Hash 绕过失败。
 - 默认构建脚本使用 Windows PowerShell 7（`pwsh`）和 MinGW GCC/G++。编译器缺失、依赖路径错误、上游源文件 Hash 不匹配都属于构建失败，不是可忽略警告。
 - 每次拉取新代码、修改配置、模型或测试数据后，都必须重新运行完整入口；不得沿用旧的 `work/validation` 报告、旧 DLL/MEX 或旧模型缓存。
 - `config/SIM_ONLY/QUAD_X4` 是仿真专用参数，不是实机标定数据；当前通过只代表当前 SIM_ONLY 配置下的数值/软件行为符合相应标准。
