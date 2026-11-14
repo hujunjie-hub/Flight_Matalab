@@ -218,6 +218,7 @@
   "limitation": "Mathematical and finite protocol references only; not Simulink integration or firmware proof.",
   "script_sha256": "51f975b65dee42dc2c655c953c49cef1092d6233d2bf3a0404ce6cb382bccfc6",
   "document_sha256": {
+    "AGENT-操作指南.md": "c4a664c8fc359be1c5c880f05a60eb8d1d3818091dafbbbdbd1180b9d101523c",
     "FlightSIM-architecture.md": "b7651f65db0c20abc2fccc36562a5fb6d8d29921c793cbecd9d2c3240b48e224",
     "FlightSIM-control.md": "55428facca63d700b7edd4079bcadf6515576233295d0cc065f1c91e7f766a22",
     "FlightSIM-data-replay.md": "7448a52c4a28ea53c6a91dae1024e60f6e406b79f89c4af60a4317f27b5d7c9d",
@@ -230,11 +231,12 @@
     "FlightSIM-review-log.md": "0ebb1216333a83d7792d434b21038991daa9326bf0fda1caf5aea1179007d703",
     "FlightSIM-stateflow.md": "6a297958752b3f58a02de183d4ee562412969f67f954680c1682f9c82ccfa54b",
     "FlightSIM-system.md": "56b4721dfa6fe5570326af4925545b3dedfba55afb0209a7f555b32dc771eaf6",
-    "FlightSIM-test-plan.md": "86cd6ed5548b857dc7bdc3265ef1ce2888e35473f40c25d3557521a907fcb23b",
-    "QuadPlant-architecture.md": "0762f4b9f478a1b2cc014adaea9e8ae7af55522f4c74efb3e78c59f54fbc436c",
-    "QuadPlant-implementation-plan.md": "b08356a2f710aa2c24ffd5f6efd3c3afa5e945d3c20f8c2c33427244ebfd0818",
-    "QuadPlant-system.md": "983681179419261b73c4e2d74093ae32458f1eb94452e321c683bf4c81459b00",
-    "QuadPlant-test-plan.md": "3d68f84665a7f0607a07a8befe9679624c3f159bcbcb0216b46d25bd9162d343",
-    "README.md": "5c4dce0e91fbe0fe490810e2963973b4309bf4dfc3a36c8e1379f7fc3853f779"
+    "FlightSIM-test-plan.md": "1bd3aec94dae33494dd863daffd0b7256dd79081e9a3133909c93b124ed77fbd",
+    "MATLAB-验收与结果提交.md": "faea1afb4bde1416a69888cf2b33b98439fa48101ce4320dc32b28a300c87a2a",
+    "QuadPlant-architecture.md": "60de7dbf6efa99d52b5eed4fee1ec04dd837c51cab1ce6bbbcbe7eec7ea8b3e7",
+    "QuadPlant-implementation-plan.md": "f29b37c1b90c346be62dcb69af79c0b436321cad15b90114e4fa2947c0818a9d",
+    "QuadPlant-system.md": "dfedcbbf8d1b8e63316147f543696af2b55b61aa52e9346d2420fbe31c472d24",
+    "QuadPlant-test-plan.md": "2fb6debba7deb9829db33737b5982215e7d0e2ba13a33a2deb9fd5eefafb5253",
+    "README.md": "655f061a1e8632246379ce18159893a467e81cbbf5228ac5a63f394caaf32c25"
   }
 }

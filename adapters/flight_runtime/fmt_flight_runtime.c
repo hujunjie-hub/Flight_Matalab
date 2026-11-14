@@ -1,9 +1,79 @@
 /* Reuse Flight's RT-Thread host device/clock stubs and real task translation
  * units. The standalone SIL scenario and its UDP helpers are never called. */
+/* The MIL must exercise the firmware time service, not the SIL stub. */
+#define FLIGHT_HOST_REAL_TIME_SERVICE 1
 #define main flight_standalone_sil_main
 #include "sil_flight.c"
 #undef main
+#include "systime.h"
+#include "unicore_ascii/unicore_ascii.h"
 #include "fmt_flight_runtime.h"
+#include "fmt_sensor_simulation.h"
+#include "calibration/sensor_calibration.h"
+#include "sample_normalization/sensor_sample.h"
+#include "mpc_diagnostics.h"
+
+/* The firmware time service derives monotonic time from this source. */
+static Status host_tick_source(uint64_t *tick64, uint32_t *time_epoch)
+{
+    if (!tick64 || !time_epoch) return STATUS_INVALID_ARGUMENT;
+    *tick64 = test_clock.monotonic_us;
+    *time_epoch = test_clock.time_epoch;
+    return STATUS_OK;
+}
+
+/* FMAT-0014: feed the firmware time service with a real PPS edge and the UTC
+ * that the real UM982 RECTIMEA parser decodes from a recorded sentence. */
+static UnicoreAsciiParser p10b_parser;
+static UnicoreAsciiMessage p10b_message;
+static uint32_t p10b_sequence;
+static uint64_t p10b_last_us;
+static struct { uint32_t pps_ok, pps_reject, gnss_ok, frames; int last_pps, last_utc;
+                 uint32_t last_mapping; } p10b_stats;
+static const char p10b_rectime[] =
+    "#RECTIMEA,97,GPS,FINE,2190,365121000,0,0,18,12;VALID,3.580410506e-04,"
+    "0.000000000e+00,-18.00000000000,2021,12,30,5,25,3000,VALID*7e364e74\r\n";
+
+static void p10b_inject(void)
+{
+    PpsCaptureEvent edge;
+    GnssTimeObservation observation;
+    const char *cursor;
+    int decoded = 0;
+
+    /* FMAT-0014 holdover window: no PPS and no UTC for four seconds so the
+     * service has to fall back to holdover and then re-lock. */
+    if (test_clock.monotonic_us >= 10000000u && test_clock.monotonic_us < 14000000u)
+        return;
+    if (test_clock.monotonic_us - p10b_last_us < 1000000u) return;
+    p10b_last_us = test_clock.monotonic_us;
+
+    memset(&edge, 0, sizeof(edge));
+    edge.capture_tick64 = test_clock.monotonic_us;
+    edge.edge_sequence = ++p10b_sequence;
+    edge.time_epoch = test_clock.time_epoch;
+    edge.capture_flags = 1u;
+    if (time_submit_pps(&edge) != STATUS_OK) {
+        p10b_stats.pps_reject++;
+        return;
+    }
+    p10b_stats.pps_ok++;
+
+    for (cursor = p10b_rectime; *cursor && !decoded; ++cursor)
+        decoded = unicore_ascii_feed(&p10b_parser, (uint8_t)*cursor, &p10b_message);
+    if (decoded != 1 || p10b_message.kind != UNICORE_ASCII_RECTIME) return;
+    p10b_stats.frames++;
+
+    memset(&observation, 0, sizeof(observation));
+    observation.utc_time_ns = p10b_message.utc_time_ns;
+    observation.paired_pps_tick64 = edge.capture_tick64;
+    observation.pps_edge_sequence = edge.edge_sequence;
+    observation.time_epoch = edge.time_epoch;
+    observation.receiver_accuracy_ns = p10b_message.receiver_accuracy_ns;
+    observation.time_scale = TIME_SCALE_UTC;
+    observation.validity_flags = GNSS_TIME_UTC_VALID | GNSS_TIME_PPS_PAIRED;
+    if (time_submit_gnss_time(&observation) == STATUS_OK) p10b_stats.gnss_ok++;
+}
 
 typedef struct {
     NavigationSnapshot snapshot;
@@ -14,13 +84,152 @@ static NavFrame external_frame;
 static unsigned elapsed_ticks;
 static int mode_active, attached;
 static uint32_t last_request;
-static uint16_t last_ack, last_reason;
+static uint16_t last_ack, last_reason, last_command_code;
+static FmtSensorSimState sensor_simulation;
+static int sensor_simulation_ready;
+static uint64_t sensor_simulation_epoch_us;
+static double sensor_model_parameters[FMT_SENSOR_MODEL_PARAMETER_COUNT];
+static double sensor_timing_parameters[FMT_SENSOR_SIM_PARAMETER_COUNT];
+static sensor_imu_config_t simulated_imu_config;
+static sensor_context_t simulated_imu_context;
+/* Host SIL must emulate RTOS semaphore wakeups for the GNSS-origin handshake. */
+static uint32_t last_origin_candidate_sequence;
+static uint64_t last_origin_candidate_sample_us;
+static uint32_t origin_auth_attempts, origin_auth_successes;
+static uint32_t origin_reset_attempts, origin_reset_successes;
+static int origin_auth_last_status, origin_reset_last_status;
+static uint16_t origin_reset_last_type;
+static uint32_t origin_reset_last_origin_id;
+static uint32_t gnss_submit_attempts, gnss_submit_successes;
+static int gnss_submit_last_status;
+static uint32_t gnss_push_attempts, gnss_push_successes;
+static int gnss_push_last_status;
+static uint32_t origin_poll_attempts, origin_poll_successes;
+static int origin_poll_last_status;
+static uint32_t origin_poll_last_sequence, origin_poll_last_next_id;
+static uint32_t sensor_turn_count, mission_turn_count, origin_wake_count, candidate_observed_count;
+static uint32_t candidate_last_sequence, candidate_last_next_id;
+static uint64_t candidate_last_sample_us, candidate_last_valid_until_us, candidate_last_age_us;
+static uint32_t mil_gnss_gate_released, mil_gnss_gate_wait_steps;
+static uint32_t mil_gnss_first_fix_sequence;
+static uint64_t mil_gnss_gate_ready_time_us, mil_gnss_first_fix_sample_us;
+static uint32_t gnss_push_not_ready_count, gnss_push_not_permitted_count, gnss_push_other_failures;
+static uint32_t candidate_first_sequence;
+static uint64_t candidate_first_sample_us, candidate_first_age_us;
+static uint64_t first_terminal_time_us, arm_submit_time_us;
+static uint32_t first_terminal_decision_code, first_terminal_decision_reason;
+static uint32_t first_terminal_landed_state, first_terminal_landed_stable_ms;
+static uint32_t first_terminal_landed_evidence;
+static double first_terminal_landed_confidence;
+static uint32_t first_terminal_control_health_state, first_terminal_control_dof_mask;
+static uint32_t first_terminal_control_degraded_dof_mask, first_terminal_control_reason;
+static int32_t first_terminal_control_status, first_terminal_runtime_error;
+static uint32_t step_calls;
+static uint64_t last_step_us;
+static uint32_t run_index;
+static uint32_t first_terminal_runtime_control_health, first_terminal_solver_status;
+static uint32_t first_terminal_deadline_miss_count, first_terminal_allocation_failure_count;
+static uint32_t first_terminal_actuator_fault_mask, first_terminal_actuator_available_mask;
+static uint32_t first_terminal_actuator_cap_available_mask, first_terminal_actuator_cap_dof_mask;
+static uint32_t first_terminal_permit_flags, first_terminal_permit_reason;
+static uint32_t first_terminal_guidance_state, first_terminal_guidance_reason;
+static uint32_t first_terminal_guidance_feasible, first_terminal_feasibility_reason;
+static uint32_t first_terminal_control_reference_id, first_terminal_receipt_result_code;
+static uint32_t first_terminal_mpc_updates, first_terminal_nav_capability_mask;
+static uint32_t first_terminal_nav_solution_state, first_terminal_nav_valid_mask;
+static uint32_t first_terminal_bundle_ready;
+static uint32_t arm_prearm_state_at_submit, arm_prearm_failed_mask_at_submit;
+static uint32_t arm_prearm_epoch_at_submit, arm_request_id;
 
+static int external_mode(void);
+
+Status __real_estimator_init(const ProductEstimatorConfig *);
 Status __real_estimator_push_imu(const ImuSample *);
 Status __real_estimator_update(uint64_t);
 Status __real_estimator_get_snapshot(NavigationSnapshot *);
 Status __real_estimator_get_capability(NavigationCapability *);
 Status __real_ins_get_pending_origin(ContractHeader *, uint32_t *);
+Status __real_estimator_push_measurement(const SensorMeasurement *);
+Status __real_fms_authorize_origin_reset(const ContractHeader *, uint32_t, EstimatorResetRequest *);
+Status __real_estimator_reset(const EstimatorResetRequest *);
+
+Status __wrap_estimator_init(const ProductEstimatorConfig *config)
+{
+    if (!config)
+        return __real_estimator_init(config);
+    ProductEstimatorConfig mil_config = *config;
+    /* Exercise the real late-first-fix/FMS Origin Reset path in MIL and its
+     * DataSIM replay. ExtINS consumes recorded navigation and keeps the anchored profile. */
+    if (mode_active == FMT_MIL_SIM || mode_active == FMT_DATA_SIM)
+        mil_config.payload.initial_origin_valid_mask = 1u;
+    return __real_estimator_init(&mil_config);
+}
+
+Status __wrap_ins_get_pending_origin(ContractHeader *candidate, uint32_t *next_origin_id)
+{
+    ++origin_poll_attempts;
+    Status result;
+    if (external_mode()) {
+        if (candidate)
+            memset(candidate, 0, sizeof(*candidate));
+        if (next_origin_id)
+            *next_origin_id = 0u;
+        result = STATUS_NOT_READY;
+    } else {
+        result = __real_ins_get_pending_origin(candidate, next_origin_id);
+    }
+    origin_poll_last_status = (int)result;
+    if (result == STATUS_OK)
+        ++origin_poll_successes;
+    if (candidate)
+        origin_poll_last_sequence = candidate->sequence;
+    if (next_origin_id)
+        origin_poll_last_next_id = *next_origin_id;
+    return result;
+}
+
+Status __wrap_estimator_push_measurement(const SensorMeasurement *measurement)
+{
+    Status result = __real_estimator_push_measurement(measurement);
+    if (measurement && measurement->measurement_kind == PRODUCT_MEASUREMENT_GNSS) {
+        ++gnss_push_attempts;
+        gnss_push_last_status = (int)result;
+        if (result == STATUS_OK)
+            ++gnss_push_successes;
+        else if (result == STATUS_NOT_READY)
+            ++gnss_push_not_ready_count;
+        else if (result == STATUS_NOT_PERMITTED)
+            ++gnss_push_not_permitted_count;
+        else
+            ++gnss_push_other_failures;
+    }
+    return result;
+}
+
+Status __wrap_fms_authorize_origin_reset(const ContractHeader *candidate, uint32_t next_origin_id,
+                                         EstimatorResetRequest *request)
+{
+    ++origin_auth_attempts;
+    Status result = __real_fms_authorize_origin_reset(candidate, next_origin_id, request);
+    origin_auth_last_status = (int)result;
+    if (result == STATUS_OK)
+        ++origin_auth_successes;
+    return result;
+}
+
+Status __wrap_estimator_reset(const EstimatorResetRequest *request)
+{
+    ++origin_reset_attempts;
+    if (request) {
+        origin_reset_last_type = request->reset_type;
+        origin_reset_last_origin_id = request->requested_origin_id;
+    }
+    Status result = __real_estimator_reset(request);
+    origin_reset_last_status = (int)result;
+    if (result == STATUS_OK)
+        ++origin_reset_successes;
+    return result;
+}
 
 static int external_mode(void)
 {
@@ -53,15 +262,6 @@ Status __wrap_estimator_get_capability(NavigationCapability *out)
         return __real_estimator_get_capability(out);
     *out = external_frame.capability;
     return STATUS_OK;
-}
-
-Status __wrap_ins_get_pending_origin(ContractHeader *candidate, uint32_t *next)
-{
-    if (!external_mode())
-        return __real_ins_get_pending_origin(candidate, next);
-    memset(candidate, 0, sizeof(*candidate));
-    *next = 0;
-    return STATUS_NOT_READY;
 }
 
 static void inject_imu(const double *s, unsigned sequence)
@@ -127,12 +327,296 @@ static void feed_sensors(const double *s, unsigned ms)
         if ((valid & FMT_MAG_VALID) && ms % 10u == 0u && valid_group(s + FMT_SENSOR_MAG, 3))
             inject_mag(s, ms);
     }
-    if ((valid & FMT_IMU_VALID) && valid_group(s, 6))
+    /* External-navigation replay only needs an IMU sample to clock the
+     * estimator task: the push itself is bypassed and the navigation state is
+     * injected. The recorded validity bit marks IMU samples only on alternate
+     * 500 us rows, and this feed runs on the 1 ms grid, so gating on it would
+     * starve the task forever (FMAT-0008 ExtINS replay). */
+    if ((external_mode() ? valid_group(s, 6)
+                         : ((valid & FMT_IMU_VALID) && valid_group(s, 6))))
         inject_imu(s, ms);
 }
 
 /* Present the separate contact observation through the existing SIL contact
  * hook. The temporary position/velocity above are only used to encode GNSS. */
+
+static void configure_simulated_imu(const double *timing)
+{
+    memset(&simulated_imu_config, 0, sizeof(simulated_imu_config));
+    for (unsigned axis = 0; axis < 3; ++axis) {
+        simulated_imu_config.gyro_scale[axis] = 1.0f;
+        simulated_imu_config.accel_scale[axis] = 1.0f;
+        for (unsigned column = 0; column < 3; ++column) {
+            const float identity = axis == column ? 1.0f : 0.0f;
+            simulated_imu_config.install_rotation[axis][column] = identity;
+            simulated_imu_config.gyro_misalignment[axis][column] = identity;
+            simulated_imu_config.accel_misalignment[axis][column] = identity;
+        }
+    }
+    /* SensorModelParameters has already produced calibrated body-FRD values.
+     * The M2 builder is used only to attach the physical sample-time contract. */
+    simulated_imu_config.pipeline_delay_us = timing[FMT_TIMING_IMU_PIPELINE_DELAY];
+    simulated_imu_config.pipeline_delay_uncertainty_us =
+        timing[FMT_TIMING_IMU_PIPELINE_UNCERTAINTY];
+    simulated_imu_config.calibration_version = 1u;
+
+    memset(&simulated_imu_context, 0, sizeof(simulated_imu_context));
+    simulated_imu_context.boot_id = test_clock.boot_id;
+    simulated_imu_context.time_epoch = test_clock.time_epoch;
+    simulated_imu_context.profile_id = PRODUCT_PROFILE_ID;
+    simulated_imu_context.sensor_instance_id = 1u;
+    simulated_imu_context.sequence = 1u;
+}
+
+static int inject_simulated_imu(const FmtSensorSimEvent *event)
+{
+    const double rad_to_deg = 57.29577951308232;
+    ImuReading reading = {0};
+    ImuSample sample;
+    for (unsigned axis = 0; axis < 3; ++axis) {
+        reading.gyro_dps[axis] = (float)(event->values[axis] * rad_to_deg);
+        reading.accel_mps2[axis] = (float)event->values[3u + axis];
+    }
+    reading.temperature_c = 25.0f;
+    reading.sequence = event->sequence;
+    reading.diagnostic_clear = true;
+    if (sensor_imu_build_sample(&simulated_imu_config, &simulated_imu_context,
+                                &reading, event->capture_us, event->release_us,
+                                &sample) != SENSOR_OK ||
+        sample.header.timestamp_sample_us != event->sample_us ||
+        sample.header.timestamp_publish_us != event->release_us ||
+        sensor_imu_inject(&sample, event->release_us) != STATUS_OK) {
+        ++failures;
+        return -1;
+    }
+    return 0;
+}
+
+static int inject_simulated_mag(const FmtSensorSimEvent *event, const double *model_parameters)
+{
+    SensorMeasurement measurement = {0};
+    measurement.header = h(SOURCE_MAG, event->sample_us + 100000u);
+    measurement.header.timestamp_sample_us = event->sample_us;
+    measurement.header.timestamp_publish_us = event->release_us;
+    measurement.header.valid_until_us = event->sample_us + 100000u;
+    measurement.header.timestamp_quality = TIMESTAMP_QUALITY_SENSOR_MODEL_CORRECTED;
+    measurement.header.sequence = event->sequence;
+    measurement.header.frame_id = FRAME_BODY_FRD;
+    measurement.measurement_kind = PRODUCT_MEASUREMENT_MAG;
+    measurement.sensor_instance_id = 2u;
+    measurement.payload.mag.header = measurement.header;
+    measurement.payload.mag.sensor_instance_id = 2u;
+    measurement.payload.mag.calibration_version = 1u;
+    measurement.payload.mag.quality_flags = MAG_Q_FIELD_VALID | MAG_Q_CALIBRATED;
+    for (unsigned axis = 0; axis < 3; ++axis) {
+        measurement.payload.mag.field_frd_ut[axis] = (float)event->values[axis];
+        measurement.payload.mag.variance_ut2[axis] = (float)fmax(0.01, 
+            model_parameters[FMT_MODEL_MAG_NOISE + axis] *
+            model_parameters[FMT_MODEL_MAG_NOISE + axis]);
+    }
+    if (runtime_submit_measurement(&measurement) != STATUS_OK) {
+        ++failures;
+        return -1;
+    }
+    return 0;
+}
+
+static int inject_simulated_baro(const FmtSensorSimEvent *event, const double *model_parameters)
+{
+    SensorMeasurement measurement = {0};
+    measurement.header = h(SOURCE_BARO, event->sample_us + 20000u);
+    measurement.header.timestamp_sample_us = event->sample_us;
+    measurement.header.timestamp_publish_us = event->release_us;
+    measurement.header.valid_until_us = event->sample_us + 20000u;
+    measurement.header.timestamp_quality = TIMESTAMP_QUALITY_SENSOR_MODEL_CORRECTED;
+    measurement.header.sequence = event->sequence;
+    measurement.measurement_kind = PRODUCT_MEASUREMENT_BARO;
+    measurement.sensor_instance_id = 3u;
+    measurement.payload.baro.header = measurement.header;
+    measurement.payload.baro.sensor_instance_id = 3u;
+    measurement.payload.baro.calibration_version = 1u;
+    measurement.payload.baro.altitude_m = (float)event->values[0];
+    measurement.payload.baro.variance_m2 = (float)fmax(0.25,
+        model_parameters[FMT_MODEL_BARO_NOISE] * model_parameters[FMT_MODEL_BARO_NOISE]);
+    measurement.payload.baro.quality_flags = 7u;
+    if (runtime_submit_measurement(&measurement) != STATUS_OK) {
+        ++failures;
+        return -1;
+    }
+    return 0;
+}
+
+static int inject_simulated_gnss(const FmtSensorSimEvent *event, const double *model_parameters)
+{
+    const double radians_to_degrees = 57.29577951308232;
+    const double meridian_radius_m = 6335439.32729282;
+    const double prime_vertical_radius_m = 6378137.0;
+    SensorMeasurement measurement = {0};
+    measurement.header = h(SOURCE_GNSS, event->sample_us + 20000u);
+    measurement.header.timestamp_sample_us = event->sample_us;
+    measurement.header.timestamp_publish_us = event->release_us;
+    measurement.header.valid_until_us = event->sample_us + 20000u;
+    measurement.header.timestamp_quality = TIMESTAMP_QUALITY_SENSOR_MODEL_CORRECTED;
+    measurement.header.sequence = event->sequence;
+    measurement.header.frame_id = FRAME_WGS84_GEODETIC;
+    measurement.measurement_kind = PRODUCT_MEASUREMENT_GNSS;
+    measurement.sensor_instance_id = 4u;
+    measurement.payload.gnss.header = measurement.header;
+    measurement.payload.gnss.sensor_instance_id = 4u;
+    measurement.payload.gnss.calibration_version = 1u;
+    measurement.payload.gnss.quality_flags = 15u;
+    measurement.payload.gnss.fix_type = GNSS_FIX_RTK_FIXED;
+    measurement.payload.gnss.latitude_deg =
+        ((event->values[0] - fmt_origin.position_ned_m[0]) *
+         radians_to_degrees / meridian_radius_m);
+    measurement.payload.gnss.longitude_deg =
+        ((event->values[1] - fmt_origin.position_ned_m[1]) *
+         radians_to_degrees / prime_vertical_radius_m);
+    measurement.payload.gnss.altitude_m =
+        fmt_origin.position_ned_m[2] - event->values[2];
+    for (unsigned axis = 0; axis < 3; ++axis) {
+        measurement.payload.gnss.velocity_ned_mps[axis] =
+            (float)event->values[3u + axis];
+        measurement.payload.gnss.position_variance_m2[axis] = (float)fmax(0.04,
+            model_parameters[FMT_MODEL_GNSS_POSITION_NOISE + axis] *
+            model_parameters[FMT_MODEL_GNSS_POSITION_NOISE + axis]);
+        measurement.payload.gnss.velocity_variance_m2ps2[axis] = (float)fmax(0.01,
+            model_parameters[FMT_MODEL_GNSS_VELOCITY_NOISE + axis] *
+            model_parameters[FMT_MODEL_GNSS_VELOCITY_NOISE + axis]);
+    }
+    ++gnss_submit_attempts;
+    Status submit_status = runtime_submit_measurement(&measurement);
+    gnss_submit_last_status = (int)submit_status;
+    if (submit_status != STATUS_OK) {
+        ++failures;
+        return -1;
+    }
+    ++gnss_submit_successes;
+    if ((mode_active == FMT_MIL_SIM || mode_active == FMT_DATA_SIM) && mil_gnss_first_fix_sequence == 0u) {
+        mil_gnss_first_fix_sequence = event->sequence;
+        mil_gnss_first_fix_sample_us = event->sample_us;
+    }
+    return 0;
+}
+
+static int feed_simulated_sensor_events(const double *sensor_frame,
+                                        const double *model_parameters,
+                                        const double *timing,
+                                        uint64_t now_us)
+{
+    FmtSensorSimEvent due[4];
+    double gated_sensor_frame[FMT_SENSOR_WIDTH];
+    if (!valid_group(sensor_frame, FMT_SENSOR_WIDTH) ||
+        !isfinite(sensor_frame[FMT_SENSOR_VALID]) || sensor_frame[FMT_SENSOR_VALID] < 0.0 ||
+        sensor_frame[FMT_SENSOR_VALID] > 15.0 || floor(sensor_frame[FMT_SENSOR_VALID]) != sensor_frame[FMT_SENSOR_VALID])
+        return -1;
+    memcpy(gated_sensor_frame, sensor_frame, sizeof(gated_sensor_frame));
+    if ((mode_active == FMT_MIL_SIM || mode_active == FMT_DATA_SIM) && !mil_gnss_gate_released) {
+        NavigationSnapshot snapshot = {0};
+        Status nav_status = __real_estimator_get_snapshot(&snapshot);
+        if (nav_status == STATUS_OK &&
+            (snapshot.core.valid_mask & NAV_VALID_ATTITUDE) != 0u &&
+            (snapshot.core.valid_mask & NAV_VALID_HORIZONTAL_POSITION) == 0u) {
+            mil_gnss_gate_released = 1u;
+            mil_gnss_gate_ready_time_us = now_us;
+        } else {
+            const unsigned mask = (unsigned)gated_sensor_frame[FMT_SENSOR_VALID];
+            gated_sensor_frame[FMT_SENSOR_VALID] = (double)(mask & ~FMT_GNSS_VALID);
+            ++mil_gnss_gate_wait_steps;
+        }
+    }
+    if (!valid_group(model_parameters, FMT_SENSOR_MODEL_PARAMETER_COUNT)) {
+        ++failures;
+        return -1;
+    }
+    if (!sensor_simulation_ready) {
+        if (fmt_sensor_sim_init(&sensor_simulation, timing,
+                                sensor_simulation_epoch_us) != 0) {
+            ++failures;
+            return -1;
+        }
+        memcpy(sensor_model_parameters, model_parameters, sizeof(sensor_model_parameters));
+        memcpy(sensor_timing_parameters, timing, sizeof(sensor_timing_parameters));
+        configure_simulated_imu(timing);
+        sensor_simulation_ready = 1;
+    } else if (memcmp(sensor_model_parameters, model_parameters,
+                      sizeof(sensor_model_parameters)) != 0 ||
+               memcmp(sensor_timing_parameters, timing,
+                      sizeof(sensor_timing_parameters)) != 0) {
+        ++failures;
+        return -1;
+    }
+
+    if (fmt_sensor_sim_step_offset(&sensor_simulation, gated_sensor_frame, now_us,
+                                   FMT_SENSOR_SIM_FIXED_STEP_US, due) != 0) {
+        ++failures;
+        return -1;
+    }
+    if (due[FMT_SENSOR_SIM_IMU].valid) {
+        if (inject_simulated_imu(&due[FMT_SENSOR_SIM_IMU]) != 0 ||
+            fmt_sensor_sim_mark_accepted(&sensor_simulation, FMT_SENSOR_SIM_IMU) != 0)
+            return -1;
+    }
+    if (due[FMT_SENSOR_SIM_GNSS].valid) {
+        if (inject_simulated_gnss(&due[FMT_SENSOR_SIM_GNSS], model_parameters) != 0 ||
+            fmt_sensor_sim_mark_accepted(&sensor_simulation, FMT_SENSOR_SIM_GNSS) != 0)
+            return -1;
+    }
+    if (due[FMT_SENSOR_SIM_MAG].valid) {
+        if (inject_simulated_mag(&due[FMT_SENSOR_SIM_MAG], model_parameters) != 0 ||
+            fmt_sensor_sim_mark_accepted(&sensor_simulation, FMT_SENSOR_SIM_MAG) != 0)
+            return -1;
+    }
+    if (due[FMT_SENSOR_SIM_BARO].valid) {
+        if (inject_simulated_baro(&due[FMT_SENSOR_SIM_BARO], model_parameters) != 0 ||
+            fmt_sensor_sim_mark_accepted(&sensor_simulation, FMT_SENSOR_SIM_BARO) != 0)
+            return -1;
+    }
+    return 0;
+}
+
+static void capture_first_terminal(void)
+{
+    if (first_terminal_time_us != 0u ||
+        runtime_data.fms.failsafe_level != FAILSAFE_TERMINAL)
+        return;
+
+    first_terminal_time_us = test_clock.monotonic_us;
+    first_terminal_decision_code = fms_output.decision_event.decision_code;
+    first_terminal_decision_reason = fms_output.decision_event.reason_code;
+    first_terminal_landed_state = fms_output.landed_state.state;
+    first_terminal_landed_stable_ms = fms_output.landed_state.stable_duration_ms;
+    first_terminal_landed_evidence = fms_output.landed_state.evidence_mask;
+    first_terminal_landed_confidence = fms_output.landed_state.confidence_0_to_1;
+    first_terminal_control_health_state = runtime_data.control_cap.health_state;
+    first_terminal_control_dof_mask = runtime_data.control_cap.controllable_dof_mask;
+    first_terminal_control_degraded_dof_mask = runtime_data.control_cap.degraded_dof_mask;
+    first_terminal_control_reason = runtime_data.control_cap.reason_code;
+    first_terminal_control_status = (int32_t)runtime_stats.control_status;
+    first_terminal_runtime_control_health = runtime_data.control_health.common.health_state;
+    first_terminal_solver_status = runtime_data.control_health.solver_status;
+    first_terminal_deadline_miss_count = runtime_data.control_health.deadline_miss_count;
+    first_terminal_allocation_failure_count = runtime_data.control_health.allocation_failure_count;
+    first_terminal_actuator_fault_mask = runtime_data.actuator.fault_mask;
+    first_terminal_actuator_available_mask = runtime_data.actuator.available_mask;
+    first_terminal_actuator_cap_available_mask = runtime_data.actuator_cap.available_mask;
+    first_terminal_actuator_cap_dof_mask = runtime_data.actuator_cap.controllable_dof_mask;
+    first_terminal_permit_flags = fms_output.actuation_permit.permit_flags;
+    first_terminal_permit_reason = fms_output.actuation_permit.reason_code;
+    first_terminal_guidance_state = plan_bundle.guidance.guidance_status.guidance_state;
+    first_terminal_guidance_reason = plan_bundle.guidance.guidance_status.reason_code;
+    first_terminal_guidance_feasible = plan_bundle.guidance.feasibility.feasible;
+    first_terminal_feasibility_reason = plan_bundle.guidance.feasibility.reason_code;
+    first_terminal_control_reference_id = runtime_data.control_reference_id;
+    first_terminal_receipt_result_code = runtime_data.receipt.result_code;
+    first_terminal_runtime_error = (int32_t)runtime_stats.last_error;
+    first_terminal_mpc_updates = runtime_stats.mpc_updates;
+    first_terminal_nav_capability_mask = runtime_data.nav_cap.capability_mask;
+    first_terminal_nav_solution_state = runtime_data.nav_cap.solution_state;
+    first_terminal_nav_valid_mask = runtime_data.nav.core.valid_mask;
+    first_terminal_bundle_ready = runtime_data.bundle_ready;
+}
+
 static void feed_contact(double contact)
 {
     last_fmt_us = contact == 0 || contact == 1 ? test_clock.monotonic_us : 0;
@@ -149,12 +633,89 @@ __declspec(dllexport) int fmt_flight_start(int mode)
 {
     if (attached || mode < FMT_DATA_SIM || mode > FMT_EXTINS_DATA_SIM)
         return -1;
-    test_clock = (ClockInstant){0x12345678, 1000000, 1, 0};
+    /* The firmware time service anchors monotonic time at zero, so the host
+     * clock starts at zero too; mixing a 1 s-based host clock with a 0-based
+     * time service breaks every TTL comparison. */
+    test_clock = (ClockInstant){0x12345678, 0, 1, 0};
+    {
+        static TimeConfig time_config;
+        Status time_status;
+        memset(&time_config, 0, sizeof(time_config));
+        time_config.boot_id = test_clock.boot_id;
+        time_config.time_epoch = test_clock.time_epoch;
+        time_config.tick_hz = 1000000u;
+        time_config.pps_timeout_us = 2000000u;
+        time_config.utc_timeout_us = 5000000u;
+        time_config.utc_locked_uncertainty_ns = 100000u;
+        time_config.utc_max_uncertainty_ns = 5000000u;
+        time_config.holdover_rate_bound_ppb = 50000;
+        time_config.gnss_pps_installed = 1u;
+        time_status = systime_init(&time_config, host_tick_source);
+        if (time_status != STATUS_OK) {
+            fprintf(stderr, "systime_init failed: %d\n", (int)time_status);
+            return -1;
+        }
+    }
+    run_index++;
+    step_calls = 0;
     test_imu_pending = 0;
     checks = failures = commits = inhibits = 0;
     test_tx_complete = NULL;
     elapsed_ticks = sil_requests = last_request = 0;
+    sensor_simulation_ready = 0;
+    last_origin_candidate_sequence = 0u;
+    last_origin_candidate_sample_us = 0u;
+    memset(&sensor_simulation, 0, sizeof(sensor_simulation));
+    memset(sensor_model_parameters, 0, sizeof(sensor_model_parameters));
+    memset(sensor_timing_parameters, 0, sizeof(sensor_timing_parameters));
+    /* mdlUpdate advances the runtime clock before processing the Plant sample.
+     * Start event opportunities one tick ahead, then subtract that same fixed
+     * offset when stamping the physical sample/capture epochs. */
+    sensor_simulation_epoch_us = test_clock.monotonic_us + FMT_SENSOR_SIM_FIXED_STEP_US;
     last_ack = last_reason = 0;
+    last_command_code = 0u;
+    origin_auth_attempts = origin_auth_successes = 0u;
+    origin_reset_attempts = origin_reset_successes = 0u;
+    origin_auth_last_status = origin_reset_last_status = 0;
+    origin_reset_last_type = 0u;
+    origin_reset_last_origin_id = 0u;
+    mil_gnss_gate_released = mil_gnss_gate_wait_steps = 0u;
+    mil_gnss_first_fix_sequence = 0u;
+    mil_gnss_gate_ready_time_us = mil_gnss_first_fix_sample_us = 0u;
+    gnss_push_not_ready_count = gnss_push_not_permitted_count = gnss_push_other_failures = 0u;
+    candidate_first_sequence = 0u;
+    candidate_first_sample_us = candidate_first_age_us = 0u;
+    first_terminal_time_us = arm_submit_time_us = 0u;
+    first_terminal_decision_code = first_terminal_decision_reason = 0u;
+    first_terminal_landed_state = first_terminal_landed_stable_ms = 0u;
+    first_terminal_landed_evidence = 0u;
+    first_terminal_landed_confidence = 0.0;
+    first_terminal_control_health_state = first_terminal_control_dof_mask = 0u;
+    first_terminal_control_degraded_dof_mask = first_terminal_control_reason = 0u;
+    first_terminal_control_status = first_terminal_runtime_error = 0;
+    first_terminal_runtime_control_health = first_terminal_solver_status = 0u;
+    first_terminal_deadline_miss_count = first_terminal_allocation_failure_count = 0u;
+    first_terminal_actuator_fault_mask = first_terminal_actuator_available_mask = 0u;
+    first_terminal_actuator_cap_available_mask = first_terminal_actuator_cap_dof_mask = 0u;
+    first_terminal_permit_flags = first_terminal_permit_reason = 0u;
+    first_terminal_guidance_state = first_terminal_guidance_reason = 0u;
+    first_terminal_guidance_feasible = first_terminal_feasibility_reason = 0u;
+    first_terminal_control_reference_id = first_terminal_receipt_result_code = 0u;
+    first_terminal_mpc_updates = first_terminal_nav_capability_mask = 0u;
+    first_terminal_nav_solution_state = first_terminal_nav_valid_mask = 0u;
+    first_terminal_bundle_ready = 0u;
+    arm_prearm_state_at_submit = arm_prearm_failed_mask_at_submit = 0u;
+    arm_prearm_epoch_at_submit = arm_request_id = 0u;
+    gnss_submit_attempts = gnss_submit_successes = 0u;
+    gnss_submit_last_status = 0;
+    gnss_push_attempts = gnss_push_successes = 0u;
+    gnss_push_last_status = 0;
+    origin_poll_attempts = origin_poll_successes = 0u;
+    origin_poll_last_status = 0;
+    origin_poll_last_sequence = origin_poll_last_next_id = 0u;
+    sensor_turn_count = mission_turn_count = origin_wake_count = candidate_observed_count = 0u;
+    candidate_last_sequence = candidate_last_next_id = 0u;
+    candidate_last_sample_us = candidate_last_valid_until_us = candidate_last_age_us = 0u;
     memset(&external_frame, 0, sizeof(external_frame));
     memset(&fmt_origin, 0, sizeof(fmt_origin));
     memset(&fmt_state, 0, sizeof(fmt_state));
@@ -169,9 +730,254 @@ __declspec(dllexport) int fmt_flight_start(int mode)
     return 0;
 }
 
+/* M6 acceptance evidence: the runtime only exposes the current solver status, so
+ * the job counts and covered time are written once at shutdown. The counters are
+ * owned by the real MPC task; this function only serializes them.
+ *
+ * MpcRunStats, MpcJobRecord and MpcConsumerStats come from the firmware's own
+ * mpc_diagnostics.h. This adapter used to keep a copy of the struct; the copy
+ * silently misreported every field after one side gained a member. */
+static void write_m6_job_stats(void)
+{
+    static MpcJobRecord chunk[64];
+    MpcRunStats stats;
+    MpcConsumerStats consumer;
+    uint32_t index, copied, total = 0, first = 0;
+    FILE *file;
+    mpc_get_run_stats(&stats);
+    mpc_copy_consumer_stats(&consumer);
+    file = fopen("work/validation/m6_runtime_stats.json", "w");
+    if (!file) return;
+    fprintf(file,
+            "{\n  \"jobs\": %u,\n  \"solved\": %u,\n  \"rejected\": %u,\n"
+            "  \"covered_us\": %llu,\n  \"blocked_uninitialized\": %u,\n"
+            "  \"blocked_validation\": %u,\n  \"blocked_mode\": %u,\n"
+            "  \"blocked_clock\": %u,\n  \"blocked_stale\": %u,\n"
+            "  \"blocked_throttle\": %u,\n  \"blocked_lock\": %u,\n  \"last_validation_status\": %d,\n  \"last_eval_age_us\": %u,\n  \"max_eval_age_us\": %u,\n  \"last_now_us\": %llu,\n  \"last_control_time_us\": %llu,\n  \"worker_ticks\": %u,\n  \"worker_skips\": %u,\n  \"entry_calls\": %u,\n  \"last_worker_us\": %llu,\n  \"step_calls\": %u,\n  \"last_step_us\": %llu,\n  \"run_index\": %u,\n  \"elapsed_ticks\": %llu,\n  \"rejected_numeric\": %u,\n  \"rejected_range\": %u,\n  \"rejected_stale\": %u,\n  \"rejected_domain\": %u,\n  \"solver_inaccurate\": %u,\n  \"solver_max_iter\": %u,\n  \"solver_infeasible\": %u,\n  \"solver_deadline\": %u,\n  \"last_solver_status\": %d,\n  \"max_prim_res_x1e6\": %u,\n  \"max_dual_res_x1e6\": %u,\n  \"p10b_pps_ok\": %u,\n  \"p10b_pps_reject\": %u,\n  \"p10b_rectime_frames\": %u,\n  \"p10b_gnss_ok\": %u,\n"
+            "  \"job_record_count\": %u,\n"
+            "  \"consumer\": {\n"
+            "    \"samples\": %u, \"used\": %u,\n"
+            "    \"backup_expired\": %u, \"backup_clock\": %u, \"backup_state_epoch\": %u,\n"
+            "    \"backup_origin\": %u, \"backup_reference\": %u, \"backup_authority\": %u,\n"
+            "    \"backup_directive\": %u, \"backup_envelope\": %u, \"backup_model\": %u,\n"
+            "    \"backup_envelope_id\": %u, \"backup_seed_position\": %u,\n"
+            "    \"backup_seed_velocity\": %u,\n"
+            "    \"limit_rejected\": %u, \"bounds_rejected\": %u,\n"
+            "    \"diff_samples\": %llu,\n"
+            "    \"diff_lo\": [%.9g, %.9g, %.9g],\n"
+            "    \"diff_hi\": [%.9g, %.9g, %.9g],\n"
+            "    \"diff_max_abs\": [%.9g, %.9g, %.9g],\n"
+            "    \"life_bucket_origin_us\": %d, \"life_bucket_us\": %d,\n"
+            "    \"life_min_us\": %d, \"life_max_us\": %d, \"life_samples\": %u,\n"
+            "    \"life_hist\": [%u",
+            stats.jobs, stats.solved, stats.rejected,
+            (unsigned long long)stats.covered_us,
+            stats.blocked_uninitialized, stats.blocked_validation,
+            stats.blocked_mode, stats.blocked_clock, stats.blocked_stale,
+            stats.blocked_throttle, stats.blocked_lock, (int)stats.last_validation_status,
+            stats.last_eval_age_us, stats.max_eval_age_us,
+            (unsigned long long)stats.last_now_us, (unsigned long long)stats.last_control_time_us,
+            stats.worker_ticks, stats.worker_skips, stats.entry_calls,
+            (unsigned long long)stats.last_worker_us, step_calls,
+            (unsigned long long)last_step_us, run_index,
+            (unsigned long long)elapsed_ticks,
+            stats.rejected_numeric, stats.rejected_range, stats.rejected_stale,
+            stats.rejected_domain, stats.solver_inaccurate, stats.solver_max_iter,
+            stats.solver_infeasible, stats.solver_deadline, (int)stats.last_solver_status,
+            stats.max_prim_res_x1e6, stats.max_dual_res_x1e6,
+            p10b_stats.pps_ok, p10b_stats.pps_reject,
+            p10b_stats.frames, p10b_stats.gnss_ok,
+            mpc_job_record_count(),
+            consumer.samples, consumer.used,
+            consumer.backup_expired, consumer.backup_clock,
+            consumer.backup_state_epoch, consumer.backup_origin,
+            consumer.backup_reference, consumer.backup_authority,
+            consumer.backup_directive, consumer.backup_envelope,
+            consumer.backup_model, consumer.backup_envelope_id,
+            consumer.backup_seed_position, consumer.backup_seed_velocity,
+            consumer.limit_rejected, consumer.bounds_rejected,
+            (unsigned long long)consumer.diff_samples,
+            (double)consumer.diff_lo[0], (double)consumer.diff_lo[1],
+            (double)consumer.diff_lo[2],
+            (double)consumer.diff_hi[0], (double)consumer.diff_hi[1],
+            (double)consumer.diff_hi[2],
+            (double)consumer.diff_max_abs[0], (double)consumer.diff_max_abs[1],
+            (double)consumer.diff_max_abs[2],
+            (int)MPC_LIFE_ORIGIN_US, (int)MPC_LIFE_BUCKET_US,
+            (int)consumer.life_min_us, (int)consumer.life_max_us,
+            consumer.life_total,
+            consumer.life_hist[0]);
+    for (index = 1; index < MPC_LIFE_BUCKETS; ++index)
+        fprintf(file, ", %u", consumer.life_hist[index]);
+    fprintf(file, "]\n  }\n}\n");
+    fclose(file);
+    {
+        char per_run[64];
+        snprintf(per_run, sizeof(per_run),
+                 "work/validation/m6_runtime_stats_run%u.json", (unsigned)run_index);
+        file = fopen(per_run, "w");
+        if (file) {
+            fprintf(file, "{\"run_index\": %u, \"elapsed_ticks\": %llu,"
+                          " \"jobs\": %u, \"solved\": %u, \"rejected\": %u,"
+                          " \"blocked_validation\": %u, \"last_now_us\": %llu,"
+                          " \"last_control_time_us\": %llu, \"entry_calls\": %u}\n",
+                    run_index, (unsigned long long)elapsed_ticks,
+                    stats.jobs, stats.solved, stats.rejected,
+                    stats.blocked_validation,
+                    (unsigned long long)stats.last_now_us,
+                    (unsigned long long)stats.last_control_time_us,
+                    stats.entry_calls);
+            fclose(file);
+        }
+    }
+    /* Per-job records: the distribution gate needs every job's first failing
+     * stage, residuals and timestamps, not the last sample of the run. */
+    file = fopen("work/validation/m6_jobs.json", "w");
+    if (!file) return;
+    copied = mpc_copy_job_records(0, NULL, 0u, &total);
+    (void)copied;
+    fprintf(file, "{\n  \"schema\": \"fmat-m6-jobs/1.0\",\n"
+                  "  \"record_count\": %u,\n  \"records\": [",
+            (unsigned)total);
+    while (first < total) {
+        uint32_t n = mpc_copy_job_records(first, chunk, 64u, &total);
+        if (!n) break;
+        for (index = 0; index < n; ++index) {
+            const MpcJobRecord *r = &chunk[index];
+            fprintf(file,
+                    "%s\n    {\"job\": %u, \"outcome\": %u, \"solver_status\": %u,"
+                    " \"status\": %u, \"prim_res\": %.9g, \"dual_res\": %.9g,"
+                    " \"primal_violation\": %.9g, \"thrust_excess_n\": %.9g,"
+                    " \"accel\": [%.9g, %.9g, %.9g],"
+                    " \"seed\": [%.9g, %.9g, %.9g],"
+                    " \"sample_us\": %llu, \"control_us\": %llu,"
+                    " \"eval_us\": %llu, \"expires_us\": %llu}",
+                    (first + index) ? "," : "", r->job, r->outcome,
+                    r->solver_status, r->status, (double)r->prim_res,
+                    (double)r->dual_res, (double)r->primal_violation,
+                    (double)r->thrust_excess_n, (double)r->accel[0],
+                    (double)r->accel[1], (double)r->accel[2], (double)r->seed[0],
+                    (double)r->seed[1], (double)r->seed[2],
+                    (unsigned long long)r->sample_us,
+                    (unsigned long long)r->control_us,
+                    (unsigned long long)r->eval_us,
+                    (unsigned long long)r->expires_us);
+        }
+        first += n;
+    }
+    fprintf(file, "\n  ]\n}\n");
+    fclose(file);
+    /* Time-resolved usage inside the takeoff window: the aggregate counters
+     * cannot say whether the MPC acceleration acted before TAKEOFF. */
+    file = fopen("work/validation/m6_use_trace.json", "w");
+    if (!file) return;
+    {
+        static MpcUseTrace rows[MPC_TRACE_CAPACITY];
+        uint32_t count = mpc_copy_use_trace(rows, MPC_TRACE_CAPACITY);
+        fprintf(file, "{\n  \"schema\": \"fmat-m6-use-trace/1.0\",\n"
+                      "  \"window_us\": [%u, %u],\n  \"record_count\": %u,\n"
+                      "  \"records\": [",
+                (unsigned)MPC_TRACE_FIRST_US, (unsigned)MPC_TRACE_LAST_US,
+                (unsigned)count);
+        for (index = 0; index < count; ++index)
+            fprintf(file,
+                    "%s\n    {\"time_us\": %u, \"backup\": %u,"
+                    " \"mpc\": [%.9g, %.9g, %.9g], \"pd\": [%.9g, %.9g, %.9g]}",
+                    index ? "," : "", rows[index].time_us,
+                    rows[index].backup, (double)rows[index].mpc[0],
+                    (double)rows[index].mpc[1], (double)rows[index].mpc[2],
+                    (double)rows[index].pd[0], (double)rows[index].pd[1],
+                    (double)rows[index].pd[2]);
+        fprintf(file, "\n  ]\n}\n");
+        fclose(file);
+    }
+}
+
+/* Sampled during the holdover window so the loss and the re-lock can be judged
+ * against the locked state. */
+static struct { int captured; uint8_t utc_valid; uint32_t mapping_epoch;
+                uint64_t holdover_us, uncertainty_ns, last_pps_us; } p10b_loss;
+static void p10b_capture_loss(void)
+{
+    TimeServiceStatus service;
+    if (p10b_loss.captured) return;
+    if (test_clock.monotonic_us < 13500000u) return;
+    if (time_get_status(&service) != STATUS_OK) return;
+    p10b_loss.captured = 1;
+    p10b_loss.utc_valid = service.utc_valid;
+    p10b_loss.mapping_epoch = service.utc_mapping_epoch;
+    p10b_loss.holdover_us = service.holdover_duration_us;
+    p10b_loss.uncertainty_ns = service.utc_uncertainty_ns;
+    p10b_loss.last_pps_us = service.last_valid_pps_us;
+}
+
+/* FMAT-0014: dump what the firmware time service reports after the MIL, so the
+ * PPS/RECTIMEA injection can be judged by the service state and not only by the
+ * submission status codes. */
+static void write_p10b_time_service(void)
+{
+    TimeServiceStatus service;
+    LocalTimebaseDisciplineStatus discipline;
+    ClockDomainMappingStatus mapping;
+    FILE *file;
+    int service_ok = time_get_status(&service) == STATUS_OK;
+    int discipline_ok = time_get_local_discipline_status(&discipline) == STATUS_OK;
+    int mapping_ok = time_get_mapping_status(0u, &mapping) == STATUS_OK;
+    file = fopen("work/validation/p10b_time_service.json", "w");
+    if (!file) return;
+    fprintf(file,
+            "{\n  \"pps_events\": %u,\n  \"rectime_frames\": %u,\n"
+            "  \"gnss_observations\": %u,\n  \"pps_rejected\": %u,\n"
+            "  \"time_get_status_ok\": %d,\n  \"utc_valid\": %u,\n"
+            "  \"local_clock_valid\": %u,\n  \"time_epoch\": %u,\n"
+            "  \"utc_mapping_epoch\": %u,\n  \"utc_uncertainty_ns\": %llu,\n"
+            "  \"last_valid_pps_us\": %llu,\n  \"monotonic_now_us\": %llu,\n"
+            "  \"discipline_ok\": %d,\n  \"discipline_valid\": %u,\n"
+            "  \"accepted_intervals\": %u,\n  \"rate_correction_ppb\": %d,\n"
+            "  \"mapping_ok\": %d,\n  \"mapping_epoch\": %u,\n"
+            "  \"mapping_state\": %u\n}\n",
+            p10b_stats.pps_ok, p10b_stats.frames, p10b_stats.gnss_ok,
+            p10b_stats.pps_reject,
+            service_ok, service_ok ? (unsigned)service.utc_valid : 0u,
+            service_ok ? (unsigned)service.local_clock_valid : 0u,
+            service_ok ? service.time_epoch : 0u,
+            service_ok ? service.utc_mapping_epoch : 0u,
+            service_ok ? (unsigned long long)service.utc_uncertainty_ns : 0ull,
+            service_ok ? (unsigned long long)service.last_valid_pps_us : 0ull,
+            service_ok ? (unsigned long long)service.monotonic_now_us : 0ull,
+            discipline_ok, discipline_ok ? (unsigned)discipline.valid : 0u,
+            discipline_ok ? (unsigned)discipline.accepted_interval_count : 0u,
+            discipline_ok ? (int)discipline.rate_correction_ppb : 0,
+            mapping_ok, mapping_ok ? mapping.mapping_epoch : 0u,
+            mapping_ok ? (unsigned)mapping.mapping_state : 0u);
+    fclose(file);
+    file = fopen("work/validation/p10b_holdover.json", "w");
+    if (!file) return;
+    fprintf(file,
+            "{\n  \"loss_captured\": %d,\n  \"loss_utc_valid\": %u,\n"
+            "  \"loss_mapping_epoch\": %u,\n  \"loss_holdover_us\": %llu,\n"
+            "  \"loss_uncertainty_ns\": %llu,\n  \"loss_last_pps_us\": %llu,\n"
+            "  \"recover_utc_valid\": %u,\n  \"recover_uncertainty_ns\": %llu,\n"
+            "  \"recover_last_pps_us\": %llu,\n  \"recover_intervals\": %u,\n"
+            "  \"pps_events\": %u\n}\n",
+            p10b_loss.captured, (unsigned)p10b_loss.utc_valid,
+            p10b_loss.mapping_epoch,
+            (unsigned long long)p10b_loss.holdover_us,
+            (unsigned long long)p10b_loss.uncertainty_ns,
+            (unsigned long long)p10b_loss.last_pps_us,
+            service_ok ? (unsigned)service.utc_valid : 0u,
+            service_ok ? (unsigned long long)service.utc_uncertainty_ns : 0ull,
+            service_ok ? (unsigned long long)service.last_valid_pps_us : 0ull,
+            discipline_ok ? (unsigned)discipline.accepted_interval_count : 0u,
+            p10b_stats.pps_ok);
+    fclose(file);
+}
+
 __declspec(dllexport) void fmt_flight_stop(void)
 {
     if (attached) {
+        write_m6_job_stats();
+        write_p10b_time_service();
         telemetry_link_release_radio();
         runtime_shutdown();
         attached = 0;
@@ -179,31 +985,94 @@ __declspec(dllexport) void fmt_flight_stop(void)
 }
 
 __declspec(dllexport) int fmt_flight_step(const double *s, const double *command,
-                                       const uint8_t *nav_in, double *force,
-                                       double *status, uint8_t *nav_out)
+                                       const uint8_t *nav_in, const double *sensor_model_parameters,
+                                       const double *sensor_timing_parameters,
+                                       double *force, double *status, uint8_t *nav_out)
 {
     if (!attached)
         return -1;
     ++elapsed_ticks;
+    step_calls++;
+    p10b_inject();
+    p10b_capture_loss();
+    last_step_us = test_clock.monotonic_us;
     test_clock.monotonic_us += 500u;
     unsigned ms = elapsed_ticks / 2u;
+    int mission_turned = 0;
     if (external_mode())
         memcpy(&external_frame, nav_in, sizeof(external_frame));
+    if ((mode_active == FMT_MIL_SIM || mode_active == FMT_DATA_SIM) &&
+        feed_simulated_sensor_events(s, sensor_model_parameters, sensor_timing_parameters,
+                                     test_clock.monotonic_us) != 0)
+        return -3;
 
     if (elapsed_ticks % 2u == 0u) {
         if (ms % TASK_MISSION_PERIOD_MS == 0u)
             feed_operator(0, 0);
-        feed_sensors(s, ms);
+        if (mode_active == FMT_EXTINS_DATA_SIM)
+            feed_sensors(s, ms);
         feed_contact(s[FMT_SENSOR_CONTACT]);
+        ++sensor_turn_count;
         turn(task_sensor_entry);
+        /*
+         * The real RTOS wakes Mission immediately when task_sensor publishes a
+         * validated GNSS origin candidate. Host SIL's rt_sem_release is a
+         * deterministic no-op, so the periodic 20-ms Mission turn can arrive
+         * exactly at (or after) the 20-ms GNSS validity deadline (100-ms sample
+         * + 10-ms transport + 20-ms Mission phase). Emulate that event wake
+         * explicitly; after authorization, emulate the IMU semaphore wake so
+         * task_sensor consumes the queued EstimatorResetRequest immediately.
+         */
+        {
+            ContractHeader candidate = {0};
+            uint32_t next_origin = 0u;
+            if (runtime_data_lock(0)) {
+                candidate = runtime_data.origin_candidate;
+                next_origin = runtime_data.next_origin_id;
+                runtime_data_unlock();
+            }
+            candidate_last_sequence = candidate.sequence;
+            candidate_last_next_id = next_origin;
+            candidate_last_sample_us = candidate.timestamp_sample_us;
+            candidate_last_valid_until_us = candidate.valid_until_us;
+            candidate_last_age_us = candidate.timestamp_sample_us && test_clock.monotonic_us >= candidate.timestamp_sample_us ?
+                test_clock.monotonic_us - candidate.timestamp_sample_us : 0u;
+            if (next_origin != 0u && candidate.sequence != 0u) {
+                ++candidate_observed_count;
+                if (candidate_first_sequence == 0u) {
+                    candidate_first_sequence = candidate.sequence;
+                    candidate_first_sample_us = candidate.timestamp_sample_us;
+                    candidate_first_age_us = candidate_last_age_us;
+                }
+            }
+            if (next_origin == 0u) {
+                last_origin_candidate_sequence = 0u;
+                last_origin_candidate_sample_us = 0u;
+            } else if (candidate.sequence != 0u &&
+                       (candidate.sequence != last_origin_candidate_sequence ||
+                        candidate.timestamp_sample_us != last_origin_candidate_sample_us)) {
+                last_origin_candidate_sequence = candidate.sequence;
+                last_origin_candidate_sample_us = candidate.timestamp_sample_us;
+                ++origin_wake_count;
+                ++mission_turn_count;
+                turn(task_mission_entry);
+                mission_turned = 1;
+                turn(task_sensor_entry);
+                ++sensor_turn_count;
+            }
+        }
         if (ms % TASK_COMMUNICATION_PERIOD_MS == 0u)
             turn(task_communication_entry);
         turn(task_actuator_entry);
     }
     if (elapsed_ticks % 5u == 0u)
         (void)actuator_guard_frame_boundary(test_clock.monotonic_us);
-    if (elapsed_ticks % (2u * TASK_MISSION_PERIOD_MS) == 0u) {
+    if (elapsed_ticks % (2u * TASK_MISSION_PERIOD_MS) == 0u && !mission_turned) {
+        ++mission_turn_count;
         turn(task_mission_entry);
+        mission_turned = 1;
+    }
+    if (mission_turned) {
         for (unsigned i = 0; i < fms_output.command_result_count; ++i) {
             const CommandAck *ack = &fms_output.command_results[i];
             if (ack->request_id == last_request) {
@@ -212,17 +1081,29 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
             }
         }
     }
+    if (mission_turned)
+        capture_first_terminal();
     if (elapsed_ticks % (2u * TASK_MPC_PERIOD_MS) == 0u)
         turn(task_mpc_entry);
     if (elapsed_ticks % (2u * TASK_SUPERVISOR_PERIOD_MS) == 0u)
         task_supervisor_step();
     if (command[0] >= 1 && command[0] <= UINT16_MAX && floor(command[0]) == command[0] &&
         isfinite(command[1])) {
-        uint32_t request = submit_command((uint16_t)command[0], runtime_data.prearm.check_epoch,
+        const uint16_t command_code = (uint16_t)command[0];
+        if (command_code == PRODUCT_CMD_ARM && arm_submit_time_us == 0u) {
+            arm_prearm_state_at_submit = runtime_data.prearm.state;
+            arm_prearm_failed_mask_at_submit = runtime_data.prearm.failed_checks_mask;
+            arm_prearm_epoch_at_submit = runtime_data.prearm.check_epoch;
+            arm_submit_time_us = test_clock.monotonic_us;
+        }
+        uint32_t request = submit_command(command_code, runtime_data.prearm.check_epoch,
                                           (float)command[1]);
         if (request) {
             last_request = request;
             last_ack = last_reason = 0;
+            last_command_code = command_code;
+            if (command_code == PRODUCT_CMD_ARM && arm_request_id == 0u)
+                arm_request_id = request;
         }
     }
 
@@ -230,6 +1111,8 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
     for (unsigned i = 0; i < 4; ++i)
         force[i] = permitted ? runtime_data.receipt.committed_demand.motor_thrust_n[i] : 0.0;
     const NavStateCore *nav = &runtime_data.nav.core;
+    NavigationOriginSnapshot origin_snapshot = {0};
+    Status origin_snapshot_status = estimator_get_origin(&origin_snapshot);
     const double values[FMT_STATUS_WIDTH] = {
         test_clock.monotonic_us, runtime_data.prearm.state, runtime_data.fms.arm_state,
         runtime_data.fms.flight_mode, runtime_data.fms.failsafe_level,
@@ -238,7 +1121,96 @@ __declspec(dllexport) int fmt_flight_step(const double *s, const double *command
         nav->position_ned_m[0], nav->position_ned_m[1], nav->position_ned_m[2],
         nav->velocity_ned_mps[0], nav->velocity_ned_mps[1], nav->velocity_ned_mps[2],
         runtime_stats.navigation_status, runtime_stats.control_status,
-        runtime_stats.planning_status, runtime_stats.mpc_updates, commits, failures
+        runtime_stats.planning_status, runtime_stats.mpc_updates, commits, failures,
+        runtime_data.prearm.failed_checks_mask,
+        runtime_data.prearm.primary_reason_code,
+        runtime_data.prearm.failed_count,
+        runtime_data.prearm.warning_count,
+        runtime_data.prearm.check_epoch,
+        runtime_data.fms.authority,
+        runtime_data.fms.mission_state,
+        last_command_code,
+        origin_auth_attempts,
+        origin_auth_successes,
+        origin_auth_last_status,
+        origin_reset_attempts,
+        origin_reset_successes,
+        origin_reset_last_status,
+        origin_reset_last_type,
+        origin_reset_last_origin_id,
+        gnss_submit_attempts,
+        gnss_submit_successes,
+        gnss_submit_last_status,
+        gnss_push_attempts,
+        gnss_push_successes,
+        gnss_push_last_status,
+        origin_poll_attempts,
+        origin_poll_successes,
+        origin_poll_last_status,
+        origin_poll_last_sequence,
+        origin_poll_last_next_id,
+        sensor_turn_count,
+        mission_turn_count,
+        origin_wake_count,
+        candidate_observed_count,
+        candidate_last_sequence,
+        candidate_last_sample_us,
+        candidate_last_valid_until_us,
+        candidate_last_next_id,
+        candidate_last_age_us,
+        mil_gnss_gate_released,
+        mil_gnss_gate_ready_time_us,
+        mil_gnss_gate_wait_steps,
+        mil_gnss_first_fix_sequence,
+        mil_gnss_first_fix_sample_us,
+        gnss_push_not_ready_count,
+        gnss_push_not_permitted_count,
+        gnss_push_other_failures,
+        origin_snapshot_status,
+        origin_snapshot.valid_mask,
+        origin_snapshot.origin_id,
+        candidate_first_sequence,
+        candidate_first_sample_us,
+        candidate_first_age_us,
+        first_terminal_time_us,
+        first_terminal_decision_code,
+        first_terminal_decision_reason,
+        first_terminal_landed_state,
+        first_terminal_landed_stable_ms,
+        first_terminal_landed_evidence,
+        first_terminal_landed_confidence,
+        first_terminal_control_health_state,
+        first_terminal_control_dof_mask,
+        first_terminal_control_degraded_dof_mask,
+        first_terminal_control_reason,
+        first_terminal_control_status,
+        first_terminal_runtime_control_health,
+        first_terminal_solver_status,
+        first_terminal_deadline_miss_count,
+        first_terminal_allocation_failure_count,
+        first_terminal_actuator_fault_mask,
+        first_terminal_actuator_available_mask,
+        first_terminal_actuator_cap_available_mask,
+        first_terminal_actuator_cap_dof_mask,
+        first_terminal_permit_flags,
+        first_terminal_permit_reason,
+        first_terminal_guidance_state,
+        first_terminal_guidance_reason,
+        first_terminal_guidance_feasible,
+        first_terminal_feasibility_reason,
+        first_terminal_control_reference_id,
+        first_terminal_receipt_result_code,
+        first_terminal_runtime_error,
+        first_terminal_mpc_updates,
+        first_terminal_nav_capability_mask,
+        first_terminal_nav_solution_state,
+        first_terminal_nav_valid_mask,
+        first_terminal_bundle_ready,
+        arm_prearm_state_at_submit,
+        arm_prearm_failed_mask_at_submit,
+        arm_prearm_epoch_at_submit,
+        arm_submit_time_us,
+        arm_request_id
     };
     memcpy(status, values, sizeof(values));
     NavFrame published = {0};

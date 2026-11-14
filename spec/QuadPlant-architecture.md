@@ -1,65 +1,80 @@
 # QuadPlant 架构规格
 
-状态：设计草案；2026-11-05。物理保真度保持短时间局部刚体，执行方案统一为离散显式RK4。适用域见[Plant系统](QuadPlant-system.md)。
+状态：实现与验收分离；2026-11-09。物理保真度保持短时间局部刚体，执行方案统一为离散显式RK4。适用域见 QuadPlant-system.md。
 
 ## 1. 数值结构与执行边界
 
-顶层fixed-step discrete，500us，无Continuous Integrator或continuous Model Reference。状态向量x=[p(3),v(3),q(4),ω(3),motorω(4)]共17维double，Unit Delay初值来自Scenario。PlantStep由四个可见的PureRHS数值子系统与Sum/Gain构成：k1=f(x,u)，k2=f(x+h*k1/2,u)，k3=f(x+h*k2/2,u)，k4=f(x+h*k3,u)，x_next=x+h*(k1+2*k2+2*k3+k4)/6。每个RHS重新计算姿态/力/接触，u与外扰在间隔内保持。只在完整步后归一化q，记录归一化前范数；中间阶段构造旋转矩阵用归一化工作副本，不反馈修改阶段状态。
+顶层 fixed-step discrete，500us，无 Continuous Integrator 或 continuous Model Reference。状态向量 x=[p(3),v(3),q(4),ω(3),motorω(4)] 共17维 double，Unit Delay 初值来自 Scenario。PlantStep 由四个可见的 PureRHS 数值子系统与 Sum/Gain 构成：k1=f(x,u)，k2=f(x+h*k1/2,u)，k3=f(x+h*k2/2,u)，k4=f(x+h*k3,u)，x_next=x+h*(k1+2*k2+2*k3+k4)/6。每个 RHS 重新计算姿态/力/接触，u 与外扰在间隔内保持。只在完整步后归一化 q，记录归一化前范数；中间阶段构造旋转矩阵用归一化工作副本，不反馈修改阶段状态。
 
 | 组件 | 输入→输出 | 状态/DFT |
 |---|---|---|
-| AppliedFrameRegister | 到期pending code→等效N目标 | 非DFT；初值stop，应用延迟500us |
+| AppliedFrameRegister | 到期 pending code→等效N目标 | 非DFT；初值stop，应用延迟500us |
 | MotorRHS/RotorWrench | motorω/目标N→ω_dot/FRD wrench | 纯RHS，DFT；电机状态在17维寄存器 |
-| Environment/GroundRHS | 本阶段状态/外生场景→外力矩 | DFT；每RK4阶段重算接触 |
+| Environment/GroundRHS | 本阶段x/外生场景→外力矩 | DFT；每RK4阶段重算接触 |
 | RigidBodyRHS | 当前阶段x/wrench→p/v/q/ω导数 | DFT；不包含隐藏积分器 |
 | RK4Step/PlantState | 四阶段RHS→x_next→x_k | Unit Delay非DFT，固定h=.0005s |
 | SensorKinematics/Sampler | x_k及已应用命令→原始物理量/采样事件 | 数学DFT；队列/随机流非DFT |
 
-Sample相位在PlantStep之前，只读x_k，不能输出x_next冒充同刻测量。SimStop后run_enable=false，x_next=x_k并结束运行；冻结只实现终止语义，不是物理安全动作。离散日志先记t_k，再保存x_next，避免把未来状态标成当前时间。
+Sample 相位在 PlantStep 之前，只读 x_k，不能输出 x_next 冒充同刻测量。SimStop 后 run_enable=false，x_next=x_k 并结束运行；冻结只实现终止语义，不是物理安全动作。离散日志先记 t_k，再保存 x_next，避免把未来状态标成当前时间。
 
 ## 2. 原点与动力学
 
-N0是绑定Origin的固定ECEF切平面NED，C_0b将FRD转N0；Plant p/v/q/rate都在这个固定局部框架。原点位于初始CG，p0=[0,0,0]，地面D=0.15m，CG→接地点FRD=[0,0,.15]。WGS锚点45degN/0degE/100m是初始CG；Home从M4捕获，不改变Origin。Baro基准在同一初始位置锁存，初始化p_D=0/b_h=0不会凭空产生0.15m创新。
+N0 是绑定 Origin 的固定 ECEF 切平面 NED，C_0b 将 FRD 转 N0；Plant p/v/q/rate 都在这个固定局部框架。原点位于初始 CG，p0=[0,0,0]，地面 D=0.15m，CG→接地点 FRD=[0,0,.15]。WGS 锚点 45degN/0degE/100m 是初始 CG；Home 从 M4 捕获，不改变 Origin。Baro 基准在同一初始位置锁存，初始化 p_D=0/b_h=0 不会凭空产生0.15m创新。
 
-对非重力外力F_b，p_dot=v，v_dot=C_0b*F_b/m+g0；ω为body相对N0的rate，ω_dot=J^-1*(τ-ω×Jω)，q_dot=.5*q⊗[0,ω]。固定局部刚体忽略地球自转对转动动量的微小影响；传感器前向模型仍与KF地理编排一致，不能把框架差异当gyro bias调掉。重力g0由共享WGS函数在锚点生成，短域内常量近似入manifest。
+对非重力外力 F_b，p_dot=v，v_dot=C_0b*F_b/m+g0；ω为 body 相对 N0 的 rate，ω_dot=J^-1*(τ-ω×Jω)，q_dot=.5*q⊗[0,ω]。固定局部刚体忽略地球自转对转动动量的微小影响；传感器前向模型仍与 KF 地理编排一致，不能把框架差异当 gyro bias 调掉。重力由 Flight Host SIL 共享参数提供；Earth rate 由 SIM_ONLY Origin 计算并转换到固定 N0。
 
-GeodesyAdapter严格区分点和向量：r_e=r0_e+C_e0*p0，v_e=C_e0*v0，R_0b=C_0e*C_en(LLH)*R_nb(KF)。位置经ECEF平移后旋转，速度/力只旋转；不能把ecef2ned位置函数用在速度上。LLH当前NED的transport项留在KF内部；公开固定N0的body rate是ω_b/N0，不是当前LLH导航系rate。该语义纳入G0 Nav rate确认，不声称父ICD已明确。
+GeodesyAdapter 严格区分点和向量：r_e=r0_e+C_e0*p0，v_e=C_e0*v0，R_0b=C_0e*C_en(LLH)*R_nb(KF)。位置经 ECEF 平移后旋转，速度/力只旋转；不能把 ecef2ned 位置函数用在速度上。LLH 当前 NED 的 transport 项留在 KF 内部；公开固定 N0 的 body rate 是 ω_b/N0，不是当前 LLH 导航系 rate。该语义纳入 G0 Nav rate 确认，不声称父 ICD 已明确。
 
 ## 3. 电机、载荷和接地
 
-ω_cmd=sqrt(max(f_cmd,0)/k_f)，motorω_dot=(ω_cmd-motorω)/tau，f_actual=k_f*motorω²；0..10N目标，对应0..1000rad/s。四电机顺序前左/前右/后右/后左，位置分别(+a,-a),(+a,+a),(-a,+a),(-a,-a)，a=.225/sqrt(2)m；F_i=[0,0,-f_i]，τ_i=r_i×F_i+[0,0,gamma_i*f_i]。loss-of-effectiveness是Plant内部物理故障，不把该真值直接写M6/M7能力mask。
+电机顺序、FRD 坐标、偏航符号、质量、惯量、推力上下限和一阶时间常数由同级 Flight/config/vehicle_model.yaml 提供。当前 Flight 合成配置的四个位置为 [0.18,-0.18,0]、[0.18,0.18,0]、[-0.18,0.18,0]、[-0.18,-0.18,0] m，偏航系数为 [-.02,+.02,-.02,+.02] m；这组参数没有硬件辨识证据。刚体内核支持完整 3×3 对称正定惯量矩阵，使用完整 J·ω、ω×(J·ω) 和 Cholesky 求解 J·α=rhs；参数生成和 S-Function 会拒绝非对称或非正定矩阵。当前 Flight 合成数值恰好为对角矩阵。
 
-相对空气速度阻力-Fdrag*v_air，转动阻尼-Kω；所有外力先注明frame再变换。M7输入N来自量化code逆映射，无第二次PWM解释。电机ω/实际力只到传感器和只读评价，ESC反馈NONE。
+SIM_ONLY 专属参数包括转速到推力系数、空气阻力、转动阻尼和地面接触。ω_cmd=sqrt(max(f_cmd,0)/k_f)，motorω_dot=(ω_cmd-motorω)/tau，f_actual=k_f*motorω²。Plant 物理电机上限跟随 Flight vehicle config；当前 M7 DShot 虚拟量化曲线仍限制命令为0..10N。F_i=[0,0,-f_i]，τ_i=r_i×F_i+[0,0,gamma_i*f_i]。loss-of-effectiveness 是 Plant 内部物理故障，不把该真值直接写 M6/M7 能力 mask。
 
-接触必须先按几何门控：p_contact_D<ground_D时Fn=0，与下降速度无关；否则δ=p_contact_D-ground_D，Fn=max(0,k*δ+c*v_contact_D)，向N0 Up作用并产生CG力矩。接地之外不得有阻尼悬浮力；离地后不粘地，不用状态投影/瞬移纠正穿透。无水平摩擦，超2cm基准穿透或非有限即FAIL。
+相对空气速度阻力 -Fdrag*v_air，转动阻尼 -Kω；所有外力先注明 frame 再变换。PlantParameters 固定26项：p[0]=mass，p[1..9]=完整 J(:)（MATLAB列主序），p[10]=kf，p[11]=motor tau，p[12..14]=NED drag，p[15]=rate damping，p[16]=ground stiffness，p[17]=ground damping，p[18]=ground down，p[19..21]=contact lever FRD，p[22]=gravity，p[23..24]=skid half-span，p[25]=ground friction。参数由 generate_parameters 统一生成；任何维度、对称正定性或物理范围不匹配都应在模型运行前失败。M7 输入 N 来自量化 code 逆映射，无第二次 PWM 解释。电机ω/实际力只到传感器和只读评价，ESC反馈 NONE。
 
-GroundContact fixture用有符号间隙gap=ground_D-p_contact_D判定：gap≤1mm且穿透δ≤2cm、测量有效时给CONTACT；合法静态压缩不会因abs(gap)>1mm丢失接地，sample每500us、TTL1000us；无随机误判为名义假设，drop/stuck在独立故障场景注入。M4仍需Nav加速度/速度和2s dwell，不能只凭该位宣布LANDED。
+接触必须先按几何门控：p_contact_D<ground_D 时 Fn=0，与下降速度无关；否则 δ=p_contact_D-ground_D，Fn=max(0,k*δ+c*v_contact_D)，向 N0 Up 作用并产生 CG 力矩。接地之外不得有阻尼悬浮力；离地后不粘地，不用状态投影/瞬移纠正穿透。第一版地面摩擦参数明确为 μ=0，不产生水平接触力；超2cm基准穿透或非有限即 FAIL。
 
-## 4. 传感器与M2入口
+GroundContact fixture 用有符号间隙 gap=ground_D-p_contact_D 判定：gap≤1mm 且穿透 δ≤2cm、测量有效时给 CONTACT；合法静态压缩不会因 abs(gap)>1mm 丢失接地，sample 每500us、TTL1000us；无随机误判为名义假设，drop/stuck 在独立故障场景注入。M4 仍需 Nav 加速度/速度和2s dwell，不能只凭该位宣布 LANDED。
 
-设l_I为CG→IMU，v_I=v_CG+C*(ω×l_I)，a_I=a_CG+C*(α×l_I+ω×(ω×l_I))，其中ω=ω_b/N0、α为同刻局部角加速度。原始gyro=ω+C'*ω_ie^0，比力f_I=C'*(a_I-g0+2*ω_ie^0×v_I)。Origin固定于ECEF，不能在此再加当前地理NED的transport项；KF在其内部当前LLH/NED编排使用wie+wen，适配器负责基变换。
+## 4. 传感器与 M2 入口
 
-GNSS点按天线LLH/速度合成，Mag N0场[25,0,40]uT；Baro以合成压力高度基准100m和Up位移生成，再用M2同一压力转换函数的逆生成pressure。该100m压力基准是明确合成假设，不把椭球高等同实测压力高度；h_baro0由M3锁存。
+设 l_I 为 CG→IMU，v_I=v_CG+C*(ω×l_I)，a_I=a_CG+C*(α×l_I+ω×(ω×l_I))，其中 ω=ω_b/N0、α为同刻局部角加速度。原始 gyro=ω+C'*ω_ie^0，比力 f_I=C'*(a_I-g0+2*ω_ie^0×v_I)。当前 SIM sensor adapter 已加入固定 N0 Earth-rate/Coriolis 项、CG→IMU 杆臂角加速度与向心加速度、IMU→GNSS 天线位置/速度杆臂，并用初始速度/角速度初始化差分器、屏蔽首个无差分 IMU 样本。P07/P08 对应的杆臂与静止 IMU 物理检查已有脚本。P09 已在 M2 标准样本出口实现安装矩阵、残余 bias/scale 与多源高斯噪声；随机流按 seed/source/sample-index/axis 派生，不依赖 RK4 调用次数，回归脚本验证 seed 重复性、轴间独立性和 IMU STD。P10a 的独立多速率采样/传输队列已接入 MIL Host SIL，sample/capture/arrival/release 分别建模，物理到达与固定步长实际交付不混淆，并验证 generated/suppressed/released/accepted 计数。P10b 的 Flight TimeService 核心通过 `verify_time_service_sync` 复用真实 `systime.c` 和上游 host suite 回归 PPS period gate、频率驯服、UTC/PPS 配对、UTC mapping、holdover 与 epoch 拒绝；`verify_gnss_time_recovery` 复用真实 GNSS sample normalization/filter 和 Flight 的 GNSS outage 测试，覆盖 PVT/UTC/PPS 独立失效与恢复；`verify_rectime_time_mapping` 直接调用真实 `unicore_ascii.c`，验证 RECTIMEA CRC、GPS/UTC epoch 一致性和 PPS 配对 UTC mapping。三组测试的 PPS 输入仍为合成 `PpsCaptureEvent`，Host MIL `sil_flight.c` 对 time service API 仍是 `STATUS_NOT_READY` stub，TIM2 capture ISR、UART/DMA 和 `sensor_gnss_poll` 尚未进入 MIL 闭环。
 
-UM982/PPS为固定主要器件，不建“可选GNSS”名义Variant。GNSS PVT、PPS边沿、时间历元分别走SIM_PVT/SIM_PPS_EPOCH适配；PVT失锁不伪造新数据或清配置，PPS是否仍可靠由该故障场景明确给证据。PPS不是刚体状态的函数，其捕获raw tick/历元关联/理想时基边界见执行协议第8节。真实RAW_CAPTURE中的UM982串口解码仍需正式后端；不能把合成PVT通过当成已验收原生解析器。
+GNSS 点按天线 LLH/速度合成，Mag N0 场[25,0,40]uT；Baro 以合成压力高度基准100m和 Up 位移生成，再用 M2 同一压力转换函数的逆生成 pressure。该100m压力基准是明确合成假设，不把椭球高等同实测压力高度；h_baro0 由 M3 锁存。
 
-SensorFrontend默认SIM_RAW_ENGINEERING子格式：生成sensor轴系工程量/捕获时间/质量，私有虚拟采集适配进入M2校准/安装/时间处理，M2出口才是公共标准样本。该模式验证处理数学，不验证ADIS二进制解码或驱动。RAW_CAPTURE另用于真实字节解码fixture。M2_STANDARD回放则只验证转发，禁止再做校准或扣pipeline；input_level/subformat必须写manifest。
+UM982/PPS 为目标系统固定器件，不建“可选GNSS”名义 Variant。目标接口要求 GNSS PVT、PPS 边沿和时间历元分别建模；当前 Host SIL 仅注入 SIM_PVT 本地 monotonic 时间，`pps_backend=DISABLED_LOCAL_MONOTONIC`；TimeService 算法核心已有独立回归，但 PPS/UTC 尚未进入 Host MIL 传感器事件链，仍是 P10b 集成缺口。PVT失锁不伪造新数据或清配置，PPS是否仍可靠应由后续同一硬件配置故障场景给证据。真实 RAW_CAPTURE 中的 UM982 串口解码仍需正式后端；不能把合成 PVT 通过当成已验收原生解析器。
+
+SensorFrontend 默认 SIM_RAW_ENGINEERING 子格式：生成 sensor 轴系工程量/捕获时间/质量，私有虚拟采集适配进入 M2 校准/安装/时间处理，M2 出口才是公共标准样本。该模式验证处理数学，不验证 ADIS 二进制解码或驱动。RAW_CAPTURE 另用于真实字节解码 fixture。M2_STANDARD 回放则只验证转发，禁止再做校准或扣 pipeline；input_level/subformat 必须写 manifest。
 
 | 源 | 采样率/STD | sample→capture→arrival |
 |---|---|---|
 | IMU | 1kHz，gyro.001rad/s、accel.02m/s² | capture=sample+2000us，arrival=capture+300us |
 | GNSS | 10Hz，pos.2m/axis、vel.03m/s/axis | 合成有效sample，arrival=sample+10000us |
 | PPS / GNSS历元 | 1Hz固定启用，独立捕获质量/历元有效位 | raw tick锁存；PPS arrival=capture+100us，历元arrival=对应秒+10000us；UTC不在8个有效间隔之前假锁定 |
-| Baro | 100Hz，高度.05m | arrival=sample+5000us，压力参考明确 |
+| Baro | 100Hz，高度.05m | arrival=sample+5000us |
 | Mag | 100Hz，.1uT/axis | arrival=sample+3000us |
 | GroundContact | 2kHz，名义无随机误判 | arrival=sample，TTL1000us |
 
-IMU原始捕获时刻在M2减已知2000us一次；STANDARD消息直接携带校正sample并标PIPELINE_CORRECTED，不再扣一次。first arrival2300us在2500us释放，额外200us为调度等待，不是测量误差。轴间时延测试按物理历史生成，先因果对齐共同旧sample。
-
-随机流以seed/source/measurement sequence派生，不能依赖RK4调用次数；步长细化不改变输入噪声序列。参数STD/PSD分开记录；纯数值与噪声统计分别验收。
+IMU 原始捕获时刻在 M2 减已知2000us一次；STANDARD 消息直接携带校正 sample 并标 PIPELINE_CORRECTED，不再扣一次。随机流以 seed/source/measurement sequence 派生，不能依赖 RK4 调用次数；步长细化不改变输入噪声序列。参数 STD/PSD 分开记录；纯数值与噪声统计分别验收。
 
 ## 5. 数值证据和限制
 
-P-12在同一500us外层调用内比较一次500us RK4与两个250us RK4子步，保持Frame应用延迟、sensor采样/arrival、输入保持和随机序列完全相同，只改变物理积分精度。子步内不再触发Chart/队列/噪声。连续块或Aerospace 6DOF不能直接混入活动方案；若以后整体换积分策略，需重验执行时序/符号/收敛再替换本方案。
+P-12 对比 500us Simulink RK4 与独立 250us RK4 参考，使用相同初始状态、输入保持和无接触环境；当前参考只覆盖平滑无接触轨迹，不代表传感器队列/事件时序已验收。子步内不再触发 Chart/队列/噪声。连续块或 Aerospace 6DOF 不能直接混入活动方案；若以后整体换积分策略，需重验执行时序/符号/收敛再替换本方案。
 
-Truth只有SensorFrontend和只读Evaluator可动态读取；初始化来自同一Scenario先验配置而非运行中truth反馈。没有HIL实时性或飞行安全放行结论。
+Truth 只有 SensorFrontend 和只读 Evaluator 可动态读取；初始化来自同一 Scenario 先验配置而非运行中 truth 反馈。没有 HIL 实时性或飞行安全放行结论。
+
+
+## 固定向量合同（2026-11-09）
+
+- PlantState：17 doubles，依次为 p_NED(3)、v_NED(3)、q_0b(wxyz)(4)、omega_b/N0_FRD(3)、motor_omega(4)。
+- Environment：15 doubles，1:3 wind_NED(m/s)，4:6 external_force_NED(N)，7:9 external_torque_FRD(N·m)，10 ground_enable(0/1)，11 drag_enable(0/1)，12:15 rotor_effectiveness([0,1])。
+- PlantParameters：26 doubles，依次为 mass、J(:)完整3×3矩阵（MATLAB列主序9项）、kf、motor_tau、drag(3)、rate_damping、ground_k、ground_c、ground_down、contact_lever_FRD(3)、gravity、skid_half_span(2)、ground_friction。
+- J 必须对称正定；当前 Flight SIM_ONLY 惯量数值恰好对角。刚体角加速度通过 Cholesky 求解 J*alpha=rhs，不显式求逆。
+- 所有状态/参数/wrench/environment 输入必须有限；四元数非零、电机转速非负；ground/drag 标志严格为 0/1，电机效能在 [0,1]。不合法输入由 S-Function 直接拒绝。
+- 第一版 ground_friction=0，明确不建水平地面摩擦。该参数位保留但不得在没有验证用例前改成非零。
+
+
+## SensorParameters 合同
+
+SensorParameters 为 19 doubles：[gravity, magnetic_field_NED(3), earth_rate_NED(3), initial_velocity_NED(3), initial_rate_FRD(3), imu_to_cg_FRD(3), antenna_from_imu_FRD(3)]。SensorModelParameters 为 54 doubles，携带随机种子、IMU/MAG 安装矩阵、残余 bias/scale、IMU/MAG/GNSS/Baro 噪声 STD。IMU 杆臂按 CG→IMU = -imu_to_cg 解释，GNSS 天线杆臂为 CG→IMU + IMU→antenna。P-07/P-08 已有组件测试；P-09 的可复现噪声和残余误差注入已实现；P-10a 多速率采样/传输队列已实现并由 `verify_sensor_event_timing` 检查；P-10b 的 Flight TimeService 核心由 `verify_time_service_sync` 复用上游测试回归，Host MIL 的 TIM2 capture/UM982 RECTIME/UTC epoch 端到端链仍待接入。

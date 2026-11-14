@@ -1,0 +1,8 @@
+{
+  "schema": "flight-matalab-issue-workflow-pointer/1.0",
+  "deprecated": true,
+  "canonical_document": "spec/quality/ISSUE_WORKFLOW.md",
+  "canonical_checklist": "spec/quality/ISSUE_CLOSURE_CHECKLIST.md",
+  "canonical_manifest": "spec/quality/issue-workflow.json",
+  "agent_entrypoint": "spec/AGENT-操作指南.md"
+}

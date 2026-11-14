@@ -1,5 +1,9 @@
 # Flight_Matalab 独立工程规格入口
 
+## Agent 唯一操作入口
+
+**将任务交给自动化 Agent 时，先要求它完整读取 [Agent 操作总指南](AGENT-操作指南.md)，然后按本页阅读顺序读取相关技术规格。** 所有正式技术、测试验收、问题管理和操作流程文档统一维护在 `spec/`。动态问题登记在 GitHub Issues，MATLAB 运行证据保存在 `work/validation/archives/`。GitHub 模板和可执行工具仍放在 GitHub/MATLAB 要求的固定路径，具体操作见 Agent 指南。
+
 基线：`FLIGHT-MATLAB-SPEC-1.3-DRAFT`；日期：2026-11-05；状态：`SPEC_REVIEWED_MODEL_NOT_STARTED`。
 
 当前为规格阶段，工程已从Flight目录移出，与Flight和FMT-Model同级。独立工程根目录为 `D:/STM32Project/FMT-Firmware-1.2.0/Flight_Matalab`；原 `FMT-Model` 保留，用户已明确不回写原工程。三个目标 `.slx` 尚未生成，编译/仿真/代码生成结果均为 `NOT_RUN`。
@@ -49,3 +53,16 @@ python -B spec/tools/check_specs.py
 Host方案统一标HOST_NATIVE_V2：约束驱动retimer/GoalConnector、固定grid与未来交接、PREPARE/COMMIT、双时间轴和完整World证据。G0-HOST检查实际依赖/输入，G1验证模型拓扑；固件数值/时序等价另经FirmwareConformanceGate。模型实施仍未开始，任何规格PASS都不自动代替模型仿真。
 
 独立目录关系和外部只读路径见[工程组织](FlightSIM-architecture.md#4-工程规划目录)。本次迁移保留所有历史证据的原始内容和原观察路径；它们不作为当前工作目录。当前迁移和逐文件核对见[迁移记录](validation/project_relocation_report.json)。
+
+
+## 当前分支 MATLAB 实际验收
+
+规格文档中的目标矩阵不自动代表代码已实现或已执行。当前分支的可执行测试入口、数据集版本、实际断言阈值、报告清单和结果提交格式，以 [MATLAB 仿真测试数据集与验收标准](MATLAB-验收与结果提交.md) 及 [机器可读验收清单](validation/matlab_acceptance_manifest.json) 为准。
+
+
+## 问题登记与闭环
+
+所有缺陷、测试失败和验收阻塞统一登记在 GitHub Issues；编号、状态、严重级别、证据 RUN_ID、修复 commit 和回归结果按 [问题闭环规范](quality/ISSUE_WORKFLOW.md) 管理。每次 MATLAB 运行的原始证据归档在被 Git 忽略的 `work/validation/archives/`，不与版本化的 `spec/validation/` 验收标准混放。
+
+
+关闭问题前必须逐项执行[问题关闭验收清单](quality/ISSUE_CLOSURE_CHECKLIST.md)；机器可读状态定义见[issue-workflow.json](quality/issue-workflow.json)。

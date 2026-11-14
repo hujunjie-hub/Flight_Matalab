@@ -1,0 +1,469 @@
+{
+  "schema": "flight-matlab-acceptance/1.0",
+  "branch": "optimize/sil-physical-parameter-alignment",
+  "repository": "hujunjie-hub/Flight_Matalab",
+  "acceptance_document": "spec/MATLAB-验收与结果提交.md",
+  "generated_by": "run_component_checks",
+  "run_sequence": [
+    "build_flight_runtime.ps1",
+    "build_native_kernels",
+    "generate_parameters",
+    "build_plant_models(8)",
+    "build_flight_models",
+    "build_actuation_components",
+    "build_pid_allocation_probe",
+    "verify_flight_entries(true)",
+    "verify_time_service_sync",
+    "verify_gnss_time_recovery",
+    "verify_rectime_time_mapping",
+    "verify_parameter_view",
+    "verify_osqp_gate",
+    "verify_execution_gate",
+    "verify_plant_open_loop",
+    "verify_truth_isolation",
+    "verify_rate_pid_transaction",
+    "verify_pid_allocator_feedback",
+    "verify_actuation_components",
+    "final_source_fingerprint_check"
+  ],
+  "datasets": [
+    {
+      "id": "D-MIL-COMMAND-TAPE",
+      "kind": "deterministic_generated",
+      "source": "tools/fmt_default_input.m",
+      "model": "FMT_MILSIM",
+      "time_grid": {
+        "start_s": 0,
+        "stop_s": 26,
+        "step_us": 500
+      },
+      "command_rows_matlab_1_based": [
+        8400,
+        12000,
+        28000,
+        50000
+      ],
+      "command_codes": [
+        {
+          "row": 8400,
+          "code": 1,
+          "meaning": "DISARMED/LOCKED to unlock request"
+        },
+        {
+          "row": 12000,
+          "code": 3,
+          "meaning": "takeoff request, target height 2 m"
+        },
+        {
+          "row": 28000,
+          "code": 4,
+          "meaning": "land request"
+        },
+        {
+          "row": 50000,
+          "code": 2,
+          "meaning": "lock request"
+        }
+      ],
+      "acceptance": "26 s MIL completes FMS-authorized late-GNSS origin rebuild, ARM, valid CONTROL_ACTIVE permit and committed M7 output, takeoff/landing/disarm; no terminal failsafe before valid commit and no nonzero thrust without valid commit.",
+      "mil_origin_profile": {
+        "initial_origin_valid_mask": 1,
+        "complete_origin_valid_mask": 3,
+        "candidate_max_age_us": 20000,
+        "first_fix_sequence_min_exclusive": 1,
+        "gnss_release_condition": "Release first GNSS measurement only after INS publishes NAV_VALID_ATTITUDE while horizontal position remains invalid; applies only to FMT_MILSIM.",
+        "other_entry_modes": "FMT_DataSIM uses the same provisional origin and deterministic late-GNSS event queue to reproduce MIL; FMT_ExtINS_DataSIM consumes the recorded navigation frame and does not exercise its own estimator origin reset."
+      },
+      "diagnostics": {
+        "report": "work/validation/mil_diagnostics.json",
+        "status_width": 113,
+        "status_columns": {
+          "prearm_failed_mask": 25,
+          "prearm_primary_reason": 26,
+          "prearm_failed_count": 27,
+          "prearm_warning_count": 28,
+          "prearm_check_epoch": 29,
+          "fms_authority": 30,
+          "mission_state": 31,
+          "last_command_code": 32,
+          "origin_auth_attempts": 33,
+          "origin_auth_successes": 34,
+          "origin_auth_last_status": 35,
+          "origin_reset_attempts": 36,
+          "origin_reset_successes": 37,
+          "origin_reset_last_status": 38,
+          "origin_reset_last_type": 39,
+          "origin_reset_last_origin_id": 40,
+          "prearm_reject_state": 3,
+          "prearm_ready_state": 2,
+          "origin_rebuild_reset_type": 2,
+          "gnss_submit_attempts": 41,
+          "gnss_submit_successes": 42,
+          "gnss_submit_last_status": 43,
+          "gnss_push_attempts": 44,
+          "gnss_push_successes": 45,
+          "gnss_push_last_status": 46,
+          "origin_poll_attempts": 47,
+          "origin_poll_successes": 48,
+          "origin_poll_last_status": 49,
+          "origin_poll_last_sequence": 50,
+          "origin_poll_last_next_id": 51,
+          "sensor_turn_count": 52,
+          "mission_turn_count": 53,
+          "origin_wake_count": 54,
+          "candidate_observed_count": 55,
+          "candidate_last_sequence": 56,
+          "candidate_last_sample_us": 57,
+          "candidate_last_valid_until_us": 58,
+          "candidate_last_next_id": 59,
+          "candidate_last_age_us": 60,
+          "mil_gnss_gate_released": 61,
+          "mil_gnss_gate_ready_time_us": 62,
+          "mil_gnss_gate_wait_steps": 63,
+          "mil_gnss_first_fix_sequence": 64,
+          "mil_gnss_first_fix_sample_us": 65,
+          "gnss_push_not_ready_count": 66,
+          "gnss_push_not_permitted_count": 67,
+          "gnss_push_other_failures": 68,
+          "origin_snapshot_status": 69,
+          "origin_valid_mask": 70,
+          "origin_id": 71,
+          "candidate_first_sequence": 72,
+          "candidate_first_sample_us": 73,
+          "candidate_first_age_us": 74,
+          "permit_scope_control_active_flag": 2,
+          "permit_flag_revoked": 4,
+          "actuator_receipt_committed": 1,
+          "first_terminal_time_us": 75,
+          "first_terminal_decision_code": 76,
+          "first_terminal_decision_reason": 77,
+          "first_terminal_landed_state": 78,
+          "first_terminal_landed_stable_ms": 79,
+          "first_terminal_landed_evidence": 80,
+          "first_terminal_landed_confidence": 81,
+          "first_terminal_control_health_state": 82,
+          "first_terminal_control_dof_mask": 83,
+          "first_terminal_control_degraded_dof_mask": 84,
+          "first_terminal_control_reason": 85,
+          "first_terminal_control_status": 86,
+          "first_terminal_runtime_control_health": 87,
+          "first_terminal_solver_status": 88,
+          "first_terminal_deadline_miss_count": 89,
+          "first_terminal_allocation_failure_count": 90,
+          "first_terminal_actuator_fault_mask": 91,
+          "first_terminal_actuator_available_mask": 92,
+          "first_terminal_actuator_cap_available_mask": 93,
+          "first_terminal_actuator_cap_dof_mask": 94,
+          "first_terminal_permit_flags": 95,
+          "first_terminal_permit_reason": 96,
+          "first_terminal_guidance_state": 97,
+          "first_terminal_guidance_reason": 98,
+          "first_terminal_guidance_feasible": 99,
+          "first_terminal_feasibility_reason": 100,
+          "first_terminal_control_reference_id": 101,
+          "first_terminal_receipt_result_code": 102,
+          "first_terminal_runtime_error": 103,
+          "first_terminal_mpc_updates": 104,
+          "first_terminal_nav_capability_mask": 105,
+          "first_terminal_nav_solution_state": 106,
+          "first_terminal_nav_valid_mask": 107,
+          "first_terminal_bundle_ready": 108,
+          "arm_prearm_state_at_submit": 109,
+          "arm_prearm_failed_mask_at_submit": 110,
+          "arm_prearm_epoch_at_submit": 111,
+          "arm_submit_time_us": 112,
+          "arm_request_id": 113
+        },
+        "command_history_fields": [
+          "request_id",
+          "command_code",
+          "ack_state",
+          "reason_code",
+          "arm_state",
+          "flight_mode",
+          "failsafe_level",
+          "prearm_state",
+          "prearm_failed_mask",
+          "prearm_primary_reason",
+          "prearm_failed_count",
+          "prearm_check_epoch",
+          "origin_auth_attempts",
+          "origin_auth_successes",
+          "origin_auth_last_status",
+          "origin_reset_attempts",
+          "origin_reset_successes",
+          "origin_reset_last_status",
+          "origin_reset_last_type",
+          "origin_reset_last_origin_id"
+        ],
+        "terminal_snapshot_fields": [
+          "first_terminal_time_us",
+          "first_terminal_decision_code",
+          "first_terminal_decision_reason",
+          "first_terminal_landed_state",
+          "first_terminal_landed_stable_ms",
+          "first_terminal_landed_evidence",
+          "first_terminal_landed_confidence",
+          "first_terminal_control_health_state",
+          "first_terminal_control_dof_mask",
+          "first_terminal_control_degraded_dof_mask",
+          "first_terminal_control_reason",
+          "first_terminal_control_status",
+          "first_terminal_runtime_control_health",
+          "first_terminal_solver_status",
+          "first_terminal_deadline_miss_count",
+          "first_terminal_allocation_failure_count",
+          "first_terminal_actuator_fault_mask",
+          "first_terminal_actuator_available_mask",
+          "first_terminal_actuator_cap_available_mask",
+          "first_terminal_actuator_cap_dof_mask",
+          "first_terminal_permit_flags",
+          "first_terminal_permit_reason",
+          "first_terminal_guidance_state",
+          "first_terminal_guidance_reason",
+          "first_terminal_guidance_feasible",
+          "first_terminal_feasibility_reason",
+          "first_terminal_control_reference_id",
+          "first_terminal_receipt_result_code",
+          "first_terminal_runtime_error",
+          "first_terminal_mpc_updates",
+          "first_terminal_nav_capability_mask",
+          "first_terminal_nav_solution_state",
+          "first_terminal_nav_valid_mask",
+          "first_terminal_bundle_ready"
+        ],
+        "arm_submission_fields": [
+          "arm_prearm_state_at_submit",
+          "arm_prearm_failed_mask_at_submit",
+          "arm_prearm_epoch_at_submit",
+          "arm_submit_time_us",
+          "arm_request_id"
+        ]
+      }
+    },
+    {
+      "id": "D-FLIGHT-REPLAY-MAT",
+      "kind": "tracked_and_regenerated",
+      "path": "scenarios/flight_sil_recording.mat",
+      "baseline_git_blob_sha1": "f3106ca4d4394f3761ef813879bd603fb85a3bb4",
+      "baseline_size_bytes": 7606547,
+      "variables": [
+        "t",
+        "sensor",
+        "commands",
+        "navigation",
+        "revision"
+      ],
+      "generated_by": "verify_flight_entries(true)",
+      "consumed_by": [
+        "FMT_DataSIM",
+        "FMT_ExtINS_DataSIM"
+      ],
+      "runtime_hash": "work/validation/current_source_fingerprint.json:files[scenarios/flight_sil_recording.mat]"
+    },
+    {
+      "id": "D-PLANT-ANALYTIC-FIXTURES",
+      "kind": "deterministic_generated_in_test",
+      "source": "tests/verify_plant_open_loop.m",
+      "cases": [
+        "P-01 motor step",
+        "P-02/P-03 rotor wrench geometry",
+        "P-04 free fall",
+        "P-05 hover equilibrium",
+        "P-06 quaternion sign invariance",
+        "P-07 lever-arm kinematics and 2 ms IMU sample epoch with jerk",
+        "P-08 fixed-N0 Earth-rate and Coriolis",
+        "P-09 seeded noise, confidence interval, axis independence, bias and scale",
+        "P-11 contact drop",
+        "P-12 RK4 step convergence",
+        "P-13 motor effectiveness and external wrench",
+        "P-15/P-16/P-17 contact boundaries and friction",
+        "P-18/P-19/P-20 frame, wind and full inertia",
+        "P-21 fail-closed invalid inputs"
+      ],
+      "note": "P-14 is a separate structural test; P-10b host integration remains unimplemented."
+    },
+    {
+      "id": "D-SENSOR-EVENT-QUEUE",
+      "kind": "deterministic_generated_in_test",
+      "source": "tests/verify_sensor_event_timing.m",
+      "epoch_us": 1000000,
+      "fixed_step_us": 500,
+      "duration_us": 1200000,
+      "channels": [
+        "IMU",
+        "GNSS",
+        "MAG",
+        "BARO"
+      ],
+      "loss_injection": "Suppress one sample opportunity per channel and require a visible sequence gap."
+    },
+    {
+      "id": "D-FLIGHT-TIME-SERVICE",
+      "kind": "upstream_c_fixture",
+      "sources": [
+        "../Flight/tests/time/test_time_service.c",
+        "../Flight/tests/drivers/test_gnss_outage.c",
+        "../Flight/middleware/protocol/unicore_ascii/unicore_ascii.c",
+        "../Flight/sensor_device/time_base/systime.c"
+      ],
+      "input_type": "Synthetic deterministic PPS capture/tick and RECTIMEA byte frames",
+      "note": "Core algorithm/parser tests only; not physical TIM2, UART/DMA or Host MIL end-to-end."
+    },
+    {
+      "id": "D-SIM-ONLY-PARAMETERS",
+      "kind": "versioned_configuration",
+      "paths": [
+        "config/SIM_ONLY/QUAD_X4/vehicle_model.yaml",
+        "config/SIM_ONLY/QUAD_X4/sensor_alignment.yaml",
+        "config/SIM_ONLY/QUAD_X4/profile_manifest.json",
+        "config/SIM_ONLY/QUAD_X4/estimator_tuning.yaml",
+        "config/SIM_ONLY/QUAD_X4/controller_tuning.yaml",
+        "../Flight/config/vehicle_model.yaml",
+        "config/firmware_sources.json",
+        "config/flight_baseline.json",
+        "external_dependencies.lock.json"
+      ]
+    }
+  ],
+  "required_reports": [
+    "work/validation/component_checks.json",
+    "work/validation/current_source_fingerprint.json",
+    "work/validation/flight_entries.json",
+    "work/validation/mil_diagnostics.json",
+    "work/validation/parameter_view_report.json",
+    "work/validation/osqp_mex_report.json",
+    "work/validation/g1_execution_report.json",
+    "work/validation/plant_open_loop_report.json",
+    "work/validation/sensor_event_timing_report.json",
+    "work/validation/time_service_sync_report.json",
+    "work/validation/gnss_time_recovery_report.json",
+    "work/validation/rectime_time_mapping_report.json",
+    "work/validation/truth_isolation_report.json",
+    "work/validation/rate_pid_report.json",
+    "work/validation/pid_allocator_feedback_report.json",
+    "work/validation/actuation_report.json",
+    "work/validation/matlab_acceptance_diary.txt"
+  ],
+  "gates": [
+    {
+      "id": "FLIGHT-ENTRIES",
+      "report": "flight_entries.json",
+      "expected": "PASS",
+      "scope": "26 s MIL + DataSIM/ExtINS replay + sensor dropout inhibition"
+    },
+    {
+      "id": "PARAMETERS",
+      "report": "parameter_view_report.json",
+      "expected": "PASS",
+      "scope": "Flight-owned vehicle parameters and SIM_ONLY sensor/estimator parameter views"
+    },
+    {
+      "id": "PLANT",
+      "report": "plant_open_loop_report.json",
+      "expected": "PARTIAL",
+      "scope": "P-01..P-09, P-10a, P-11..P-13, P-15..P-21; P-14 separate"
+    },
+    {
+      "id": "SENSOR-TIMING",
+      "report": "sensor_event_timing_report.json",
+      "expected": "PASS",
+      "scope": "four-channel multirate queue, time ordering, conservation and sequence gaps"
+    },
+    {
+      "id": "TIME-SERVICE",
+      "report": "time_service_sync_report.json",
+      "expected": "PASS",
+      "scope": "Flight TimeService core using synthetic PPS capture events"
+    },
+    {
+      "id": "GNSS-RECOVERY",
+      "report": "gnss_time_recovery_report.json",
+      "expected": "PASS",
+      "scope": "Flight GNSS/PPS/UTC loss and recovery core"
+    },
+    {
+      "id": "RECTIME",
+      "report": "rectime_time_mapping_report.json",
+      "expected": "PASS",
+      "scope": "Flight UM982 RECTIMEA parser and UTC mapping core"
+    },
+    {
+      "id": "OSQP-MEX",
+      "report": "osqp_mex_report.json",
+      "expected": "PASS_WITH_LIMITATIONS",
+      "scope": "Standalone MEX known optimum/KKT; not full MPC model acceptance"
+    },
+    {
+      "id": "G1-EXECUTION",
+      "report": "g1_execution_report.json",
+      "expected": "PASS_WITH_LIMITATIONS",
+      "scope": "G1 scheduling/topology only"
+    },
+    {
+      "id": "PID",
+      "report": "rate_pid_report.json",
+      "expected": "PARTIAL",
+      "scope": "Implemented PID transaction checks; complete M6 time context and closed-loop rate step not run"
+    },
+    {
+      "id": "PID-ALLOCATOR",
+      "report": "pid_allocator_feedback_report.json",
+      "expected": "PASS",
+      "scope": "Same-tick allocation feedback and failure atomicity"
+    },
+    {
+      "id": "ACTUATION",
+      "report": "actuation_report.json",
+      "expected": "PARTIAL",
+      "scope": "Numerical allocation/quantization; permit lifecycle, frame apply and ground-stop transaction not run"
+    },
+    {
+      "id": "TRUTH-ISOLATION",
+      "report": "truth_isolation_report.json",
+      "expected": "PASS",
+      "scope": "No Plant truth bypass into navigation/control"
+    },
+    {
+      "id": "SOURCE-DATA-FINGERPRINT",
+      "report": "current_source_fingerprint.json",
+      "expected": "PRESENT_AND_MATCHED",
+      "scope": "Includes simulation models, scenario MAT, tests, source, configuration and MEX outputs"
+    }
+  ],
+  "overall_status_rules": {
+    "FAIL": "Any build/test failure, early stop, missing report, incomplete run, or changed input fingerprint.",
+    "PARTIAL_PASS": "All implemented gates pass, the three entries/replays pass, and known unimplemented scope remains explicit.",
+    "PASS": "Not permitted for this branch until P-10 Host MIL PPS/RECTIME end-to-end integration and all current phase requirements are implemented and validated."
+  },
+  "known_gaps": [
+    "P-10 Host MIL TIM2 capture, UM982 UART/DMA and sensor_gnss_poll end-to-end integration.",
+    "OSQP model-level QP assembly and strict candidate validation are not run by the standalone OSQP MEX gate.",
+    "G1 topology tests do not prove full Flight algorithm coverage.",
+    "PID report retains NOT_RUN fields for complete M6 time-context guard and closed-loop rate step.",
+    "Actuation report retains NOT_RUN fields for permit lifecycle, 500 us frame application and ground-stop transaction.",
+    "No MCU real-time, PIL/HIL, hardware sensor calibration or flight-release claim."
+  ],
+  "issue_workflow": {
+    "document": "spec/quality/ISSUE_WORKFLOW.md",
+    "closure_checklist": "spec/quality/ISSUE_CLOSURE_CHECKLIST.md",
+    "github_issue_template": ".github/ISSUE_TEMPLATE/matlab-acceptance-issue.md",
+    "issue_id_format": "FMAT-{github_issue_number:04d}",
+    "status_manifest": "spec/quality/issue-workflow.json",
+    "archive_script": "tools/archive_validation_run.ps1",
+    "run_archive_root": "work/validation/archives",
+    "agent_entrypoint": "spec/AGENT-操作指南.md"
+  },
+  "agent_workflow": {
+    "entrypoint": "spec/AGENT-操作指南.md",
+    "spec_index": "spec/README.md",
+    "rules": [
+      "Read the Agent guide before modifying files or changing issue status.",
+      "Inspect branch, commit, PR and existing Issues before writes.",
+      "Do not merge to main without explicit user authorization.",
+      "Do not claim MATLAB execution unless the target MATLAB environment actually ran the acceptance command.",
+      "Every actionable issue must reference a RUN_ID and evidence hashes.",
+      "A fix cannot be closed before a new MATLAB regression run is verified."
+    ]
+  }
+}

@@ -6,14 +6,14 @@
   "headers": {
     "middleware/contracts/base_types/common_base.h": "b28c37f625060e249254f4140a17668279baa86b9899a87511ee459a17b89102",
     "middleware/contracts/base_types/contract_version.h": "6c1a2aaef949e6b9441a0f4044f2df41352ccc0953b8918abe95db29318b5df5",
-    "middleware/contracts/contract_checks/algorithm_checks.h": "d870fee2a2769fc0fd49cd5c1707d48169da439ddd0be813192a5001b9d3542a",
-    "middleware/contracts/messages/common_messages.h": "f4293e8ecd40d13ac8f8846f9efe08c05411976bcb2cf6d4fe7792ead2963d87",
-    "middleware/contracts/messages/message_ids.h": "4574ec4874d59a6f64f5feeb92338f09c37430795668e5918fb6d8a6c10fda46",
+    "middleware/contracts/contract_checks/algorithm_checks.h": "ba0412c6dad2f881dba434df40fc8023edf830ea9b4eee0dd248ce19ee646bfc",
+    "middleware/contracts/messages/common_messages.h": "faac987c7d235e9040a808ee3203d3b248b83220f06c3748e32f7644c9104f27",
+    "middleware/contracts/messages/message_ids.h": "a1b04e10d5e8f3a839179e2ab86e56496ea289e33ca704e523cbefd6a35e361a",
     "middleware/contracts/ports/control_model_types.h": "bb36451790060d8b0a7588617f5dc2f18277cf63dbd78edee8cf2e0b847d43f2",
     "middleware/contracts/ports/port_api.h": "2a641af4578ad8634ccca91c87f6efe3fea7f617b0d15dda6fff672de565ee8c",
     "middleware/contracts/ports/port_types.h": "b64d0c331a5da74fc5a7dadd427505e152203fc1d897abcfd4291a83c5dadb46",
     "middleware/contracts/product_contract/abi_lock.h": "b62c5991b9fd91c6c5e0a6b236b2ad7ee4c371ea0eaaf14c145cc3b245d04321",
-    "middleware/contracts/product_contract/product_contract.h": "461477d6d870bc2755c84ff5d5366cf28f032b9ad7d425bb7bdb19320817a7e1"
+    "middleware/contracts/product_contract/product_contract.h": "b4498e826e9e0b34230fc8bce6146a62d45260011888549a92b56505cee7764d"
   },
   "osqp": {
     "root": "../Flight/middleware/model/control/outer_loop/quad_x4/mpc_solver/osqp",
@@ -24,9 +24,17 @@
       "commit": "236713ce9a56c182ac3230d52108f952afce1523",
       "archive_sha256": "dd6a1c2e7e921485697d5e7cdeeb043c712526c395b3700601f51d472a7d8e48",
       "license_sha256": "ae5e69b1fea4c316b80e4bc2cb49ac82c0e9b34785415e128e00c975bd10f687",
-      "source_scope": "Generated embedded runtime from Python osqp==1.0.0, upstream archive retained in build/dependency_cache"
+      "source_scope": "Generated embedded runtime from Python osqp==1.0.0, upstream archive retained in build/dependency_cache",
+      "transitive_sources": {
+        "qdldl": {
+          "url": "https://github.com/osqp/qdldl",
+          "tag": "v0.1.8",
+          "commit": "138fdac58b9cd1c4137ff1b99152c8108a6cff5b",
+          "generated_header_template": "configure/qdldl_version.h.in"
+        }
+      }
     },
-    "runtime_lock_sha256": "846712c37f3fa59e83e7603cd3065673b77894e804d9eb339526db8b468f42fb",
+    "runtime_lock_sha256": "1f193ed24a6755a62eba0bf5ae4b13bfd9a66ef85371685b33e5b9343dcb7a88",
     "verified_files": 47,
     "archive_sha256": "dd6a1c2e7e921485697d5e7cdeeb043c712526c395b3700601f51d472a7d8e48"
   },

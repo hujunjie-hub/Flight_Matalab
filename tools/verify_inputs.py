@@ -11,6 +11,25 @@ def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def sha_canonical_crlf(path):
+    """Hash text after normalising every line ending to CRLF.
+
+    Flight's OSQP runtime lock declares ``"hash_newlines": "canonical CRLF"``:
+    the recorded digests must not depend on the checkout's core.autocrlf
+    setting, which is why the same generated header hashed to a different value
+    before and after the upstream normalisation commit.  Only the declared mode
+    is applied; anything else keeps the raw byte hash.
+    """
+    data = path.read_bytes().replace(b'\r\n', b'\n').replace(b'\n', b'\r\n')
+    return hashlib.sha256(data).hexdigest()
+
+
+def runtime_sha(path, runtime):
+    if runtime.get('hash_newlines') == 'canonical CRLF':
+        return sha_canonical_crlf(path)
+    return sha(path)
+
+
 def unique_object(pairs):
     result = {}
     for key, value in pairs:
@@ -38,6 +57,40 @@ def finite(value):
         assert math.isfinite(value), 'Nonfinite parameter'
 
 
+def matrix3(flat):
+    assert len(flat) == 9, 'Inertia tensor must contain nine elements'
+    return [flat[0:3], flat[3:6], flat[6:9]]
+
+
+def validate_spd_inertia(flat):
+    j = matrix3(flat)
+    scale = max(1.0, *(abs(value) for row in j for value in row))
+    tol = 1e-10 * scale
+    assert max(abs(j[i][k] - j[k][i]) for i in range(3) for k in range(3)) <= tol, \
+        'Inertia tensor must be symmetric'
+    a, b, c = j[0]
+    d, e, f = j[1]
+    g, h, i = j[2]
+    minor2 = a * e - b * d
+    determinant = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g)
+    assert a > 0 and minor2 > 0 and determinant > 0, \
+        'Inertia tensor must be positive definite'
+
+
+def validate_rotation(flat, label):
+    m = matrix3(flat)
+    for row in range(3):
+        for column in range(3):
+            dot = sum(m[k][row] * m[k][column] for k in range(3))
+            assert (abs(dot - (1.0 if row == column else 0.0)) <= 1e-6), f'{label} must be orthonormal'
+    determinant = (
+        m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+        - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+        + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0])
+    )
+    assert abs(determinant - 1.0) <= 1e-6, f'{label} must be a proper rotation'
+
+
 def main():
     report_path = ROOT / 'work/validation/input_preflight.json'
     report = {'scope': 'LOCKED_INPUT_PREFLIGHT', 'status': 'IN_PROGRESS'}
@@ -49,14 +102,49 @@ def main():
         baseline = read(ROOT / 'config/flight_baseline.json')
         for name, digest in baseline['sources_sha256'].items():
             assert sha(flight / name) == digest, f'Flight baseline changed: {name}'
+        for required in ('sensor_device/time_base/systime.c',
+                         'sensor_device/time_base/systime.h',
+                         'tests/time/test_time_service.c',
+                         'tests/drivers/test_gnss_outage.c',
+                         'middleware/sensor/sample_normalization/sensor_sample.c',
+                         'middleware/sensor/measurement_filter/sensor_filter.c',
+                         'middleware/sensor/calibration/sensor_calibration.c',
+                         'middleware/protocol/unicore_ascii/unicore_ascii.c',
+                         'middleware/protocol/unicore_ascii/unicore_ascii.h'):
+            assert required in baseline['sources_sha256'], f'Flight baseline must fingerprint {required}; rebuild the Host SIL baseline first'
+
+        flight_vehicle = read(flight / 'config/vehicle_model.yaml')
+        finite(flight_vehicle)
+        assert flight_vehicle['profile'] == 'QUAD_X4' and flight_vehicle['status'] == 'SIM_ONLY'
+        assert flight_vehicle['mass_kg'] > 0 and len(flight_vehicle['inertia_frd_kgm2']) == 9
+        assert len(flight_vehicle['motor_position_frd_m']) == 4
+        assert all(len(position) == 3 for position in flight_vehicle['motor_position_frd_m'])
+        assert len(flight_vehicle['motor_yaw_torque_ratio_m']) == 4
+        assert len(flight_vehicle['motor_min_thrust_n']) == 4
+        assert len(flight_vehicle['motor_max_thrust_n']) == 4
+        assert len(flight_vehicle['motor_time_constant_s']) == 4
+        assert all(0 <= lo < hi for lo, hi in zip(
+            flight_vehicle['motor_min_thrust_n'], flight_vehicle['motor_max_thrust_n']))
+        assert all(tau > 0 for tau in flight_vehicle['motor_time_constant_s'])
+        validate_spd_inertia(flight_vehicle['inertia_frd_kgm2'])
+        positions = flight_vehicle['motor_position_frd_m']
+        radii = [math.hypot(position[0], position[1]) for position in positions]
+        assert max(radii) - min(radii) < 1e-10, 'X4 motor arms must have equal radial length'
+
         osqp = (ROOT / lock['osqp']['root']).resolve()
-        assert sha(osqp / 'UPSTREAM_LOCK.json') == lock['osqp']['runtime_lock_sha256'], 'OSQP runtime lock changed'
         runtime = read(osqp / 'UPSTREAM_LOCK.json')
+        assert (sha(osqp / 'UPSTREAM_LOCK.json') == lock['osqp']['runtime_lock_sha256'] or
+                sha_canonical_crlf(osqp / 'UPSTREAM_LOCK.json') ==
+                lock['osqp']['runtime_lock_sha256']), 'OSQP runtime lock changed'
         for name, digest in runtime['files'].items():
-            assert sha(osqp / 'generated' / name) == digest, f'OSQP runtime changed: {name}'
+            assert runtime_sha(osqp / 'generated' / name, runtime) == digest, \
+                f'OSQP runtime changed: {name}'
+        assert len(runtime['files']) == lock['osqp']['verified_files'], \
+            'OSQP runtime lock does not cover the expected file count'
         kf = ROOT / lock['kf_gins_matlab']['path']
         for name, digest in lock['kf_gins_matlab']['files'].items():
             assert sha(kf / name) == digest, f'KF-GINS reference changed: {name}'
+
         hashes = {}
         config = {}
         for file in sorted((ROOT / 'config/SIM_ONLY/QUAD_X4').iterdir()):
@@ -65,25 +153,86 @@ def main():
                 finite(value)
                 assert value['status'] == 'SIM_ONLY', f'Missing synthetic source tag: {file.name}'
                 config[file.stem] = value
-                hashes[str(file.relative_to(ROOT)).replace('\\', '/')] = sha(file)
+                hashes[str(file.relative_to(ROOT)).replace(chr(92), '/')] = sha(file)
         assert set(config) == {'vehicle_model', 'sensor_alignment', 'estimator_tuning',
                                'controller_tuning', 'profile_manifest'}, 'Expected four COREs and readonly Profile'
+
         p = config['profile_manifest']
         for flag in ('gnss_installed', 'gnss_enabled', 'pps_installed', 'pps_enabled'):
             assert p.get(flag) is True, f'Fixed device flag must be true: {flag}'
         assert p['implementation'] == 'HOST_NATIVE_V2' and p['firmware_equivalent'] is False
         assert p['base_step_us'] == 500
+        assert len(p['dshot_force_curve_n']) == 2 and p['dshot_force_curve_n'][1] > p['dshot_force_curve_n'][0]
+        assert p['frame_slew_nps'] * p['frame_period_ticks'] * .0005 >= max(p['dshot_force_curve_n']) / 1999
+
         v = config['vehicle_model']
-        assert v['mass_kg'] > 0 and len(v['inertia_frd_kgm2']) == 9
-        assert len(v['plant_state0']) == 17 and len(v['motor_max_thrust_n']) == 4
-        assert all(0 <= lo < hi for lo, hi in zip(v['motor_min_thrust_n'], v['motor_max_thrust_n']))
-        assert p['frame_slew_nps'] * p['frame_period_ticks'] * .0005 >= max(v['motor_max_thrust_n']) / 1999
+        assert v['motor_thrust_coefficient_n_s2'] > 0
+        assert len(v['drag_ned_kgps']) == 3 and all(value >= 0 for value in v['drag_ned_kgps'])
+        assert v['ground_stiffness_npm'] > 0 and v['ground_damping_ns_pm'] >= 0
+        assert v['ground_friction'] == 0, 'First-version Plant must not enable unvalidated horizontal ground friction'
+        assert len(v['plant_state0']) == 17
+        assert math.sqrt(sum(value * value for value in v['plant_state0'][6:10])) > 1e-12
+        assert all(value >= 0 for value in v['plant_state0'][13:17])
+        assert len(v['origin_llh_rad_m']) == 3
+        sensor = config['sensor_alignment']
+        for field in ('magnetic_field_ned_ut', 'imu_to_cg_frd_m',
+                      'antenna_from_imu_frd_m', 'static_gyro_bias_radps',
+                      'static_accel_bias_mps2', 'static_mag_bias_ut', 'scale_error',
+                      'gyro_noise_std_radps', 'accel_noise_std_mps2',
+                      'mag_noise_std_ut', 'gnss_position_noise_std_m',
+                      'gnss_velocity_noise_std_mps'):
+            assert len(sensor[field]) == 3, f'{field} must be a 3-vector'
+            assert all(math.isfinite(float(value)) for value in sensor[field]), f'{field} must be finite'
+        assert all(value > -1.0 for value in sensor['scale_error']), 'Scale error must preserve positive sensitivity'
+        for field in ('gyro_noise_std_radps', 'accel_noise_std_mps2',
+                      'mag_noise_std_ut', 'gnss_position_noise_std_m',
+                      'gnss_velocity_noise_std_mps'):
+            assert all(value >= 0.0 for value in sensor[field]), f'{field} cannot be negative'
+        assert math.isfinite(sensor['baro_noise_std_m']) and sensor['baro_noise_std_m'] >= 0.0
+        assert math.isfinite(sensor['baro_bias_m']), 'baro_bias_m must be finite'
+        validate_rotation(sensor['imu_installation'], 'IMU installation')
+        validate_rotation(sensor['mag_installation'], 'magnetometer installation')
+        for field in ('imu_pipeline_delay_us', 'imu_transport_delay_us',
+                      'gnss_transport_delay_us', 'baro_transport_delay_us',
+                      'mag_transport_delay_us', 'imu_pipeline_uncertainty_us'):
+            upper = 0xffffffff if field == 'imu_pipeline_uncertainty_us' else 9_000_000_000_000_000
+            assert (isinstance(sensor[field], int) and not isinstance(sensor[field], bool)
+                    and 0 <= sensor[field] <= upper), f'{field} must be a bounded nonnegative integer microsecond value'
+        assert (
+            sensor['imu_pipeline_delay_us'] + sensor['imu_transport_delay_us'] + 500 < 5000
+        ), 'IMU arrival plus worst-case fixed-step release lateness must precede the firmware 5-ms sample expiry'
+        assert (
+            sensor['gnss_transport_delay_us'] + 500 < 20000
+        ), 'GNSS arrival plus worst-case fixed-step release lateness must precede the firmware 20-ms sample expiry'
+        assert (
+            sensor['baro_transport_delay_us'] + 500 < 20000
+        ), 'Barometer arrival plus worst-case fixed-step release lateness must precede the firmware 20-ms sample expiry'
+        assert (
+            sensor['mag_transport_delay_us'] + 500 < 100000
+        ), 'Magnetometer arrival plus worst-case fixed-step release lateness must precede the firmware 100-ms sample expiry'
+        for field in ('imu_sample_period_us', 'mag_sample_period_us',
+                      'baro_sample_period_us', 'gnss_sample_period_us'):
+            minimum = 1000 if field == 'imu_sample_period_us' else 500
+            alignment = 1000 if field == 'imu_sample_period_us' else 500
+            assert (isinstance(sensor[field], int) and not isinstance(sensor[field], bool)
+                    and sensor[field] >= minimum and sensor[field] % alignment == 0), \
+                f'{field} must be aligned to its consumer task period'
+        assert (isinstance(sensor['random_seed'], int) and not isinstance(sensor['random_seed'], bool)
+                and 0 < sensor['random_seed'] <= 0xffffffff), 'random_seed must be a nonzero uint32'
+        assert sensor['gnss_backend'] == 'SIM_PVT'
+        assert sensor['pps_backend'] == 'DISABLED_LOCAL_MONOTONIC'
+
         e = config['estimator_tuning']
         assert (e['error_state_rank'], e['noise_rank']) == (22, 19)
         assert e['bias_correlation_time_s'] > 0
         report.update(status='PASS', headers_verified=len(lock['headers']),
                       osqp_files_verified=len(runtime['files']),
                       kf_files_verified=len(lock['kf_gins_matlab']['files']),
+                      flight_vehicle_source='Flight/config/vehicle_model.yaml',
+                      plant_parameter_contract='FULL_3X3_INERTIA_26',
+                      sensor_parameter_contract='SENSOR_19_IMU_ANTENNA_LEVERS_PLUS_SENSOR_MODEL_54',
+                      sensor_timing_contract='TIMING_10_MULTIRATE_QUEUE_SAMPLE_CAPTURE_ARRIVAL',
+                      time_service_contract='UPSTREAM_TIME_SERVICE_GNSS_RECOVERY_AND_RECTIME_PARSER_REGRESSION',
                       config_hashes=hashes,
                       config_content_sha256=hashlib.sha256(json.dumps(config, sort_keys=True, separators=(',', ':')).encode()).hexdigest())
     except Exception as error:
@@ -97,4 +246,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
