@@ -12,7 +12,7 @@
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\run_local_validation.ps1
 ```
 
-脚本自动同步 Flight_Matlab/main 与 Flight/main，运行 MATLAB 完整验收、生成不可覆盖归档，并在 ARM/Host 工具链可用时完成 FMAT-0018 ABI 检查。最后只需交付 `work/validation/archives/<RUN_ID>_DELIVERY.zip` 和同名 `.sha256` 文件；总包还包含本轮验收 manifest 和状态摘要。遇到本地未提交修改时脚本会停止，不会 reset/clean。总包生成后，MATLAB/组件/ABI 失败会返回非零退出码；`PARTIAL_PASS` 仍是部分通过，不等于完整 PASS。当前 main 的完整本地复测状态为 `NOT_RUN`。详细行为见 [一键本地验证交接说明](spec/validation/LOCAL_MATLAB_HANDOFF.md)。
+脚本自动同步 Flight_Matlab/main 与 Flight/main，运行 MATLAB 完整验收、生成不可覆盖归档，并在 ARM/Host 工具链可用时完成 FMAT-0018 ABI 检查。最后只需交付 `work/validation/archives/<RUN_ID>_DELIVERY.zip` 和同名 `.sha256` 文件；总包还包含本轮验收 manifest 和状态摘要。遇到本地未提交修改时脚本会停止，不会 reset/clean。总包生成后，MATLAB/组件/ABI 失败会返回非零退出码；`PARTIAL_PASS` 仍是部分通过，不等于完整 PASS。当前 main 的完整本地复测状态为 `NOT_RUN`。 脚本静态 CI 已通过（3 个 PowerShell 脚本解析、5 项交付合同测试），但该 CI 不替代 MATLAB/Simulink 本地复测。详细行为见 [一键本地验证交接说明](spec/validation/LOCAL_MATLAB_HANDOFF.md)。
 
 本工程使用同级 `../Flight` 的现行固件作为飞控实现来源。三个入口共用 `FMT_FlightCore`，通过 Windows Host SIL 运行生产任务和 M2～M7 中间件，包括 KF-GINS、FMS、制导、控制、OSQP 和执行器保护。飞控使用 Flight 的 Host SIL 默认配置和运行参数，执行器设备端落在内存记录桩。
 
