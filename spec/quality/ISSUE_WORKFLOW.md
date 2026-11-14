@@ -1,9 +1,10 @@
 # 问题登记、证据归档与闭环规范
 
 版本：1.0  
-适用仓库：`hujunjie-hub/Flight_Matalab`  
-适用分支：当前开发/验收分支  
-权威登记系统：GitHub Issues
+适用仓库：`hujunjie-hub/Flight_Matlab`  
+适用分支：`main`（唯一工作分支）  
+权威登记系统：GitHub Issues  
+本地 MATLAB 交接：[LOCAL_MATLAB_HANDOFF.md](../validation/LOCAL_MATLAB_HANDOFF.md)
 
 ## 1. 唯一登记位置与编号
 
@@ -14,7 +15,7 @@
 - GitHub Issue 创建后，按编号生成项目问题 ID：`FMAT-0001` 对应 GitHub Issue `#1`，`FMAT-0027` 对应 `#27`。编号不复用。
 - Issue 标题格式：`[FMAT-0001][S1][PLANT] 电机动态响应偏差`。创建前可暂用 `[MATLAB]`，创建后补齐正式 ID。
 - Issue 正文中的 **Current status** 是当前状态；每次状态变化必须追加一条评论，记录日期、原状态、新状态、原因和证据。GitHub 原生 Open/Closed 只表示是否结案，不替代下面的细分状态。
-- 当前 GitHub Issue 查询未发现已登记的问题；仓库已有 Pull Request #1。GitHub Issue 与 Pull Request 共用编号序列，因此新建问题的编号以 GitHub 实际分配为准，不预设从 #1 开始；例如新 Issue 分配为 #2，则项目 ID 为 `FMAT-0002`。
+- 当前已登记的主要问题为 FMAT-0012～FMAT-0017：#12 BLOCKED、#13 BLOCKED、#14 IN_PROGRESS、#15 FIXED_WAITING_RETEST、#16/#17 VERIFIED（GitHub Issue 仍保持 Open，待当前 main 回归后按关闭清单结案）。#2/#3/#4/#6/#10/#11 的正文曾记录 VERIFIED，但 GitHub Issue 仍 Open；#5 为 FIXED_WAITING_RETEST。每次处理前必须重新读取 Issue 正文和最新评论，不得仅凭本清单关闭问题。
 
 ## 2. 问题类型与严重级别
 
@@ -156,6 +157,8 @@ pwsh -File .\tools\archive_validation_run.ps1
 若证据不足、报告不完整、Hash 不匹配或只完成代码修改，状态最多为 `FIXED_WAITING_RETEST`，不得关闭。
 
 ## 7. 双方分工与固定工作循环
+
+当前仓库只保留并使用 `main`。历史开发分支和 PR #1 已不再是交付目标；PR #1 已合并到 main。所有修复、SPEC 更新和本地复测交接都直接围绕 main 的最新 HEAD 进行。
 
 1. 用户运行 MATLAB，保存 Diary，生成并归档运行包，将 ZIP 发给验收方。
 2. 验收方核对 commit、环境、Hash、报告、测试断言和已知缺口。
