@@ -2,6 +2,8 @@
 
 > GitHub 仓库：`hujunjie-hub/Flight_Matlab`。当前唯一开发/验收分支为 `main`；不要从旧开发分支拉取代码。MATLAB 本地完整验证步骤、问题登记方式和交付文件清单见 [本地 MATLAB 验证交接说明](spec/validation/LOCAL_MATLAB_HANDOFF.md)。仓库名与 MATLAB Project 文件名存在历史拼写差异，工程文件仍为 `Flight_Matalab.prj`。
 
+首次同步后，完整入口会先重建同级 Flight Host SIL 并重新记录 flight_baseline.json，随后执行契约头、OSQP、KF-GINS 和 SIM_ONLY 输入预检；预检不通过时停止后续 MATLAB 编译/仿真。不要在首次重建前单独运行 verify_inputs.py。操作步骤见上方本地验证交接说明。
+
 本工程使用同级 `../Flight` 的现行固件作为飞控实现来源。三个入口共用 `FMT_FlightCore`，通过 Windows Host SIL 运行生产任务和 M2～M7 中间件，包括 KF-GINS、FMS、制导、控制、OSQP 和执行器保护。飞控使用 Flight 的 Host SIL 默认配置和运行参数，执行器设备端落在内存记录桩。
 
 | 模型 | 运行方式 |
