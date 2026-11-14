@@ -39,6 +39,14 @@
 
 **未改变的验收合同：** FMAT-0012 的 90% 覆盖率门槛和当前整轮分母保持不变；不改变 MPC 求解容差、不改变消费策略、不更改 Flight 公共接口。等待用户明确裁定后才处理统计分母。
 
+## 一键验证脚本静态 CI 结果（2026-11-14）
+
+- 新增 GitHub Actions workflow：`.github/workflows/static-validation.yml`，仅针对 main 推送/手动触发。
+- Run：`43594696629`，HEAD `0d2e8305c9bf2688df759c494760e71017c43b4d`，结论 SUCCESS。
+- PowerShell Parser：tools/ 下 3 个 `.ps1` 全部语法解析通过。
+- Python delivery contract：5/5 通过，覆盖 main-only、完整 PASS 授权门、失败先归档打包再返回非零、总包包含实际 manifest、PARTIAL_PASS 不冒充 PASS。
+- 此 CI 不运行 MATLAB/Simulink、不生成 MEX、不重建 Flight Host SIL；当前 main 的完整本地 MATLAB 回归仍为 NOT_RUN。
+
 ## 当前未闭合问题
 
 | Issue | 当前状态 | 本轮处理边界 |
