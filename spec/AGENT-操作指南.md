@@ -53,7 +53,7 @@ MATLAB 内部唯一验收入口仍为 run_component_checks；用户本地唯一�
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\run_local_validation.ps1
 ~~~
 
-用户从 Flight_Matlab 仓库根目录执行这一条命令即可。脚本负责同步两个 main、环境检查、先运行 `tools/test_local_validation_contract.py` 验证脚本/manifest/交付合同，再启动 MATLAB、MEX 检查、完整 run_component_checks、Diary/控制台日志、失败归档、可用时的 FMAT-0018 ARM/Host ABI 检查，以及最终总交付包生成。 若该预检失败，会在启动 MATLAB 前生成独立失败 `_DELIVERY.zip` 与 SHA-256，仍保持一包两文件交付。详细步骤和参数见 [本地 MATLAB 验证交接说明](validation/LOCAL_MATLAB_HANDOFF.md)。 脚本在生成总交付包后，若 MATLAB 进程/组件报告或 ABI 检查失败会返回非零退出码；`PARTIAL_PASS` 是已知缺口下的部分通过，不是完整 PASS。归档或打包失败时必须保留 `work/validation/` 和终端输出。
+用户从 Flight_Matlab 仓库根目录执行这一条命令即可。脚本负责同步两个 main、环境检查、先运行 `tools/test_local_validation_contract.py` 验证脚本/manifest/交付合同，再启动 MATLAB、MEX 检查、完整 run_component_checks、Diary/控制台日志、失败归档、可用时的 FMAT-0018 ARM/Host ABI 检查，以及最终总交付包生成。 若该预检失败，会在启动 MATLAB 前生成独立失败 `_DELIVERY.zip` 与 SHA-256，仍保持一包两文件交付。 若发现上一轮未归档的 `work/validation/` 文件，也会先原样打包、不删除原件并停止，避免新报告覆盖旧证据。详细步骤和参数见 [本地 MATLAB 验证交接说明](validation/LOCAL_MATLAB_HANDOFF.md)。 脚本在生成总交付包后，若 MATLAB 进程/组件报告或 ABI 检查失败会返回非零退出码；`PARTIAL_PASS` 是已知缺口下的部分通过，不是完整 PASS。归档或打包失败时必须保留 `work/validation/` 和终端输出。
 
 执行与验收时必须：
 
