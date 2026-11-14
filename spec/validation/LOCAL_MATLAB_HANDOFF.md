@@ -46,7 +46,7 @@
 
 如果编译器安装目录不同，后续 MATLAB 命令使用 run_component_checks('你的MinGW目录')。不要因为预检 Hash 不匹配而手工改锁文件；先核对 Flight commit 和路径。
 
-## 3. 拉取 main 与运行前检查
+## 3. 拉取两个仓库 main 与上游基线准备
 
 在 PowerShell 中进入本项目根目录后执行：
 
@@ -55,21 +55,27 @@ git fetch origin --prune
 git switch main
 git pull --ff-only origin main
 
+git -C ..\Flight fetch origin --prune
+git -C ..\Flight switch main
+git -C ..\Flight pull --ff-only origin main
+
 git branch --show-current
 git rev-parse HEAD
 git status --short
 
 git -C ..\Flight rev-parse HEAD
+git -C ..\Flight branch --show-current
 git -C ..\Flight status --short
-
-python -B tools\verify_inputs.py
 ~~~
 
 检查要求：
 
 - git branch --show-current 必须输出 main。
 - git status --short 如果显示本地修改，先保留并报告；不要执行 git reset --hard、git clean 或覆盖模型/字典/录制文件。
-- python -B tools\verify_inputs.py 必须输出 status=PASS。如果失败，把完整输出交回，不要自行修改 config/flight_baseline.json、external_dependencies.lock.json 或 Flight 源文件来绕过检查。
+- 首次同步后不要先单独运行 python -B tools\verify_inputs.py：旧 config/flight_baseline.json 会在 Host SIL 构建时由当前 Flight 源文件重新生成。
+- 标准 run_component_checks 顺序为：重建同级 Flight Host SIL → record_flight_baseline.py 重新记录当前源文件 → build_native_kernels 内部运行 verify_inputs.py → 预检 PASS 后才继续 MEX、模型和组件验收。
+- 如果只想单独诊断依赖预检，可先运行 pwsh -NoProfile -File .\tools\build_flight_runtime.ps1 -GccDir 'D:\STM32CubeCLT\mingw64\bin'，再运行 python -B .\tools\verify_inputs.py。正式完整验收不需要重复手工构建。
+- 预检失败时保留 work\validation\input_preflight.json 和完整 Diary，并把归档交回；不得手工修改基线或锁文件绕过失败。
 - 记录 Flight_Matlab 与 Flight 两个仓库的完整 HEAD SHA。归档脚本也会记录这两个 commit。
 
 ## 4. MATLAB 完整验证（唯一标准入口）
