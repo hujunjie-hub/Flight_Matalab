@@ -52,7 +52,8 @@
     "inputs/flight_baseline.json when present",
     "run_manifest.json with exact Flight_Matlab and Flight commit metadata",
     "SHA-256 for each archived artifact",
-    "local_validation_contract_test.txt: local script/manifest contract preflight result"
+    "local_validation_contract_test.txt: local script/manifest contract preflight result",
+    "preflight failure summary: records both repository commits and confirms MATLAB was not started"
   ],
   "canonical_locations": {
     "policy": "spec/quality/ISSUE_WORKFLOW.md",
@@ -92,6 +93,7 @@
     "current RUN_ID MATLAB evidence ZIP and its SHA-256",
     "current RUN_ID_DELIVERY.txt with overall status, failure reasons, full-project PASS authorization, blockers, and both repository commits",
     "the exact spec/validation/matlab_acceptance_manifest.json used to determine whether full-project PASS is authorized",
-    "current RUN_ID ABI evidence ZIP and its SHA-256 when the ARM/Host toolchain is available"
+    "current RUN_ID ABI evidence ZIP and its SHA-256 when the ARM/Host toolchain is available",
+    "preflight failure package and checksum when MATLAB was not started due to contract preflight failure"
   ]
 }
