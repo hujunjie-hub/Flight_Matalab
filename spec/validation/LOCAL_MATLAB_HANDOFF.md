@@ -64,7 +64,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\run_local_validation.ps1
 脚本 tools/run_local_validation.ps1 会按固定顺序完成：
 
 1. 检查 Git、Python、PowerShell 7、MATLAB 和 Host GCC。
-2. 检查两个仓库是否有本地修改；有修改就停止，不执行 reset、clean 或覆盖。
+2. 检查两个仓库是否有本地修改；如有修改，先将两个仓库 branch/HEAD/status 和待归档证据打包为失败交付包，不执行 reset、clean、切换分支或覆盖。
 3. 自动 fetch 并 fast-forward 同步 Flight_Matlab/main 和同级 Flight/main。
 4. 检查 `work/validation/` 是否有上一轮未归档证据；如有，自动将其原样打包为 `_DELIVERY.zip` + `.sha256`，不删除原件，并在启动 MATLAB 前停止。
 5. 运行 `tools/test_local_validation_contract.py`，核对当前脚本、机器可读验收清单、交付文件和退出码规则是否一致；结果写入 `work/validation/local_validation_contract_test.txt`。该检查失败时会在启动 MATLAB 前停止，并保留日志。
@@ -95,7 +95,7 @@ MatlabExe 可省略，只在 MATLAB 不在 PATH 且自动查找不到时填写�
 
 ### 3.4 如果脚本中途停止
 
-- **提示仓库有本地修改：** 不要删除或覆盖。把提示的 git status 内容交回，先确认这些文件是否为上一轮生成的待审查证据。
+- **提示仓库有本地修改：** 脚本会将 Flight_Matlab 和 Flight 两个仓库的 branch/HEAD/`git status`、上一轮待归档文件（如有）打包为 `_DELIVERY.zip` + `.sha256`，不执行 reset、clean、切换分支或覆盖原件；MATLAB 不会启动。只需交回这两个文件，等待审查。
 - **本地交接合同预检失败：** MATLAB 尚未启动；脚本会自动生成 `_DELIVERY.zip` 和同名 `.sha256`，其中包含 `local_validation_contract_test.txt`、失败摘要和可用时的验收 manifest。只需交回这两个文件，不要自行修改脚本或 manifest。
 - **发现未归档的上一轮报告：** 脚本会把 `work/validation/archives/` 以外的现有文件和目录原样打包为 `_DELIVERY.zip` + `.sha256`，不删除或覆盖原件；MATLAB 不会启动。只需交回这两个文件，不要自行删除或改名后强行重跑。
 - **提示找不到 MATLAB：** 把实际 matlab.exe 完整路径填入 -MatlabExe。
