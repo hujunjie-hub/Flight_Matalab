@@ -31,6 +31,8 @@ run_component_checks
 4. 运行参数视图、OSQP、G1 执行拓扑、Plant 开环、传感器事件时序、TimeService、GNSS 失锁恢复、RECTIMEA、truth 隔离、PID 和执行器测试。
 5. 对代码、测试、配置、顶层 `.slx` 模型、回放数据和 MEX 产物计算 SHA-256 指纹，并检查测试过程中输入未发生变化。
 
+一键脚本退出码约定：`0` 表示运行流程完成且总交付包已生成，最终状态可能是 `PASS` 或 `PARTIAL_PASS`；`PARTIAL_PASS` 不代表完整验收通过。`1` 表示 MATLAB 进程、组件验收或 ABI 检查失败，但脚本会先尽可能完成归档和总包生成再返回非零。若同步、归档或总包创建本身失败，则保留 `work/validation/` 与终端输出，不能清理现场。
+
 如 MinGW 不在默认目录，可传入编译器目录：
 
 ```matlab
