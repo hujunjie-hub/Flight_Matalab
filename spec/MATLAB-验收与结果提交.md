@@ -1,9 +1,11 @@
 # MATLAB 仿真测试数据集与验收标准
 
-版本：1.0
-适用分支：`optimize/sil-physical-parameter-alignment`
-适用仓库：`hujunjie-hub/Flight_Matalab`
-状态：本文件定义当前分支可执行验收流程；实际结果以本次 MATLAB 生成的报告和源数据指纹为准。
+版本：1.1
+适用分支：`main`（唯一工作分支）
+适用仓库：`hujunjie-hub/Flight_Matlab`
+状态：本文件定义 main 的验收门槛；实际结果以当前 main HEAD 对应的 MATLAB 运行报告和源数据指纹为准。
+
+> 用户本地 MATLAB 操作步骤、运行命令、问题登记和必交文件清单统一见 [本地 MATLAB 验证交接说明](validation/LOCAL_MATLAB_HANDOFF.md)。历史记录中的开发分支名称只用于追溯，不再作为拉取或测试目标。
 
 > **验收原则**：代码存在不等于测试通过；静态审查通过不等于 MATLAB 编译通过；单项核心算法通过不等于 MIL 端到端通过。所有 PASS 必须来自当前代码、模型、配置和数据的实际运行报告。
 
