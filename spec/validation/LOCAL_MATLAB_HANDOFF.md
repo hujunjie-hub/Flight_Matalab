@@ -211,6 +211,7 @@ ZIP 正常时，不需要再单独发送 ZIP 内已有的每一份 JSON 或 MAT 
 | FMAT-0015 | FIXED_WAITING_RETEST | 上游数组边界修复及结构化边界测试需随当前固件基线回归确认 |
 | FMAT-0016 / 0017 | VERIFIED（Issue 仍 Open） | 归档分类和 P-10b 数字对账已有历史证据；当前 main 完整复测后再按关闭清单结案 |
 | FMAT-0018 | BLOCKED | Flight/main 相比旧 MATLAB 基线前进 618 个提交；契约头/OSQP 锁已更新，但 ABI inventory 144/993 与旧 143/986 的差异仍需审查，当前 main MATLAB 验收 NOT_RUN |
+| FMAT-0019 | FIXED_WAITING_RETEST | M6 汇总 solved/rejected 现必须与逐 job outcome 数量一致，job ID 必须完整连续 1..N；新增两项负向夹具，等待 MATLAB 本地执行 |
 
 因此，本轮 component_checks.json 仍可能因 FMAT-0012 的 coverage_90 返回 FAIL。这是当前未解决的验收合同问题，不代表可以跳过 M6，也不应通过修改门槛来消除。plant_open_loop_report.json.status=PARTIAL 和 P-10 overall PARTIAL 是当前设计边界的如实记录。
 
