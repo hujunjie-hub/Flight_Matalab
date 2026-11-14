@@ -142,6 +142,7 @@ $repositoryChecks = @(
 $repositoryStatusLines = @()
 $dirtyWorktreeIssues = @()
 $projectHeadForRunId = 'UNKNOWN'
+
 foreach ($entry in $repositoryChecks) {
     $branchOutput = @(& git -C $entry.Path branch --show-current 2>&1)
     $branchExit = $LASTEXITCODE
@@ -150,10 +151,94 @@ foreach ($entry in $repositoryChecks) {
     $dirtyOutput = @(& git -C $entry.Path status --porcelain 2>&1)
     $dirtyExit = $LASTEXITCODE
 
-    $branchText = if ($branchExit -eq 0) { ($branchOutput -join ' ').Trim() } else { 'UNAVAILABLE' }
-    $headText = if ($headExit -eq 0) { ($headOutput -join ' ').Trim() } else { 'UNAVAILABLE' }
+    if ($branchExit -eq 0) {
+        $branchText = ($branchOutput -join ' ').Trim()
+    } else {
+        $branchText = 'UNAVAILABLE'
+    }
+    if ($headExit -eq 0) {
+        $headText = ($headOutput -join ' ').Trim()
+    } else {
+        $headText = 'UNAVAILABLE'
+    }
+
     $repositoryStatusLines += "$($entry.Label) branch=$branchText HEAD=$headText"
-    if ($entry.Label -eq 'Flight_Matlab' -and $headExit -eq 0 -and $headText -match '^[0-9a-f]{40}
+    if ($entry.Label -eq 'Flight_Matlab' -and $headExit -eq 0 -and $headText -match '^[0-9a-f]{40}$') {
+        $projectHeadForRunId = $headText.Substring(0,7)
+    }
+    if ($dirtyExit -ne 0) {
+        $dirtyWorktreeIssues += "$($entry.Label): git status failed: $($dirtyOutput -join ' ')"
+    } elseif ($dirtyOutput.Count -gt 0) {
+        $dirtyWorktreeIssues += "$($entry.Label) has local changes:"
+        $dirtyWorktreeIssues += $dirtyOutput
+    }
+}
+
+if ($pendingValidationFiles.Count -gt 0 -or $dirtyWorktreeIssues.Count -gt 0) {
+    Write-Host 'Preflight found pending evidence or a dirty worktree; packaging diagnostics without changing originals:' -ForegroundColor Yellow
+    $pendingRunId = $runStarted.ToString('yyyyMMddTHHmmssfffZ') + '_' + $projectHeadForRunId
+    $pendingSummaryPath = Join-Path $archiveRoot ($pendingRunId + '_DELIVERY.txt')
+    $pendingStatusPath = Join-Path $archiveRoot ($pendingRunId + '_WORKTREE_STATUS.txt')
+    $pendingDeliveryZip = Join-Path $archiveRoot ($pendingRunId + '_DELIVERY.zip')
+    $pendingChecksum = $pendingDeliveryZip + '.sha256'
+    if ((Test-Path -LiteralPath $pendingSummaryPath) -or
+        (Test-Path -LiteralPath $pendingStatusPath) -or
+        (Test-Path -LiteralPath $pendingDeliveryZip) -or
+        (Test-Path -LiteralPath $pendingChecksum)) {
+        throw "Refusing to overwrite an existing preflight package for RUN_ID $pendingRunId."
+    }
+
+    $pendingNames = @($pendingValidationFiles | ForEach-Object { $_.Name })
+    $pendingStatusLines = @('Repository branch/HEAD/status:')
+    $pendingStatusLines += $repositoryStatusLines
+    $pendingStatusLines += 'Dirty worktree findings:'
+    $pendingStatusLines += $dirtyWorktreeIssues
+    $pendingStatusLines += 'Pending unarchived validation items:'
+    $pendingStatusLines += $pendingNames
+    $pendingStatusLines | Set-Content -LiteralPath $pendingStatusPath -Encoding utf8
+
+    $projectStatusSummary = ($repositoryStatusLines | Where-Object { $_ -like 'Flight_Matlab *' }) -join ''
+    $flightStatusSummary = ($repositoryStatusLines | Where-Object { $_ -like 'Flight *' }) -join ''
+    $pendingSummary = @(
+        "RUN_ID: $pendingRunId",
+        'Overall status: INCOMPLETE',
+        'Failure stage: DIRTY_WORKTREE_OR_PENDING_UNARCHIVED_EVIDENCE',
+        "Flight_Matlab: $projectStatusSummary",
+        "Flight: $flightStatusSummary",
+        'MATLAB was not started in this invocation.',
+        'Existing validation files and Git worktrees were not deleted, reset, cleaned, or overwritten.',
+        "Pending items: $($pendingNames -join '; ')",
+        "Worktree findings: $($dirtyWorktreeIssues -join '; ')"
+    )
+    $pendingSummary | Set-Content -LiteralPath $pendingSummaryPath -Encoding utf8
+
+    $pendingItems = @($pendingStatusPath, $pendingSummaryPath)
+    $pendingItems += @($pendingValidationFiles | ForEach-Object { $_.FullName })
+    $pendingManifestPath = Join-Path $repoRoot 'spec\validation\matlab_acceptance_manifest.json'
+    if (Test-Path -LiteralPath $pendingManifestPath -PathType Leaf) {
+        $pendingItems += $pendingManifestPath
+    }
+    Compress-Archive -LiteralPath $pendingItems -DestinationPath $pendingDeliveryZip -CompressionLevel Optimal
+    if (-not (Test-Path -LiteralPath $pendingDeliveryZip -PathType Leaf)) {
+        throw 'Preflight delivery package was not created. Original worktrees and validation files remain untouched.'
+    }
+    $pendingHash = (Get-FileHash -LiteralPath $pendingDeliveryZip -Algorithm SHA256).Hash.ToLowerInvariant()
+    $pendingChecksumLine = "$pendingHash  $(Split-Path $pendingDeliveryZip -Leaf)"
+    $pendingChecksumLine | Set-Content -LiteralPath $pendingChecksum -Encoding ascii
+    $pendingVerifiedHash = (Get-FileHash -LiteralPath $pendingDeliveryZip -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($pendingVerifiedHash -ne $pendingHash -or
+        (Get-Content -LiteralPath $pendingChecksum -Raw).Trim() -ne $pendingChecksumLine) {
+        throw 'Preflight delivery package SHA-256 verification failed. Original worktrees and validation files remain untouched.'
+    }
+    Write-Host "ONE FILE TO SEND: $pendingDeliveryZip" -ForegroundColor Green
+    Write-Host "CHECKSUM: $pendingChecksum" -ForegroundColor Green
+    Write-Host 'Original Git changes and pending validation files were not removed. MATLAB was not started.' -ForegroundColor Yellow
+    exit 1
+}
+
+Write-Stage '1/6 同步 Flight_Matlab/main 与 Flight/main'
+$projectCommit = Sync-MainRepository $repoRoot 'Flight_Matlab'
+$flightCommit = Sync-MainRepository $flightRoot 'Flight'
 
 Write-Stage '1.5/6 检查本地验证脚本与验收清单一致性'
 $contractTestPath = Join-Path $repoRoot 'tools\test_local_validation_contract.py'
