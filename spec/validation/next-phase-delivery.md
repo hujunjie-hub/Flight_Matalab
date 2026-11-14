@@ -41,11 +41,13 @@
 ## 一键验证脚本静态 CI 结果（2026-11-14）
 
 - 新增 GitHub Actions workflow：`.github/workflows/static-validation.yml`，仅针对 main 推送/手动触发。
-- 最新 Run：`43596041413`，HEAD `64ecebd019a284d79fc35c974d9272d96921b4df`，结论 SUCCESS。
+- 最新 Run：`43596972875`，HEAD `4bc23e4890942836df81c3af004cb29754c6c24a`，结论 SUCCESS。
 - PowerShell Parser：tools/ 下 3 个 `.ps1` 全部语法解析通过。
-- Python delivery contract：9/9 通过，覆盖 main-only、完整 PASS 授权门、manifest 身份/阻塞条件、未归档证据原样打包且不覆盖原件、本地预检失败包、失败先归档打包再返回非零、总包包含实际 manifest、PARTIAL_PASS 不冒充 PASS。
+- Python delivery contract：10/10 通过，覆盖 main-only、完整 PASS 授权门、manifest 身份/阻塞条件、未归档证据原样打包且不覆盖原件、dirty worktree 先打包再停止、本地预检失败包、失败先归档打包再返回非零、总包包含实际 manifest、PARTIAL_PASS 不冒充 PASS。
+- 可执行 SPEC 引用检查：13 个 case、192 次多项式极值检查 PASS。
+- 规格 validator 负向测试：8/8 PASS。
 - 中间一次 CI 因测试断言未同步脚本新增的 manifest 条件打包行为而失败；测试已更新，最新 HEAD 复跑成功。
-- 此 CI 不运行 MATLAB/Simulink、不生成 MEX、不重建 Flight Host SIL；当前 main 的完整本地 MATLAB 回归仍为 NOT_RUN。
+- 此 CI 不运行完整 `check_specs.py --allow-implementation`（该检查需要本地同级 Flight/FMT-Model 来源目录），也不运行 MATLAB/Simulink、不生成 MEX、不重建 Flight Host SIL；当前 main 的完整本地 MATLAB 回归仍为 NOT_RUN。
 
 ## 当前未闭合问题
 
