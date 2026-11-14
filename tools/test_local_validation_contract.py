@@ -43,7 +43,11 @@ class LocalValidationContractTests(unittest.TestCase):
         self.assertIn("if ($abiStatus -notin @('PASS', 'SKIPPED_TOOLCHAIN_MISSING'))", self.script)
 
     def test_delivery_package_contains_the_exact_manifest(self) -> None:
-        self.assertIn("$deliveryItems = @($matlabZip.FullName, $matlabChecksum, $summaryPath, $manifestPath)", self.script)
+        self.assertIn("$manifestIncluded = Test-Path -LiteralPath $manifestPath -PathType Leaf", self.script)
+        self.assertIn('"Acceptance manifest included in delivery: $manifestIncluded"', self.script)
+        self.assertIn("$deliveryItems = @($matlabZip.FullName, $matlabChecksum, $summaryPath)", self.script)
+        self.assertIn("if ($manifestIncluded)", self.script)
+        self.assertIn("$deliveryItems += $manifestPath", self.script)
         self.assertIn("matlab_acceptance_manifest.json", self.issue_workflow["delivery_contains"][2])
         self.assertIn(
             "work/validation/archives/<RUN_ID>_DELIVERY.zip",
