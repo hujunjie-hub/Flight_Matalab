@@ -130,7 +130,7 @@ pwsh -NoProfile -File .\tools\archive_validation_run.ps1
 成功后会输出：
 
 - 唯一 RUN_ID，格式为 YYYYMMDDTHHMMSSfffZ_<commit-short>；
-- work/validation/archives/<RUN_ID>/ 归档目录；
+- work/validation/archives/RUN_ID/ 归档目录；
 - work/validation/archives/RUN_ID.zip；
 - work/validation/archives/RUN_ID.zip.sha256。
 
