@@ -54,10 +54,10 @@ badCoverageAccounting.covered_us=1980000;
 write_fixture(validation,badCoverageAccounting,records);
 expect_failure(tempRoot,'FAIL');
 
-% Coverage cannot exceed the actual full-run duration.
-badCoverage=stats;
-badCoverage.covered_us=2100001;
-write_fixture(validation,badCoverage,records);
+% Exercise the duration bound independently of the per-job accounting check:
+% 106 solved jobs represent 2.12 s of coverage, exceeding this 2.10 s run.
+[overflowStats,overflowRecords]=valid_fixture(106);
+write_fixture(validation,overflowStats,overflowRecords);
 expect_failure(tempRoot,'FAIL');
 
 % Old or unversioned runtime output must not be silently accepted.
@@ -75,14 +75,16 @@ report=struct('scope','M6_JOB_EVIDENCE_CONTRACT','status','PASS', ...
 disp(report);
 end
 
-function [stats,records]=valid_fixture
+function [stats,records]=valid_fixture(jobCount)
+if nargin<1, jobCount=100; end
+coveredUs=jobCount*20000;
 stats=struct('schema','fmat-m6-runtime-stats/1.0', ...
-    'jobs',100,'solved',100,'rejected',0,'covered_us',2000000, ...
-    'job_record_count',100,'worker_ticks',105,'blocked_mode',0);
+    'jobs',jobCount,'solved',jobCount,'rejected',0,'covered_us',coveredUs, ...
+    'job_record_count',jobCount,'worker_ticks',jobCount+5,'blocked_mode',0);
 record=struct('job',0,'outcome',0,'solver_status',1, ...
     'prim_res',1e-4,'dual_res',1e-4,'primal_violation',0, ...
     'thrust_excess_n',0,'sample_us',1000,'eval_us',2000,'expires_us',25000);
-records=repmat(record,100,1);
+records=repmat(record,jobCount,1);
 for k=1:numel(records)
     records(k).job=k;
     records(k).sample_us=1000+(k-1)*20000;
