@@ -36,6 +36,14 @@ class LocalValidationContractTests(unittest.TestCase):
         self.assertIn("cannot be authorized while unresolved blockers remain", self.script)
         self.assertIn("Full project PASS blockers:", self.script)
 
+    def test_runner_packages_dirty_worktree_status_without_reset(self) -> None:
+        self.assertIn("git -C $entry.Path status --porcelain", self.script)
+        self.assertIn("$dirtyWorktreeIssues.Count -gt 0", self.script)
+        self.assertIn("DIRTY_WORKTREE_OR_PENDING_UNARCHIVED_EVIDENCE", self.script)
+        self.assertIn("Repository branch/HEAD/status:", self.script)
+        self.assertIn("were not deleted, reset, cleaned, or overwritten", self.script)
+        self.assertIn("Compress-Archive -LiteralPath $pendingItems -DestinationPath $pendingDeliveryZip", self.script)
+
     def test_runner_packages_pending_evidence_without_overwriting(self) -> None:
         guard = self.script.index("$pendingValidationFiles = @(")
         package = self.script.index("Compress-Archive -LiteralPath $pendingItems")
