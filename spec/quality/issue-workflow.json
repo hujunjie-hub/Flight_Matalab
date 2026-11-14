@@ -55,7 +55,8 @@
     "local_validation_contract_test.txt: local script/manifest contract preflight result",
     "preflight failure summary: records both repository commits and confirms MATLAB was not started",
     "pending unarchived work/validation files and directories, copied as-is without deleting originals",
-    "pending-evidence summary with both repository commit SHAs and explicit MATLAB_NOT_STARTED status"
+    "pending-evidence summary with both repository commit SHAs and explicit MATLAB_NOT_STARTED status",
+    "pending unarchived validation files packaged as-is with a summary; originals are preserved"
   ],
   "canonical_locations": {
     "policy": "spec/quality/ISSUE_WORKFLOW.md",
@@ -98,5 +99,6 @@
     "current RUN_ID ABI evidence ZIP and its SHA-256 when the ARM/Host toolchain is available",
     "preflight failure package and checksum when MATLAB was not started due to contract preflight failure",
     "pending-evidence delivery ZIP and SHA-256 when prior unarchived files are present"
-  ]
+  ],
+  "pending_evidence_policy": "Before starting a new run, if prior unarchived evidence exists, package it unchanged, include the current manifest when available, verify SHA-256, return nonzero, and preserve all originals."
 }
