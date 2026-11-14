@@ -220,7 +220,7 @@ finally {
         Remove-Item -LiteralPath $matlabScriptPath -Force
     }
 }
-$context.matlab_exit_code = $matlabExitCode
+$context['matlab_exit_code'] = $matlabExitCode
 $context | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $validationRoot 'local_run_context.json') -Encoding utf8
 if ($matlabExitCode -eq 0) {
     Write-Host 'MATLAB process completed. The component report still determines PASS/PARTIAL/FAIL.' -ForegroundColor Green
