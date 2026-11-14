@@ -20,7 +20,7 @@
 
 本节覆盖前述历史归档之后的最新 Flight 上游状态，优先级高于后文历史交付记录：
 
-- 当前 Flight/main HEAD：`3270cff5aec26e3ae0717c62d2d78e9f30752020`（`test: initialize FMS before missing-navigation regression`）。相较旧配套基线 `1c7a72a15f82979d0bee9cdd87b7f14f91ae9f78`，当前 main 已前进 631 个提交；不得再将旧 commit 或旧 MATLAB 归档作为当前配套固件证据。
+- 当前 Flight/main HEAD：`85f02af5ff2208f805b870d70593a73733db2f5c`。Flight 仓库当前只保留 `main`；相较旧配套基线 `1c7a72a15f82979d0bee9cdd87b7f14f91ae9f78`，当前 main 已前进 635 个提交；不得再将旧 commit 或旧 MATLAB 归档作为当前配套固件证据。
 - 这段上游变化涉及 runtime 数据、Mission/Actuator task、MPC、FMS、Guidance、TimeService/Host SIL 等运行路径。必须在本地使用当前 Flight/main 重建 Host SIL 并重新运行完整 MATLAB 验收。
 - Flight_Matlab 的 `external_dependencies.lock.json` 已锁定 Flight 的契约头和 OSQP runtime lock（42 个运行时文件）；复核确认 `UPSTREAM_LOCK.json`、`abi_lock.h`、`product_contract.h` 自 e470f00 基线以来在当前 Flight/main 未再变化，因此本轮没有发现这三项输入的新增 Hash 漂移。完整 Host SIL 构建仍必须由本地一键验收实测。
 - ABI 证据冲突仍存在：当前 `abi_lock.h` 为 144 types / 993 fields，registry SHA-256 为 `27738a85e59d7232256158fe9ce70563e41c35fb074c2f2c0871eea1b678c148`；当前 `message_registry.json` 有 56 条消息，`GroundStopCertificate` 为 message ID 56。可是已提交的 `tests/abi/evidence/abi_report.md` 仍报告 143 / 986、55 registry entries，并绑定旧 SHA-256 `dd06554c240567d5f81b51e4aed39336ccf3e469c6c95a952d1a2d766bbc49e7`。旧报告的 PASS 不能代表当前锁和注册表已验证。见 FMAT-0018。
@@ -51,16 +51,23 @@
 
 | Issue | 当前状态 | 本轮处理边界 |
 |---|---|---|
+| #2 / FMAT-0002 | VERIFIED（Issue 仍 Open） | Host SIL adapter include 路径修复已有历史验证；当前 main 完整 MATLAB 回归后按关闭清单结案 |
+| #3 / FMAT-0003 | VERIFIED（Issue 仍 Open） | 生产契约头 Hash 锁修复已有历史验证；需当前 Flight/main 完整复测后结案 |
+| #4 / FMAT-0004 | VERIFIED（Issue 仍 Open） | Sensor/Plant MEX double 位运算修复已有历史验证；需当前 MATLAB 构建回归后结案 |
+| #5 / FMAT-0005 | FIXED_WAITING_RETEST | R2026b `max(...,'all')` 参数语法修复；等待当前 main MATLAB 回归 |
+| #6 / FMAT-0006 | VERIFIED（Issue 仍 Open） | R2026b 字典条目删除 API 修复已有历史验证；需当前 main 完整复测后结案 |
+| #10 / FMAT-0010 | VERIFIED（Issue 仍 Open） | Flight 源基线自动录制/对齐已有历史验证；当前 Flight/main 的基线会在本地完整运行中重建 |
+| #11 / FMAT-0011 | VERIFIED（Issue 仍 Open） | `all(A,[],'all')` 回归已修复并有历史验证；需当前 main MATLAB 回归后结案 |
 | #12 / FMAT-0012 | BLOCKED | 488/488 MPC jobs、95.0% 消费点使用率已有历史证据；整轮口径 37.54%，等待用户确认合同分母。当前代码仍按整轮口径判定，不得自行改为消费点口径 |
 | #13 / FMAT-0013 | BLOCKED | Flight M7 执行器侧证书→限速降推力→ZERO_TARGET_APPLIED 回执已有 230/230 Host 检查；但 fms_build_ground_stop_certificate 要求快照已是 DISARMED，而 PRODUCT_CMD_DISARM 在同一 handler 内从 DISARMING 直接转 DISARMED 并返回 COMPLETED，未等待真实回执。等待用户批准公共契约/异步 ACK 语义；批准前不改 ICD/ABI，闭环实现后再补本项目 Host MIL 端到端断言 |
 | #14 / FMAT-0014 | IN_PROGRESS | Host 时间服务/GNSS 核心测试与真实 TIM2、UART/DMA、sensor_gnss_poll 和板级证据分开；P-10 overall 保持 PARTIAL |
 | #15 / FMAT-0015 | FIXED_WAITING_RETEST | 上游数组边界修复已有结构化测试；等待当前配套基线的本地复测确认 |
 | #16 / FMAT-0016 | VERIFIED（Issue 仍 Open） | 归档分类有历史 8/8 证据；当前 main 回归后再结案 |
 | #17 / FMAT-0017 | VERIFIED（Issue 仍 Open） | P-10b 同 RUN_ID 对账有历史证据；当前 main 回归后再结案 |
-| #18 / FMAT-0018 | BLOCKED | 当前 Flight/main HEAD 为 `3270cff5`，比旧配套基线前进 631 个提交；GroundStopCertificate 为 message ID 56，当前 lock 为 144/993，但 ARM/Host/compare 仍是 143/986、55 messages。须重跑 ABI 证据并审查 Product/Port revision policy；当前 MATLAB/Simulink 配套回归也未完成 |
+| #18 / FMAT-0018 | BLOCKED | 当前 Flight/main HEAD 为 `85f02af5`，比旧配套基线前进 635 个提交；GroundStopCertificate 为 message ID 56，当前 lock 为 144/993，但 ARM/Host/compare 仍是 143/986、55 messages。须重跑 ABI 证据并审查 Product/Port revision policy；当前 MATLAB/Simulink 配套回归也未完成 |
 | #19 / FMAT-0019 | FIXED_WAITING_RETEST | M6 汇总与逐 job outcome 对账、covered_us=solved×20,000 us、job ID 连续性和 coverage 超出整轮时长的拒绝用例已提交；等待本地 MATLAB 回归 |
 | #20 / FMAT-0020 | FIXED_WAITING_RETEST | 一键脚本失败退出码误报已修复；当前 9 项 Python 交接合同测试和 PowerShell Parser 静态 CI（#43596041413，HEAD `64ecebd`）通过，预检失败、待归档证据和验收失败均保留交付证据；等待用户本地 MATLAB 回归 |
-| #20 / FMAT-0020 | FIXED_WAITING_RETEST | 一键验收脚本失败时非零退出、manifest 完整 PASS 授权门和交付包校验已修复；静态 CI 3 个 PS1 解析、5/5 合同测试通过，等待用户本地完整脚本回归 |
+
 
 #12、#13 的用户决策仍是阻塞条件；继续处理与其无依赖的代码、测试和文档，不得绕过决策。#14 的 Host 核心通过不能替代板级证据。 #20 的静态合同 CI 通过不等于 MATLAB 运行验证，仍需当前 main 的本地 RUN_ID 证据。
 
