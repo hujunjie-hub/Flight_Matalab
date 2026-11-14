@@ -15,6 +15,17 @@
 | implementation_manifest.json | BASELINE_EVIDENCE_STALE_REQUIRES_REFRESH；不得作为当前 main 的 PASS 证据 |
 | 本地运行交接 | [LOCAL_MATLAB_HANDOFF.md](LOCAL_MATLAB_HANDOFF.md) |
 
+## 2026-11-14 上游 Flight/main 同步复核
+
+本节覆盖前述 2026-11-13 历史归档之后的上游变化，优先级高于历史交付记录：
+
+- 当前核对的 Flight/main 为 e470f00cd539f438b1923b0faa844456ba2d3b59。历史文档所引用的 1c7a72a 已落后 618 个提交；不能继续将该 commit 或它的 MATLAB 归档当作当前配套固件证据。
+- 这段上游变化涉及 applications/runtime/runtime_data.c、runtime_internal.h、Mission/Actuator task、MPC 和 FMS 等运行路径。必须在本地使用当前 Flight/main 重建 Host SIL 并重新运行完整 MATLAB 验收。
+- external_dependencies.lock.json 已更新为当前 Flight/main 的两个契约头 SHA-256，以及 OSQP UPSTREAM_LOCK.json 的规范化 CRLF SHA-256 91e6b16fbd39a1f8e407bb9056d82adbea192b45f2673e5855377b2c94cde37e；当前锁覆盖 42 个运行时文件（此前为 47）。OSQP/qdldl 上游版本和来源仍保持 v1.0.0 / v0.1.8。
+- 当前 Flight abi_lock.h 的生成清单从 143 types / 986 fields 变为 144 types / 993 fields，但 Schema 6.0 和 Product/Port 0x00010906 未变。此差异需要确认是 ABI 扫描覆盖范围扩展还是公共布局变化；在独立审查前，不将其描述为已证明无 ABI 变化。见 FMAT-0018。
+- config/flight_baseline.json 的旧 sources_sha256 是历史记录。标准 run_component_checks 会先构建 Flight Host SIL 并重新记录当前源文件，再由 build_native_kernels 执行 verify_inputs.py。预检 PASS 才能继续 MATLAB gate。
+- 当前 main 的 MATLAB/Simulink 完整复测仍为 NOT_RUN。本轮锁文件和运行入口的修改只属于静态/仓库层变更，不构成 MATLAB 编译或仿真通过。
+
 ## 本轮代码与验证门禁更新
 
 1. M6 runtime stats 新增 schema 标识 fmat-m6-runtime-stats/1.0，避免误读旧格式统计文件。
