@@ -24,7 +24,7 @@
   "system_requirement_count": 10,
   "plant_requirement_count": 5,
   "additional_review_count": 6,
-  "model_implementation": "NOT_STARTED",
+  "model_implementation": "IN_PROGRESS",
   "current_session_rounds": [
     4,
     5,
@@ -63,6 +63,7 @@
     "command_working_directory": "PROJECT_ROOT",
     "flight_root_relative_to_project": "../Flight",
     "legacy_source_root_relative_to_project": "../FMT-Model",
-    "matlab_project_file": "PLANNED_G1_NOT_CREATED"
+    "matlab_project_file": "CREATED",
+    "implementation_status_document": "../../IMPLEMENTATION_STATUS.md"
   }
 }
