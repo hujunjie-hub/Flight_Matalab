@@ -47,135 +47,128 @@
 
 如果编译器安装目录不同，后续 MATLAB 命令使用 run_component_checks('你的MinGW目录')。不要因为预检 Hash 不匹配而手工改锁文件；先核对 Flight commit 和路径。
 
-## 3. 拉取两个仓库 main 与上游基线准备
+## 3. 一键本地验证（唯一推荐入口）
 
-在 PowerShell 中进入本项目根目录后执行：
+### 3.1 只复制这一条命令
+
+先在 Windows 文件资源管理器打开 Flight_Matlab 仓库根目录，在地址栏输入 pwsh 打开 PowerShell 7，然后整行复制执行：
 
 ~~~powershell
-git fetch origin --prune
-git switch main
-git pull --ff-only origin main
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\run_local_validation.ps1
+~~~
 
-git -C ..\Flight fetch origin --prune
-git -C ..\Flight switch main
-git -C ..\Flight pull --ff-only origin main
+正常情况下，你不需要再分别执行 git pull、打开 MATLAB、复制 MATLAB 命令、手工归档或单独运行 ABI 命令。
 
+### 3.2 这一条命令自动完成什么
+
+脚本 tools/run_local_validation.ps1 会按固定顺序完成：
+
+1. 检查 Git、Python、PowerShell 7、MATLAB 和 Host GCC。
+2. 检查两个仓库是否有本地修改；有修改就停止，不执行 reset、clean 或覆盖。
+3. 自动 fetch 并 fast-forward 同步 Flight_Matlab/main 和同级 Flight/main。
+4. 记录两个仓库的完整 commit SHA、MATLAB 路径、操作系统和编译器版本。
+5. 用 MATLAB -batch 自动选择/检查 MEX C 编译器，执行唯一标准入口 run_component_checks。
+6. 自动保存 MATLAB Diary 和 batch 控制台日志。
+7. 无论 MATLAB 测试通过还是失败，都尝试归档本轮报告；不会因为测试失败而丢弃诊断证据。
+8. 将本轮 config/flight_baseline.json 和 scenarios/flight_sil_recording.mat 一起放入 MATLAB 证据 ZIP。
+9. MATLAB 归档完成后，自动运行 FMAT-0018 的 ARM/Host ABI 检查（默认工具链路径存在时）。
+10. 生成一个总交付包及 SHA-256，方便一次性交回。
+
+### 3.3 默认路径不同时，只复制这一条带参数命令
+
+默认工具链路径：
+
+| 工具 | 默认路径 |
+|---|---|
+| Host GCC | D:\STM32CubeCLT\mingw64\bin |
+| GNU Arm | D:\STM32CubeCLT\GNU-tools-for-STM32\bin |
+| MATLAB | 优先从 PATH 查找；否则自动查找 C:\Program Files\MATLAB\ |
+
+如果你的安装目录不同，把路径替换后复制这一条：
+
+~~~powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\run_local_validation.ps1 -GccDir 'D:\STM32CubeCLT\mingw64\bin' -ArmBin 'D:\STM32CubeCLT\GNU-tools-for-STM32\bin' -MatlabExe 'C:\Program Files\MATLAB\R2026b\bin\matlab.exe'
+~~~
+
+MatlabExe 可省略，只在 MATLAB 不在 PATH 且自动查找不到时填写。
+
+### 3.4 如果脚本中途停止
+
+- **提示仓库有本地修改：** 不要删除或覆盖。把提示的 git status 内容交回，先确认这些文件是否为上一轮生成的待审查证据。
+- **提示找不到 MATLAB：** 把实际 matlab.exe 完整路径填入 -MatlabExe。
+- **提示 MEX C 编译器未配置：** 首次在 MATLAB Desktop 执行一次 mex -setup C，选定可用 C 编译器；之后重新复制上面的一键命令即可。
+- **MATLAB 测试失败：** 脚本仍会尝试归档。不要只发截图，交付总包和 SHA-256。
+- **ABI 工具链缺失：** MATLAB 验证仍会完成；总包说明中会写 SKIPPED_TOOLCHAIN_MISSING。补齐 ARM/Host 工具链后再做 ABI 专项复测。
+- **归档脚本本身失败：** 不要删除 work/validation/，把整个目录交回。
+
+脚本不会自动提交任何代码，不会自动改写 abi_lock.h，也不会添加 --emit-lock。ABI 检查生成的新证据会留在 Flight 工作区，等待审查；不要自行提交或清理。
+
+## 4. 交付给验收方（只需要一个总包）
+
+### 4.1 唯一必交文件
+
+Flight_Matlab/work/validation/archives/RUN_ID_DELIVERY.zip
+
+以及同名校验文件：
+
+Flight_Matlab/work/validation/archives/RUN_ID_DELIVERY.zip.sha256
+
+总交付 ZIP 内含：
+
+- RUN_ID.zip：完整 MATLAB/Simulink 报告、Diary、源码/产物指纹、两个仓库 commit、环境信息、flight_baseline.json 和回放录制文件。
+- RUN_ID.zip.sha256：MATLAB 证据包校验文件。
+- RUN_ID_ABI.zip：FMAT-0018 ARM/Host ABI 报告、编译证据、命令清单、规范化布局文本及哈希清单（工具链可用时）。
+- RUN_ID_ABI.zip.sha256：ABI 证据包校验文件（工具链可用时）。
+- RUN_ID_DELIVERY.txt：本轮 commit、MATLAB 状态、ABI 状态和交付文件说明。
+
+**你只需把 _DELIVERY.zip 和 _DELIVERY.zip.sha256 两个文件交给我。** 不需要逐个找 JSON、MAT、SLX、SLDD 文件，也不需要手工复制 commit SHA。
+
+### 4.2 结果状态如何理解
+
+- component_checks.json.status=PARTIAL_PASS：已实现的组件门禁通过，但 Plant/P-10 仍按设计边界保持 PARTIAL，不代表整机或板级通过。
+- component_checks.json.status=FAIL：存在失败项；仍然要把总包交回，不能跳过失败项。
+- FMAT-0012 的 coverage_90 可能仍 FAIL，这是已知阻塞；不允许为了变绿而修改 90% 门槛或整轮分母。
+- ABI FAIL 也必须保留报告交回，不能用旧证据覆盖新证据。
+- ABI SKIPPED_TOOLCHAIN_MISSING 表示本轮没有生成新的 ABI 证据，不能视为通过。
+
+### 4.3 下一轮运行前
+
+本轮 ABI 工具运行后，Flight 仓库可能出现新生成的 tests/abi/evidence/ 文件变更。这是待审查证据，不要提交、reset 或 clean。把总交付包交回，等我审查并将需要保留的修改提交到 main 后，再开始下一轮。
+
+## 5. 手工排障参考（通常不需要执行）
+
+### 5.1 手工查看两个仓库状态
+
+~~~powershell
+git status --short
 git branch --show-current
 git rev-parse HEAD
-git status --short
-
-git -C ..\Flight rev-parse HEAD
-git -C ..\Flight branch --show-current
 git -C ..\Flight status --short
+git -C ..\Flight branch --show-current
+git -C ..\Flight rev-parse HEAD
 ~~~
 
-检查要求：
+### 5.2 手工打开 MATLAB 工程
 
-- git branch --show-current 必须输出 main。
-- git status --short 如果显示本地修改，先保留并报告；不要执行 git reset --hard、git clean 或覆盖模型/字典/录制文件。
-- 首次同步后不要先单独运行 python -B tools\verify_inputs.py：旧 config/flight_baseline.json 会在 Host SIL 构建时由当前 Flight 源文件重新生成。
-- 标准 run_component_checks 顺序为：重建同级 Flight Host SIL → record_flight_baseline.py 重新记录当前源文件 → build_native_kernels 内部运行 verify_inputs.py → 预检 PASS 后才继续 MEX、模型和组件验收。
-- 如果只想单独诊断依赖预检，可先运行 pwsh -NoProfile -File .\tools\build_flight_runtime.ps1 -GccDir 'D:\STM32CubeCLT\mingw64\bin'，再运行 python -B .\tools\verify_inputs.py。正式完整验收不需要重复手工构建。
-- 预检失败时保留 work\validation\input_preflight.json 和完整 Diary，并把归档交回；不得手工修改基线或锁文件绕过失败。
-- 记录 Flight_Matlab 与 Flight 两个仓库的完整 HEAD SHA。归档脚本也会记录这两个 commit。
-
-## 4. MATLAB 完整验证（唯一标准入口）
-
-### 4.1 打开工程
+只有一键脚本无法启动 MATLAB 时才手工操作：
 
 1. 启动 MATLAB。
-2. 将当前目录切换到 Flight_Matlab 仓库根目录。
-3. 打开 Flight_Matalab.prj。
-4. 在 MATLAB 命令窗口执行 mex -setup C，确认 C 编译器可用。
+2. 打开 Flight_Matalab.prj。
+3. 在 MATLAB 命令窗口执行 mex -setup C。
+4. 按错误提示处理后，重新运行一键脚本；不要另外启动第二轮 run_component_checks。
 
-### 4.2 执行完整验收
+### 5.3 单独排查依赖预检
 
-推荐直接复制以下命令。它会保存完整 Diary；即使测试报错，也会先关闭 Diary 再抛出错误。
-
-~~~matlab
-root = flight_startup;
-reportDir = fullfile(root, 'work', 'validation');
-if ~isfolder(reportDir)
-    mkdir(reportDir);
-end
-
-diaryFile = fullfile(reportDir, 'matlab_acceptance_diary.txt');
-diary(diaryFile);
-diary on;
-
-try
-    run_component_checks('D:\STM32CubeCLT\mingw64\bin');
-catch ME
-    disp(getReport(ME, 'extended', 'hyperlinks', 'off'));
-    diary off;
-    rethrow(ME);
-end
-
-diary off;
-~~~
-
-如果 MinGW 使用默认路径，也可以执行 run_component_checks。
-
-完整入口会自动：
-
-1. 重建同级 Flight 的 Windows Host SIL 运行库。
-2. 重建本项目 MEX；build_native_kernels 会重新执行 verify_inputs.py，input_preflight.json 必须为 PASS，且会登记到 component_checks.checks.input_preflight。
-3. 重建参数字典、Plant、Flight、PID/Actuation 模型。
-4. 运行 26 s 默认 MIL 闭环并刷新 DataSIM、ExtINS DataSIM 回放。
-5. 运行 M6 job 证据完整性、OSQP、Plant、传感器事件队列、TimeService、GNSS、RECTIMEA、真值隔离、PID 和执行器等组件 gate。
-6. 生成当前运行的 JSON 报告、源码指纹、模型/字典/MEX/录制文件指纹及运行前后 Git 状态。
-
-不要用单独的 verify_flight_entries 或单个 Plant 测试代替完整验收。单项调试可以额外执行，但正式交付仍需完整入口。
-
-## 5. 生成不可覆盖的验证归档
-
-MATLAB 命令结束后，确认 Diary 已关闭，再回到 PowerShell 的仓库根目录执行：
+正式一键验收会自动先重建 Flight Host SIL，再生成当前 flight_baseline.json 并运行预检。只有定位问题时才手工执行：
 
 ~~~powershell
-pwsh -NoProfile -File .\tools\archive_validation_run.ps1
+pwsh -NoProfile -File .\tools\build_flight_runtime.ps1 -GccDir 'D:\STM32CubeCLT\mingw64\bin'
+python -B .\tools\verify_inputs.py
 ~~~
 
-成功后会输出：
+预检失败时保留 work\validation\input_preflight.json 和完整日志，不得手工修改基线或锁文件绕过失败。
 
-- 唯一 RUN_ID，格式为 YYYYMMDDTHHMMSSfffZ_<commit-short>；
-- work/validation/archives/RUN_ID/ 归档目录；
-- work/validation/archives/RUN_ID.zip；
-- work/validation/archives/RUN_ID.zip.sha256。
-
-归档包含本轮 JSON 报告、MATLAB Diary、源码/产物指纹、运行前后 Git 状态、生成资产分类、run_manifest.json 和本轮 scenarios/flight_sil_recording.mat 副本。模型、字典和 MEX 的文件哈希会登记在 artifact fingerprint；默认不把所有 .slx/.sldd 二进制文件重复塞入 ZIP。
-
-重要：归档成功后脚本会清空 work/validation/ 当前层的临时报告，历史 archives/ 不会删除。每个 RUN_ID 不可覆盖。一个运行完成后立即归档，再开始下一轮；不要在归档前重复运行完整入口，以免混淆证据。
-
-如果归档命令失败：
-
-- 不要删除或清理 work/validation/；
-- 保留完整 MATLAB Diary 和 PowerShell 错误；
-- 将整个 work/validation/ 文件夹打包交回，或至少交回 component_checks.json、input_preflight.json、flight_entries.json、m6_report.json、plant_open_loop_report.json、current_source_fingerprint.json、current_artifact_fingerprint.json、git_state_before.json、git_state_after.json 和 Diary。
-
-## 6. 必须交付给验收方的文件与信息
-
-### 6.1 每次完整运行的必交文件
-
-| 文件/信息 | 必须 | 用途 |
-|---|---|---|
-| RUN_ID.zip | 是 | 本轮完整证据包 |
-| RUN_ID.zip.sha256 | 是 | 校验 ZIP 未损坏或被替换 |
-| config/flight_baseline.json | 若本轮重建后发生变化则必须单独交付 | 由当前 Flight/main Host SIL 构建重新生成；ZIP 只保存指纹不保存该源码文件。交给验收方审查后提交 main，不要自行提交 |
-| RUN_ID | 是 | 关联报告与问题记录 |
-| Flight_Matlab 完整 commit SHA | 是 | 确认被测源码 |
-| Flight 完整 commit SHA | 是 | 确认固件上游基线 |
-| MATLAB Release、Windows 版本 | 是 | 确认运行环境 |
-| GCC 路径/版本及 MEX 编译器 | 是 | 定位构建差异 |
-| component_checks.json 顶层状态 | 是 | 快速判断本轮 PASS/FAIL/PARTIAL_PASS |
-
-ZIP 正常时，不需要再单独发送 ZIP 内已有的每一份 JSON 或 MAT 文件。唯一例外是本轮重建后发生变化的 config/flight_baseline.json：它是需要纳入 Git 的配套源码基线，必须另行交付给验收方审查。
-
-### 6.2 需要额外发送的文件
-
-- 如果 generated_assets.json 显示本轮修改了某个原先已存在的模型/字典，且问题与该模型/字典有关，再按要求额外提供对应 .slx 或 .sldd 文件。
-- 如果 component_checks 在归档前中断，发送第 5 节列出的原始报告和完整 Diary。
-- 对 FMAT-0018，先完成并归档 MATLAB 运行，再在 Flight 仓库根目录运行 `python -B tests\abi\abi_report.py --arm-bin D:\STM32CubeCLT\GNU-tools-for-STM32\bin --host-bin D:\STM32CubeCLT\mingw64\bin`（不要加 `--emit-lock`）。额外交付完整终端输出及 `tests/abi/evidence/abi_arm.json`、`abi_host.json`、`abi_compare.json`、`abi_report.md`、`commands.json`、`artifact_sha256.json`、`abi_probe.c`、`abi_canonical_arm.txt`、`abi_canonical_host.txt`。这组 ABI 证据不包含在 Flight_Matlab 的 MATLAB ZIP 中。该命令会改写 Flight 工作区中的证据文件；完成后先不要启动下一轮 MATLAB，也不要提交 abi_lock/revision 修改，等独立审查确认后再处理。
-- 截图只能辅助定位，不能替代报告、日志、数据文件和 SHA-256。
+---
 
 ## 7. 如何登记 MATLAB 发现的问题
 
