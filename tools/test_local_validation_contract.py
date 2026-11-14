@@ -57,7 +57,8 @@ class LocalValidationContractTests(unittest.TestCase):
 
     def test_runner_packages_pending_evidence_without_deleting_it(self) -> None:
         self.assertIn("$pendingValidationFiles.Count -gt 0", self.script)
-        self.assertIn("$pendingItems += $pendingSummaryPath", self.script)
+        self.assertIn("$pendingItems = @($pendingStatusPath, $pendingSummaryPath)", self.script)
+        self.assertIn("Refusing to overwrite an existing preflight package", self.script)
         self.assertIn("Compress-Archive -LiteralPath $pendingItems -DestinationPath $pendingDeliveryZip", self.script)
         self.assertIn("Git worktrees were not deleted, reset, cleaned, or overwritten", self.script)
         self.assertIn("Preflight delivery package SHA-256 verification failed", self.script)
