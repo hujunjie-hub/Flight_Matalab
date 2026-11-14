@@ -20,7 +20,8 @@
 1. M6 runtime stats 新增 schema 标识 fmat-m6-runtime-stats/1.0，避免误读旧格式统计文件。
 2. verify_m6_jobs 增加 fail-closed 校验：零 job 保持 NOT_RUN 并使完整验收失败；统计计数必须是有限非负整数；solved + rejected 必须等于 jobs；covered_us 不得超过整轮时长；逐 job 记录必须存在、schema 正确、记录数量与 job 数一致、job ID 唯一、outcome 在定义范围内。
 3. 新增 verify_m6_jobs_contract，并接入 run_component_checks，使用隔离临时目录覆盖有效 100-job、零 job、缺失记录、计数不一致、覆盖时间越界和旧 schema 六类情况。
-4. 上述 MATLAB/Simulink 代码尚未在当前环境执行。它们只有在用户本地运行完整 run_component_checks 并归档后才可标记为通过。
+4. external_dependencies.lock.json 已由 commit 249d8a3 对齐 Flight/main 的 product contract headers 与 OSQP runtime lock（42 个运行时文件）；run_component_checks 在 build_native_kernels 后读取 input_preflight.json 并将其纳入 component_checks.checks，缺失或非 PASS 会阻断。
+5. 上述 MATLAB/Simulink 代码尚未在当前环境执行。它们只有在用户本地运行完整 run_component_checks 并归档后才可标记为通过。
 
 **未改变的验收合同：** FMAT-0012 的 90% 覆盖率门槛和当前整轮分母保持不变；不改变 MPC 求解容差、不改变消费策略、不更改 Flight 公共接口。等待用户明确裁定后才处理统计分母。
 
