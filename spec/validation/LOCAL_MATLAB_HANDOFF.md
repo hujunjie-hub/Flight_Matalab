@@ -129,6 +129,7 @@ Flight_Matlab/work/validation/archives/RUN_ID_DELIVERY.zip.sha256
 ### 4.2 结果状态如何理解
 
 - component_checks.json.status=PARTIAL_PASS：已实现的组件门禁通过，但 Plant/P-10 仍按设计边界保持 PARTIAL，不代表整机或板级通过。
+- **完整项目 PASS 授权：** 当前 `matlab_acceptance_manifest.json` 的 `full_project_pass_allowed=false`，因为 P-10 Host MIL 物理 PPS/UART/DMA 链、板级/HIL 证据和当前 main 新鲜 MATLAB 复测尚未全部闭环。即使组件报告通过，也必须保持 `PARTIAL_PASS`；不得为了得到绿色状态自行修改该授权标志。
 - component_checks.json.status=FAIL：存在失败项；仍然要把总包交回，不能跳过失败项。
 - FMAT-0012 的 coverage_90 可能仍 FAIL，这是已知阻塞；不允许为了变绿而修改 90% 门槛或整轮分母。
 - ABI FAIL 也必须保留报告交回，不能用旧证据覆盖新证据。
