@@ -29,7 +29,7 @@
   Flight_Matlab/
 ~~~
 
-本项目 MATLAB Project 文件在仓库中实际命名为 Flight_Matalab.prj（历史拼写如此，暂不重命名）。请从 Flight_Matlab 仓库根目录打开该文件。
+本项目 MATLAB Project 文件在仓库中实际命名为 Flight_Matalab.prj（历史拼写如此，暂不重命名）。一键脚本通过 flight_startup 自动配置工程路径，不需要手工打开该文件；只有手工排障时才需要打开。
 
 ### 2.2 已知验证环境基线
 
@@ -40,12 +40,12 @@
 | Simulink | 与 MATLAB 同版本 |
 | PowerShell | PowerShell 7，命令名 pwsh |
 | Host SIL 编译器 | MinGW-w64 GCC；默认 D:\STM32CubeCLT\mingw64\bin |
-| MATLAB MEX 编译器 | MATLAB 支持的 C 编译器，先执行 mex -setup C |
+| MATLAB MEX 编译器 | MATLAB 支持的 C 编译器；一键脚本会检查已选编译器，未选择时尝试 mex -setup C |
 | ABI ARM 编译器（仅 FMAT-0018） | GNU Arm Embedded；默认 D:\STM32CubeCLT\GNU-tools-for-STM32\bin |
 | Python | Python 3，可执行 python |
 | 上游仓库 | 同级 Flight，commit 必须满足 config/flight_baseline.json 与 external_dependencies.lock.json |
 
-如果编译器安装目录不同，后续 MATLAB 命令使用 run_component_checks('你的MinGW目录')。不要因为预检 Hash 不匹配而手工改锁文件；先核对 Flight commit 和路径。
+如果编译器安装目录不同，在一键命令中使用 -GccDir 和 -ArmBin 参数。不要因为预检 Hash 不匹配而手工改锁文件；先核对 Flight commit 和路径。
 
 ## 3. 一键本地验证（唯一推荐入口）
 
