@@ -1,5 +1,7 @@
 # Flight_Matalab
 
+> GitHub 仓库：`hujunjie-hub/Flight_Matlab`。当前唯一开发/验收分支为 `main`；不要从旧开发分支拉取代码。MATLAB 本地完整验证步骤、问题登记方式和交付文件清单见 [本地 MATLAB 验证交接说明](spec/validation/LOCAL_MATLAB_HANDOFF.md)。仓库名与 MATLAB Project 文件名存在历史拼写差异，工程文件仍为 `Flight_Matalab.prj`。
+
 本工程使用同级 `../Flight` 的现行固件作为飞控实现来源。三个入口共用 `FMT_FlightCore`，通过 Windows Host SIL 运行生产任务和 M2～M7 中间件，包括 KF-GINS、FMS、制导、控制、OSQP 和执行器保护。飞控使用 Flight 的 Host SIL 默认配置和运行参数，执行器设备端落在内存记录桩。
 
 | 模型 | 运行方式 |
@@ -56,4 +58,4 @@ verify_flight_entries
 
 ## MATLAB 测试与验收
 
-当前分支的唯一自动化验收入口为 `run_component_checks`。该入口会重建 Host SIL/MEX/模型、刷新 MIL 回放数据，并运行当前已实现的组件与三入口回放测试。测试数据集、每项验收阈值、必需报告、已知缺口和结果提交方式统一见 [MATLAB 仿真测试数据集与验收标准](spec/MATLAB-验收与结果提交.md)。验收后执行 `pwsh -File .\\tools\\archive_validation_run.ps1` 生成唯一 RUN_ID 和证据 ZIP，再将 ZIP 附加到对应 GitHub Issue 或发给验收方。问题登记、状态流转和关闭规则见 [问题闭环规范](quality/ISSUE_WORKFLOW.md)。不要使用旧报告或静态审查结果代替本次 MATLAB 运行结果。
+当前 `main` 分支的唯一自动化验收入口为 `run_component_checks`。本地运行、Diary 保存、归档、Issue 登记和必交文件清单以 [本地 MATLAB 验证交接说明](spec/validation/LOCAL_MATLAB_HANDOFF.md) 为准。该入口会重建 Host SIL/MEX/模型、刷新 MIL 回放数据，并运行当前已实现的组件与三入口回放测试。测试数据集、每项验收阈值、必需报告、已知缺口和结果提交方式统一见 [MATLAB 仿真测试数据集与验收标准](spec/MATLAB-验收与结果提交.md)。验收后执行 `pwsh -File .\\tools\\archive_validation_run.ps1` 生成唯一 RUN_ID 和证据 ZIP，再将 ZIP 附加到对应 GitHub Issue 或发给验收方。问题登记、状态流转和关闭规则见 [问题闭环规范](quality/ISSUE_WORKFLOW.md)。不要使用旧报告或静态审查结果代替本次 MATLAB 运行结果。
