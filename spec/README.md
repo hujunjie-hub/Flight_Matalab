@@ -4,6 +4,8 @@
 
 **将任务交给自动化 Agent 时，先要求它完整读取 [Agent 操作总指南](AGENT-操作指南.md)，然后按本页阅读顺序读取相关技术规格。** 所有正式技术、测试验收、问题管理和操作流程文档统一维护在 `spec/`。动态问题登记在 GitHub Issues，MATLAB 运行证据保存在 `work/validation/archives/`。GitHub 模板和可执行工具仍放在 GitHub/MATLAB 要求的固定路径，具体操作见 Agent 指南。
 
+**本地执行统一原则：** 需要用户在本地操作时，优先提供“一个脚本、一条可复制命令、一个交付包”；双方职责和强制要求见[问题登记、状态流转与闭环规范第 7 节](quality/ISSUE_WORKFLOW.md#7-双方分工与固定工作循环)，MATLAB 具体入口见[本地 MATLAB 验证交接说明](validation/LOCAL_MATLAB_HANDOFF.md)。
+
 基线：`FLIGHT-MATLAB-SPEC-1.3-DRAFT`；日期：2026-11-05；状态：`SPEC_REVIEWED_MODEL_NOT_STARTED`。
 
 当前为规格阶段，工程已从Flight目录移出，与Flight和FMT-Model同级。独立工程根目录为 `D:/STM32Project/FMT-Firmware-1.2.0/Flight_Matalab`；原 `FMT-Model` 保留，用户已明确不回写原工程。三个目标 `.slx` 尚未生成，编译/仿真/代码生成结果均为 `NOT_RUN`。
