@@ -55,7 +55,7 @@
 
 ## 用户下一步
 
-在 Flight_Matlab 根目录只需复制执行 `pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\run_local_validation.ps1`。脚本自动同步两个 main、运行 MATLAB、归档、在 ARM/Host 工具链可用时运行 ABI 检查，并生成一个 `_DELIVERY.zip` 与同名 `.sha256`。flight_baseline.json 已包含在 MATLAB 归档的 inputs/ 内，不用单独找文件。不要单独发送截图代替归档；完整说明见 [本地 MATLAB 验证交接说明](LOCAL_MATLAB_HANDOFF.md)。
+在 Flight_Matlab 根目录只需复制执行 `pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\run_local_validation.ps1`。脚本自动同步两个 main、运行 MATLAB、归档、在 ARM/Host 工具链可用时运行 ABI 检查，并生成一个 `_DELIVERY.zip` 与同名 `.sha256`。总包生成后，MATLAB/组件/ABI 失败以非零退出码返回；`PARTIAL_PASS` 不是完整 PASS。flight_baseline.json 已包含在 MATLAB 归档的 inputs/ 内，不用单独找文件。不要单独发送截图代替归档；完整说明见 [本地 MATLAB 验证交接说明](LOCAL_MATLAB_HANDOFF.md)。
 
 ---
 
