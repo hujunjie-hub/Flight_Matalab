@@ -20,6 +20,15 @@ try
         runtimeScript,gccDir));
     assert(runtimeStatus==0,'Flight:RuntimeBuild','%s',runtimeMessage);
     build_native_kernels;
+    % build_native_kernels runs verify_inputs.py after the upstream Host SIL
+    % rebuild has regenerated flight_baseline.json. Keep that preflight in the
+    % archived component report so stale headers/OSQP/KF-GINS inputs fail closed.
+    preflightFile=fullfile(root,'work','validation','input_preflight.json');
+    assert(isfile(preflightFile),'Flight:InputPreflightReport', ...
+        'verify_inputs.py did not produce input_preflight.json.');
+    report.checks.input_preflight=jsondecode(fileread(preflightFile));
+    assert(strcmp(report.checks.input_preflight.status,'PASS'), ...
+        'Flight:InputPreflight','Locked dependency preflight did not pass.');
     generate_parameters;
     build_plant_models(8);
     build_flight_models;
