@@ -65,6 +65,17 @@ class LocalValidationContractTests(unittest.TestCase):
         ))
         self.assertIn("preflight failure summary", self.issue_workflow["archive_contains"][-1])
 
+    def test_preflight_failure_packages_evidence_before_nonzero_exit(self) -> None:
+        package = self.script.index("Compress-Archive -LiteralPath $preflightItems")
+        checksum = self.script.index("$preflightVerifiedHash =")
+        preflight_exit = self.script.index("exit 1")
+        self.assertLess(package, checksum)
+        self.assertLess(checksum, preflight_exit)
+        self.assertIn("LOCAL_VALIDATION_CONTRACT_PREFLIGHT", self.script)
+        self.assertIn("Flight_Matlab commit: $projectCommit", self.script)
+        self.assertIn("Flight commit: $flightCommit", self.script)
+        self.assertIn("MATLAB was not started; no MATLAB result is claimed.", self.script)
+
     def test_failure_is_reported_after_delivery_package_is_created(self) -> None:
         package = self.script.index("Compress-Archive -LiteralPath $deliveryItems")
         checksum = self.script.index("$verifiedHash =")
