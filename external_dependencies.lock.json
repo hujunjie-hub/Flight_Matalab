@@ -12,8 +12,8 @@
     "middleware/contracts/ports/control_model_types.h": "bb36451790060d8b0a7588617f5dc2f18277cf63dbd78edee8cf2e0b847d43f2",
     "middleware/contracts/ports/port_api.h": "2a641af4578ad8634ccca91c87f6efe3fea7f617b0d15dda6fff672de565ee8c",
     "middleware/contracts/ports/port_types.h": "b64d0c331a5da74fc5a7dadd427505e152203fc1d897abcfd4291a83c5dadb46",
-    "middleware/contracts/product_contract/abi_lock.h": "b62c5991b9fd91c6c5e0a6b236b2ad7ee4c371ea0eaaf14c145cc3b245d04321",
-    "middleware/contracts/product_contract/product_contract.h": "b4498e826e9e0b34230fc8bce6146a62d45260011888549a92b56505cee7764d"
+    "middleware/contracts/product_contract/abi_lock.h": "d2a7feff095110562e2b36d02c4008b510a2615fbcc0a55a83f6e343edfbc1fb",
+    "middleware/contracts/product_contract/product_contract.h": "3b9957b6f8229be9db50b26fd44076bf333142eb2e9e439be030962c07d4d444"
   },
   "osqp": {
     "root": "../Flight/middleware/model/control/outer_loop/quad_x4/mpc_solver/osqp",
@@ -34,8 +34,8 @@
         }
       }
     },
-    "runtime_lock_sha256": "1f193ed24a6755a62eba0bf5ae4b13bfd9a66ef85371685b33e5b9343dcb7a88",
-    "verified_files": 47,
+    "runtime_lock_sha256": "91e6b16fbd39a1f8e407bb9056d82adbea192b45f2673e5855377b2c94cde37e",
+    "verified_files": 42,
     "archive_sha256": "dd6a1c2e7e921485697d5e7cdeeb043c712526c395b3700601f51d472a7d8e48"
   },
   "kf_gins_matlab": {
