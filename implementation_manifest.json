@@ -151,7 +151,7 @@
     },
     "component_checks": {
       "scope": "IMPLEMENTED_COMPONENTS_ONLY",
-      "status": "PASS",
+      "status": "STALE_REQUIRES_RERUN",
       "checks": {
         "parameters": {
           "scope": "GENERATED_PARAMETER_VIEW",
@@ -389,10 +389,11 @@
           "ground_stop_transaction": "NOT_RUN"
         }
       },
-      "source_fingerprint": "2f1e49374f5ce87ce24f1d587698a70a9730fbce838a86003d02ba8781b602a2"
+      "source_fingerprint": "2f1e49374f5ce87ce24f1d587698a70a9730fbce838a86003d02ba8781b602a2",
+      "historical_status": "PASS"
     },
     "current_source_refresh": {
-      "status": "NOT_RUN_AFTER_P10_EVENT_QUEUE_HARDENING",
+      "status": "STALE_REQUIRES_RERUN",
       "reason": "Sensor timing queue, validity-window preflight, runtime acceptance accounting and verification scripts changed after the recorded evidence.",
       "required_command": "run_component_checks",
       "matlab_execution": "REQUIRED",
@@ -482,5 +483,6 @@
     "tools/verify_inputs.py": "8a75482b4277d0dbc00b634c2af650045e55a368999b219be7ba41e2af281bc1",
     "tools/write_implementation_manifest.py": "a93382b46abee2fce88542523aa03e5fa534b3855f47d7deb691a9c61139d9fc"
   },
-  "scope": "Windows Host SIL; synthetic quadrotor, sensor and replay fixtures. No STM32 target timing, raw sensor acquisition, PPS, physical motors, HIL transport or real-flight evidence."
+  "scope": "Windows Host SIL; synthetic quadrotor, sensor and replay fixtures. No STM32 target timing, raw sensor acquisition, PPS, physical motors, HIL transport or real-flight evidence.",
+  "note": "All prior PASS values are historical only. Current main has not completed MATLAB/Simulink validation after the 2026-11-14 upstream sync and M6 evidence-gate changes."
 }
