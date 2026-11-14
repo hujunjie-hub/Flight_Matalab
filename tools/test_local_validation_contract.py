@@ -37,6 +37,12 @@ class LocalValidationContractTests(unittest.TestCase):
         self.assertIn("Full project PASS blockers:", self.script)
 
     def test_runner_packages_dirty_worktree_status_without_reset(self) -> None:
+        dirty_check = self.script.index("$dirtyWorktreeIssues = @()")
+        repository_sync = self.script.index("Sync-MainRepository $repoRoot")
+        matlab_resolution = self.script.index("$matlabExecutable = Resolve-MatlabExecutable")
+        pending_guard = self.script.index("if ($pendingValidationFiles.Count -gt 0 -or $dirtyWorktreeIssues.Count -gt 0)")
+        self.assertLess(dirty_check, repository_sync)
+        self.assertLess(pending_guard, matlab_resolution)
         self.assertIn("git -C $entry.Path status --porcelain", self.script)
         self.assertIn("$dirtyWorktreeIssues.Count -gt 0", self.script)
         self.assertIn("DIRTY_WORKTREE_OR_PENDING_UNARCHIVED_EVIDENCE", self.script)
