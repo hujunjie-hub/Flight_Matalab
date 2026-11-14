@@ -496,7 +496,10 @@
     "preflight_failure_package": "work/validation/archives/<RUN_ID>_DELIVERY.zip",
     "preflight_failure_checksum": "work/validation/archives/<RUN_ID>_DELIVERY.zip.sha256",
     "preflight_failure_policy": "If the local validation contract test fails before MATLAB starts, package its log, failure summary, and the manifest when present; return nonzero and ask the user to deliver the package and checksum.",
-    "refuse_overwrite_unarchived_validation_evidence": true
+    "refuse_overwrite_unarchived_validation_evidence": true,
+    "pending_evidence_delivery": "work/validation/archives/<RUN_ID>_DELIVERY.zip",
+    "pending_evidence_checksum": "work/validation/archives/<RUN_ID>_DELIVERY.zip.sha256",
+    "pending_evidence_policy": "If work/validation contains files outside archives from a prior run, package all of them and a summary without deleting or overwriting originals; return nonzero before MATLAB starts."
   },
   "full_project_pass_allowed": false,
   "full_project_pass_blockers": [
