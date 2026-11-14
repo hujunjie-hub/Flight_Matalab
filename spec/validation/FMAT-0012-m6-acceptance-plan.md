@@ -1,7 +1,7 @@
 # FMAT-0012（M6 控制器）验收审查与实现计划
 
 - 对应 Issue：Flight_Matalab#12（`[FMAT-0012][S1][M6]`）
-- 分支：`optimize/sil-physical-parameter-alignment`
+- 历史编写分支：`optimize/sil-physical-parameter-alignment`（仅用于追溯，已退役）；当前唯一执行分支：`main`
 - 状态：PARTIAL（`qp_assembly_in_model`、`strict_validation_in_model`、`complete_M6_time_context_guard` 已实测 PASS；速率阶跃与 job 统计仍待做）
 
 ## 1. 审查结论：实现大部分已存在，缺的是"在模型路径内"的证据
