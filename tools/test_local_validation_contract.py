@@ -29,6 +29,8 @@ class LocalValidationContractTests(unittest.TestCase):
         self.assertIs(self.manifest["full_project_pass_allowed"], False)
         self.assertTrue(self.manifest["full_project_pass_blockers"])
         self.assertIn("$fullProjectPassAllowed = $false", self.script)
+        self.assertIn("[string]$acceptanceManifest.branch -ne 'main'", self.script)
+        self.assertIn("[string]$acceptanceManifest.repository -ne 'hujunjie-hub/Flight_Matlab'", self.script)
         self.assertIn("-not $fullProjectPassAllowed", self.script)
         self.assertIn("Full project PASS blockers:", self.script)
 
