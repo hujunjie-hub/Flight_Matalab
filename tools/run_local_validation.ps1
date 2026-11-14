@@ -159,6 +159,13 @@ $contractOutput | Set-Content -LiteralPath $contractLogPath -Encoding utf8
 if ($contractExitCode -ne 0) {
     $preflightRunId = $runStarted.ToString('yyyyMMddTHHmmssfffZ') + '_' + $projectCommit.Substring(0,7)
     $preflightSummaryPath = Join-Path $validationRoot ($preflightRunId + '_DELIVERY.txt')
+    $preflightDeliveryZip = Join-Path $archiveRoot ($preflightRunId + '_DELIVERY.zip')
+    $preflightChecksum = $preflightDeliveryZip + '.sha256'
+    if ((Test-Path -LiteralPath $preflightSummaryPath) -or
+        (Test-Path -LiteralPath $preflightDeliveryZip) -or
+        (Test-Path -LiteralPath $preflightChecksum)) {
+        throw "Refusing to overwrite an existing preflight delivery artifact for RUN_ID $preflightRunId."
+    }
     $preflightSummary = @(
         "RUN_ID: $preflightRunId",
         'Overall status: FAIL',
@@ -171,7 +178,6 @@ if ($contractExitCode -ne 0) {
         'MATLAB was not started; no MATLAB result is claimed.'
     )
     $preflightSummary | Set-Content -LiteralPath $preflightSummaryPath -Encoding utf8
-    $preflightDeliveryZip = Join-Path $archiveRoot ($preflightRunId + '_DELIVERY.zip')
     $preflightItems = @($contractLogPath, $preflightSummaryPath)
     $preflightManifestPath = Join-Path $repoRoot 'spec\validation\matlab_acceptance_manifest.json'
     if (Test-Path -LiteralPath $preflightManifestPath -PathType Leaf) {
