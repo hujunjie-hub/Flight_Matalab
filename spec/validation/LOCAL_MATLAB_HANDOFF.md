@@ -41,6 +41,7 @@
 | PowerShell | PowerShell 7，命令名 pwsh |
 | Host SIL 编译器 | MinGW-w64 GCC；默认 D:\STM32CubeCLT\mingw64\bin |
 | MATLAB MEX 编译器 | MATLAB 支持的 C 编译器，先执行 mex -setup C |
+| ABI ARM 编译器（仅 FMAT-0018） | GNU Arm Embedded；默认 D:\\STM32CubeCLT\\GNU-tools-for-STM32\\bin |
 | Python | Python 3，可执行 python |
 | 上游仓库 | 同级 Flight，commit 必须满足 config/flight_baseline.json 与 external_dependencies.lock.json |
 
@@ -173,7 +174,7 @@ ZIP 正常时，不需要再单独发送 ZIP 内已有的每一份 JSON 或 MAT 
 
 - 如果 generated_assets.json 显示本轮修改了某个原先已存在的模型/字典，且问题与该模型/字典有关，再按要求额外提供对应 .slx 或 .sldd 文件。
 - 如果 component_checks 在归档前中断，发送第 5 节列出的原始报告和完整 Diary。
-- 对 FMAT-0018，另在 Flight 仓库根目录运行 `python -B tests\\abi\\abi_report.py`（不要加 `--emit-lock`），并额外交付完整终端输出及 `tests/abi/evidence/abi_arm.json`、`abi_host.json`、`abi_compare.json`、`abi_report.md`、`commands.json`、`artifact_sha256.json`。这组 ABI 证据不包含在 Flight_Matlab 的 MATLAB ZIP 中。
+- 对 FMAT-0018，先完成并归档 MATLAB 运行，再在 Flight 仓库根目录运行 `python -B tests\\abi\\abi_report.py --arm-bin D:\\STM32CubeCLT\\GNU-tools-for-STM32\\bin --host-bin D:\\STM32CubeCLT\\mingw64\\bin`（不要加 `--emit-lock`）。额外交付完整终端输出及 `tests/abi/evidence/abi_arm.json`、`abi_host.json`、`abi_compare.json`、`abi_report.md`、`commands.json`、`artifact_sha256.json`、`abi_probe.c`、`abi_canonical_arm.txt`、`abi_canonical_host.txt`。这组 ABI 证据不包含在 Flight_Matlab 的 MATLAB ZIP 中。该命令会改写 Flight 工作区中的证据文件；完成后先不要启动下一轮 MATLAB，也不要提交 abi_lock/revision 修改，等独立审查确认后再处理。
 - 截图只能辅助定位，不能替代报告、日志、数据文件和 SHA-256。
 
 ## 7. 如何登记 MATLAB 发现的问题
