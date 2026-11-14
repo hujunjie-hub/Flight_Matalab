@@ -10,7 +10,7 @@
 
 ## 1. 当前工作规则
 
-1. 只在 main 分支工作；不创建长期开发分支，不从旧 PR 分支拉取代码。
+1. Flight_Matlab 与同级 Flight 均只使用 main 分支；当前两个仓库远程分支检查都只发现 main。不创建长期开发分支，不从旧 PR 分支拉取代码。
 2. Flight_Matlab 与同级 Flight 必须配套。Flight 是固件参数、接口合同、TimeService、GNSS 和 UM982 parser 的权威来源。
 3. 每次完整验证必须针对刚拉取的 main HEAD，并在归档中保留精确 commit。
 4. 需要 MATLAB/Simulink 的验证由用户本地执行；开发侧负责代码、静态检查、测试入口、SPEC 和交接说明。
