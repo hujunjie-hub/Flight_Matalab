@@ -1,7 +1,7 @@
 # FMAT-0013（M7 执行器事务）验收计划与实现审查
 
 - 对应 Issue：Flight_Matalab#13（`[FMAT-0013][S1][M7]`）
-- 分支：`optimize/sil-physical-parameter-alignment`
+- 历史编写分支：`optimize/sil-physical-parameter-alignment`（仅用于追溯，已退役）；当前唯一执行分支：`main`
 - 状态：**PASS**（permit_lifecycle、frame_apply_500us、ground_stop_transaction 均已实测 PASS；有效范围与未覆盖项见第 5.4 节）
 
 ## 1. 审查范围（真实实现，不新建模拟逻辑）
