@@ -50,6 +50,8 @@ python -B spec/tools/test_check_specs.py
 python -B spec/tools/check_specs.py --allow-implementation
 ```
 
+GitHub Actions static-validation 已自动执行前两项（可执行引用检查和 validator 负向测试）；完整 `check_specs.py --allow-implementation` 仍需在具备同级 Flight/FMT-Model 源目录的本地工程环境运行。
+
 这些检查核对文档/锚点/需求映射、来源、设计算术及有限反例，不编辑/编译/仿真模型。由于当前 main 已包含正式实现产物，最后一步必须使用 `--allow-implementation`；该选项只放行 `spec/tools/check_specs.py` 白名单内的新工程目录，不放宽原始 FMT-Model 源文件和 Flight 上位规范的只读 Hash 检查。独立 fixture 不等于自动证明任意修改后的正文；改变被检验数值/协议时须同步审查 fixture 与预期。输入 Hash 不一致会拒绝沿用旧 PASS。运行后报告输出到 [静态报告](validation/spec_review_report.json)、[设计算术](validation/design_arithmetic_report.json)与[源文件核对](validation/source_integrity_report.json)；运行前的历史报告不能代替本次结果。上位交接/审核元数据的并行变化单独记录，不能把它误认为本会话改动。
 
 本次新增R4～R6三轮13项，连同此前22项累计35项，详见[逐轮复审](FlightSIM-review-log.md)。除文档检查外，新增[可执行规格参考](validation/semantic_reference_report.json)，覆盖13项数学/协议反例及192组多项式导数界。
