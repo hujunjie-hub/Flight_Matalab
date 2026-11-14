@@ -1,6 +1,6 @@
 ---
 name: MATLAB / Simulink 验收问题
-about: 登记 Flight_Matalab 中发现的缺陷、测试缺口、规格问题或验收阻塞
+about: 登记 Flight_Matlab 项目中发现的缺陷、测试缺口、规格问题或验收阻塞
 title: "[MATLAB] "
 assignees: ""
 ---
@@ -20,11 +20,13 @@ assignees: ""
 ## 发现环境
 
 - 发现时间：
-- Flight_Matalab branch：
-- Flight_Matalab commit：
+- Flight_Matlab branch（当前唯一分支 main）：
+- Flight_Matlab commit：
 - Flight 上游 commit：
 - MATLAB Release：
-- OS / Compiler：
+- OS / Compiler（含 GCC 路径/版本、MEX 编译器）：
+- 验证命令：
+- component_checks 顶层状态：
 - RUN_ID：
 - 测试 ID / 报告文件：
 
@@ -47,7 +49,7 @@ assignees: ""
 ## 证据
 
 - 报告/日志文件：
-- SHA-256：
+- ZIP SHA-256：
 - 证据 ZIP 或附件：
 - 相关截图（仅辅助，不替代原始报告）：
 
