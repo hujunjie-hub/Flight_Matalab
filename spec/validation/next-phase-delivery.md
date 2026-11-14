@@ -54,7 +54,7 @@
 
 ## 用户下一步
 
-按 [本地 MATLAB 验证交接说明](LOCAL_MATLAB_HANDOFF.md) 执行。必须交回 RUN_ID ZIP、同名 SHA-256 校验文件、Flight_Matlab/Flight 两个 commit、MATLAB Release 和完整组件总状态。不要单独发送截图代替归档。
+按 [本地 MATLAB 验证交接说明](LOCAL_MATLAB_HANDOFF.md) 执行。必须交回 RUN_ID ZIP、同名 SHA-256 校验文件、Flight_Matlab/Flight 两个 commit、MATLAB Release 和完整组件总状态；若 Host SIL 重建修改了 config/flight_baseline.json，还必须把该文件单独发回，不要自行提交。不要单独发送截图代替归档。
 
 ---
 
