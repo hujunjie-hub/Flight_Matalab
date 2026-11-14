@@ -1,3 +1,48 @@
+# 当前 main 接管状态（2026-11-14）
+
+> **本节为当前有效基线；下方原始交付记录保留作历史追溯。** 下方记录中的旧开发分支、PR Draft 状态和旧测试 HEAD 不再是当前拉取/验收目标。当前唯一工作分支为 main。操作步骤以 [本地 MATLAB 验证交接说明](LOCAL_MATLAB_HANDOFF.md) 为准。
+
+## 当前仓库基线
+
+| 项 | 当前结论 |
+|---|---|
+| GitHub 仓库 | hujunjie-hub/Flight_Matlab |
+| 工作分支 | main（当前只保留 main） |
+| 接管起点 HEAD | 0cdfe3a41432834d424e4ecceec37977ffe837d5 |
+| PR #1 | 已合并；不得再按旧记录中的 Draft 状态处理 |
+| MATLAB 对当前 main 的完整复测 | NOT_RUN；必须由用户本地拉取最新 main 执行 |
+| 最近一份历史完整 MATLAB 归档 | RUN_ID 20261113T092308651Z_34e57d0；当时测试的是合并前分支 commit 34e57d0，不是当前 main HEAD |
+| implementation_manifest.json | BASELINE_EVIDENCE_STALE_REQUIRES_REFRESH；不得作为当前 main 的 PASS 证据 |
+| 本地运行交接 | [LOCAL_MATLAB_HANDOFF.md](LOCAL_MATLAB_HANDOFF.md) |
+
+## 本轮代码与验证门禁更新
+
+1. M6 runtime stats 新增 schema 标识 fmat-m6-runtime-stats/1.0，避免误读旧格式统计文件。
+2. verify_m6_jobs 增加 fail-closed 校验：零 job 保持 NOT_RUN 并使完整验收失败；统计计数必须是有限非负整数；solved + rejected 必须等于 jobs；covered_us 不得超过整轮时长；逐 job 记录必须存在、schema 正确、记录数量与 job 数一致、job ID 唯一、outcome 在定义范围内。
+3. 新增 verify_m6_jobs_contract，并接入 run_component_checks，使用隔离临时目录覆盖有效 100-job、零 job、缺失记录、计数不一致、覆盖时间越界和旧 schema 六类情况。
+4. 上述 MATLAB/Simulink 代码尚未在当前环境执行。它们只有在用户本地运行完整 run_component_checks 并归档后才可标记为通过。
+
+**未改变的验收合同：** FMAT-0012 的 90% 覆盖率门槛和当前整轮分母保持不变；不改变 MPC 求解容差、不改变消费策略、不更改 Flight 公共接口。等待用户明确裁定后才处理统计分母。
+
+## 当前未闭合问题
+
+| Issue | 当前状态 | 本轮处理边界 |
+|---|---|---|
+| #12 / FMAT-0012 | BLOCKED | 488/488 MPC jobs、95.0% 消费点使用率已有历史证据；整轮口径 37.54%，等待用户确认合同分母。当前代码仍按整轮口径判定，不得自行改为消费点口径 |
+| #13 / FMAT-0013 | BLOCKED | Flight 固件侧已有证书→执行器应用→回执实现；本项目仍需补 FMS DISARMING 等待真实 ZERO_TARGET_APPLIED 回执的 Host MIL 端到端断言 |
+| #14 / FMAT-0014 | IN_PROGRESS | Host 时间服务/GNSS 核心测试与真实 TIM2、UART/DMA、sensor_gnss_poll 和板级证据分开；P-10 overall 保持 PARTIAL |
+| #15 / FMAT-0015 | FIXED_WAITING_RETEST | 上游数组边界修复已有结构化测试；等待当前配套基线的本地复测确认 |
+| #16 / FMAT-0016 | VERIFIED（Issue 仍 Open） | 归档分类有历史 8/8 证据；当前 main 回归后再结案 |
+| #17 / FMAT-0017 | VERIFIED（Issue 仍 Open） | P-10b 同 RUN_ID 对账有历史证据；当前 main 回归后再结案 |
+
+#12、#13 的用户决策仍是阻塞条件；继续处理与其无依赖的代码、测试和文档，不得绕过决策。#14 的 Host 核心通过不能替代板级证据。
+
+## 用户下一步
+
+按 [本地 MATLAB 验证交接说明](LOCAL_MATLAB_HANDOFF.md) 执行。必须交回 RUN_ID ZIP、同名 SHA-256 校验文件、Flight_Matlab/Flight 两个 commit、MATLAB Release 和完整组件总状态。不要单独发送截图代替归档。
+
+---
+
 # 下一阶段交付清单（截至 RUN_ID `20261113T092308651Z_34e57d0`）
 
 ## 0. 新会话接管必读（2026-11-13 同步后交接）
