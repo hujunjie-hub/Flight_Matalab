@@ -365,9 +365,35 @@ if (Test-Path -LiteralPath $componentPath -PathType Leaf) {
     } catch { $componentStatus = 'INVALID_REPORT' }
 }
 
+$failureReasons = @()
+if ($matlabExitCode -ne 0) {
+    $failureReasons += "MATLAB_PROCESS_EXIT_$matlabExitCode"
+}
+if ($componentStatus -notin @('PASS', 'PARTIAL_PASS')) {
+    $failureReasons += "MATLAB_COMPONENT_STATUS_$componentStatus"
+}
+if ($abiStatus -notin @('PASS', 'SKIPPED_TOOLCHAIN_MISSING')) {
+    $failureReasons += "ABI_STATUS_$abiStatus"
+}
+
+$overallStatus = 'PASS'
+if ($componentStatus -eq 'PARTIAL_PASS' -or $abiStatus -eq 'SKIPPED_TOOLCHAIN_MISSING') {
+    $overallStatus = 'PARTIAL_PASS'
+}
+if ($failureReasons.Count -gt 0) {
+    $overallStatus = 'FAIL'
+}
+$scriptExitCode = 0
+if ($overallStatus -eq 'FAIL') {
+    $scriptExitCode = 1
+}
+
 $summaryPath = Join-Path $archiveRoot ($runId + '_DELIVERY.txt')
 $summaryLines = @(
     "RUN_ID: $runId",
+    "Overall status: $overallStatus",
+    "Script exit code: $scriptExitCode",
+    "Failure reasons: $($failureReasons -join '; ')",
     "Flight_Matlab commit: $projectCommit",
     "Flight commit: $flightCommit",
     "MATLAB process exit code: $matlabExitCode",
@@ -392,14 +418,40 @@ if ($abiZip -and (Test-Path -LiteralPath $abiZip)) {
 }
 if (Test-Path -LiteralPath $deliveryZip) { throw "Delivery package already exists: $deliveryZip" }
 Compress-Archive -LiteralPath $deliveryItems -DestinationPath $deliveryZip -CompressionLevel Optimal
+if (-not (Test-Path -LiteralPath $deliveryZip -PathType Leaf)) {
+    throw "Delivery package was not created: $deliveryZip"
+}
+
 $deliveryChecksum = $deliveryZip + '.sha256'
 $deliveryHash = (Get-FileHash -LiteralPath $deliveryZip -Algorithm SHA256).Hash.ToLowerInvariant()
-"$deliveryHash  $(Split-Path $deliveryZip -Leaf)" | Set-Content -LiteralPath $deliveryChecksum -Encoding ascii
+$checksumLine = "$deliveryHash  $(Split-Path $deliveryZip -Leaf)"
+$checksumLine | Set-Content -LiteralPath $deliveryChecksum -Encoding ascii
+if (-not (Test-Path -LiteralPath $deliveryChecksum -PathType Leaf)) {
+    throw "Delivery checksum was not created: $deliveryChecksum"
+}
+$verifiedHash = (Get-FileHash -LiteralPath $deliveryZip -Algorithm SHA256).Hash.ToLowerInvariant()
+$storedChecksum = (Get-Content -LiteralPath $deliveryChecksum -Raw).Trim()
+if ($verifiedHash -ne $deliveryHash -or $storedChecksum -ne $checksumLine) {
+    throw "Delivery ZIP SHA-256 verification failed: $deliveryZip"
+}
 
 Write-Stage '6/6 完成：只需交付一个总包'
 Write-Host "RUN_ID: $runId" -ForegroundColor Green
+Write-Host "OVERALL STATUS: $overallStatus" -ForegroundColor $(if ($overallStatus -eq 'FAIL') { 'Red' } elseif ($overallStatus -eq 'PARTIAL_PASS') { 'Yellow' } else { 'Green' })
 Write-Host "MATLAB status: $componentStatus (process exit $matlabExitCode)"
 Write-Host "FMAT-0018 ABI status: $abiStatus"
 Write-Host "ONE FILE TO SEND: $deliveryZip" -ForegroundColor Green
 Write-Host "CHECKSUM: $deliveryChecksum" -ForegroundColor Green
+
+if ($scriptExitCode -ne 0) {
+    Write-Host "The delivery package was created, but one or more acceptance checks failed: $($failureReasons -join '; ')" -ForegroundColor Red
+    exit $scriptExitCode
+}
+
+if ($overallStatus -eq 'PARTIAL_PASS') {
+    Write-Host 'The package is complete with explicit known gaps or skipped optional ABI checks. This is not a full PASS.' -ForegroundColor Yellow
+} else {
+    Write-Host 'All configured acceptance and ABI checks passed.' -ForegroundColor Green
+}
 Write-Host 'Do not commit or discard generated files. The maintainer will review them and update main/SPEC/Issues.'
+exit 0
