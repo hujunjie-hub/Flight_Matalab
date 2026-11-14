@@ -9,7 +9,7 @@
 - Flight 当前 abi_lock.h inventory 为 144 types / 993 fields，原因是 GroundStopCertificate 被加入 abi_layout.json 和 message_registry（ID 56）；但已提交的 tests/abi/evidence/abi_report.md 仍报告 143/986 和旧 registry SHA，与 abi_lock.h 不一致。Schema/Product revision 仍为 0x00010906；上游 ABI 报告需重生成并完成 revision review，当前不声称 ABI 审查通过。
 - external_dependencies.lock.json 已由 main 上的 commit 249d8a3 对齐 Flight/main 的 product contract headers 与 OSQP runtime lock（42 个运行时文件）；run_component_checks 会将 input_preflight.json 纳入 component_checks.checks 并在预检缺失/失败时阻断。
 - tools/write_implementation_manifest.py 已修正为接受预期的 PASS/PARTIAL/PARTIAL_PASS 组合，并在 M6/P-10b gate 通过时生成 PARTIAL_PASS_HOST_SIL；当前 manifest 仍保持 STALE，需等完整证据齐全后再生成。
-- M6 统计适配器已加入版本化 JSON schema；M6 验收 gate 已增加零 job、汇总/逐 job outcome 对账、完整连续 1..N job ID、covered_us=solved×20,000 us、计数不一致、缺少逐 job 记录、非法 outcome 和覆盖时长越界等 fail-closed 检查。新增负向夹具覆盖汇总 outcome 不一致与非连续 job ID，均接入 verify_m6_jobs_contract 和 run_component_checks。该 MATLAB 测试尚待用户本地执行。
+- M6 统计适配器已加入版本化 JSON schema；M6 验收 gate 已增加零 job、汇总/逐 job outcome 对账、完整连续 1..N job ID、covered_us=solved×20,000 us、计数不一致、缺少逐 job 记录、非法 outcome 和覆盖时长越界等 fail-closed 检查。新增三项负向夹具覆盖汇总 outcome 不一致、非连续 job ID 和 covered_us 记账不一致，均接入 verify_m6_jobs_contract 和 run_component_checks。该 MATLAB 测试尚待用户本地执行。
 - FMAT-0012 的 90% 门槛与整轮时长分母没有改变；当前统计合同仍等待用户裁定。FMAT-0013 的 Flight M7 执行器证书/回执事务已有 230/230 Host 检查，但 fms_build_ground_stop_certificate 要求 FMS 已 DISARMED，而 PRODUCT_CMD_DISARM 在同一 handler 内从 DISARMING 直接转 DISARMED 并返回 COMPLETED，未等待真实回执；等待用户批准公共契约/异步 ACK 语义，批准前不改 ICD/ABI。闭环实现后再补本项目 Host MIL 端到端断言。FMAT-0014 的 Host MIL 与真实板级链路继续分开标记。
 - 本地运行命令、环境要求、归档、问题登记及必须交付的文件统一见 [MATLAB 本地验证交接说明](spec/validation/LOCAL_MATLAB_HANDOFF.md)。Host SIL 重建后若 config/flight_baseline.json 变化，用户需将该文件单独交回，由验收方审查后提交 main；不要遗漏在 ZIP 之外，也不要自行提交未经审查的基线。
 
