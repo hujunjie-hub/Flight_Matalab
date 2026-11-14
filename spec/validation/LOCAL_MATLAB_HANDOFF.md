@@ -66,14 +66,15 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\run_local_validation.ps1
 1. 检查 Git、Python、PowerShell 7、MATLAB 和 Host GCC。
 2. 检查两个仓库是否有本地修改；有修改就停止，不执行 reset、clean 或覆盖。
 3. 自动 fetch 并 fast-forward 同步 Flight_Matlab/main 和同级 Flight/main。
-4. 运行 `tools/test_local_validation_contract.py`，核对当前脚本、机器可读验收清单、交付文件和退出码规则是否一致；结果写入 `work/validation/local_validation_contract_test.txt`。该检查失败时会在启动 MATLAB 前停止，并保留日志。
-5. 记录两个仓库的完整 commit SHA、MATLAB 路径、操作系统和编译器版本。
-6. 用 MATLAB -batch 自动选择/检查 MEX C 编译器，执行唯一标准入口 `run_component_checks`。
-7. 自动保存 MATLAB Diary 和 batch 控制台日志。
-8. 无论 MATLAB 测试通过还是失败，都尝试归档本轮报告；不会因为测试失败而丢弃诊断证据。
-9. 将本轮 `config/flight_baseline.json` 和 `scenarios/flight_sil_recording.mat` 一起放入 MATLAB 证据 ZIP。
-10. MATLAB 归档完成后，自动运行 FMAT-0018 的 ARM/Host ABI 检查（默认工具链路径存在时）。
-11. 生成一个总交付包及 SHA-256，方便一次性交回。
+4. 检查 `work/validation/` 是否有上一轮未归档证据；如有，自动将其原样打包为 `_DELIVERY.zip` + `.sha256`，不删除原件，并在启动 MATLAB 前停止。
+5. 运行 `tools/test_local_validation_contract.py`，核对当前脚本、机器可读验收清单、交付文件和退出码规则是否一致；结果写入 `work/validation/local_validation_contract_test.txt`。该检查失败时会在启动 MATLAB 前停止，并保留日志。
+6. 记录两个仓库的完整 commit SHA、MATLAB 路径、操作系统和编译器版本。
+7. 用 MATLAB -batch 自动选择/检查 MEX C 编译器，执行唯一标准入口 `run_component_checks`。
+8. 自动保存 MATLAB Diary 和 batch 控制台日志。
+9. 无论 MATLAB 测试通过还是失败，都尝试归档本轮报告；不会因为测试失败而丢弃诊断证据。
+10. 将本轮 `config/flight_baseline.json` 和 `scenarios/flight_sil_recording.mat` 一起放入 MATLAB 证据 ZIP。
+11. MATLAB 归档完成后，自动运行 FMAT-0018 的 ARM/Host ABI 检查（默认工具链路径存在时）。
+12. 生成一个总交付包及 SHA-256，方便一次性交回。
 ### 3.3 默认路径不同时，只复制这一条带参数命令
 
 默认工具链路径：
@@ -96,7 +97,7 @@ MatlabExe 可省略，只在 MATLAB 不在 PATH 且自动查找不到时填写�
 
 - **提示仓库有本地修改：** 不要删除或覆盖。把提示的 git status 内容交回，先确认这些文件是否为上一轮生成的待审查证据。
 - **本地交接合同预检失败：** MATLAB 尚未启动；脚本会自动生成 `_DELIVERY.zip` 和同名 `.sha256`，其中包含 `local_validation_contract_test.txt`、失败摘要和可用时的验收 manifest。只需交回这两个文件，不要自行修改脚本或 manifest。
-- **发现未归档的上一轮报告：** 脚本会在写入任何新报告前停止，列出 `work/validation/` 中现有文件，不会覆盖它们。先把整个目录交回审查，不要自行删除或改名后强行重跑。
+- **发现未归档的上一轮报告：** 脚本会把 `work/validation/archives/` 以外的现有文件和目录原样打包为 `_DELIVERY.zip` + `.sha256`，不删除或覆盖原件；MATLAB 不会启动。只需交回这两个文件，不要自行删除或改名后强行重跑。
 - **提示找不到 MATLAB：** 把实际 matlab.exe 完整路径填入 -MatlabExe。
 - **提示 MEX C 编译器未配置：** 首次在 MATLAB Desktop 执行一次 mex -setup C，选定可用 C 编译器；之后重新复制上面的一键命令即可。
 - **MATLAB 测试失败：** 脚本仍会尝试归档并生成总包。不要只发截图，交付总包和 SHA-256。
