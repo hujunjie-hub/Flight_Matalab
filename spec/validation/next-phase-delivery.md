@@ -41,9 +41,10 @@
 ## 一键验证脚本静态 CI 结果（2026-11-14）
 
 - 新增 GitHub Actions workflow：`.github/workflows/static-validation.yml`，仅针对 main 推送/手动触发。
-- Run：`43594696629`，HEAD `0d2e8305c9bf2688df759c494760e71017c43b4d`，结论 SUCCESS。
+- 最新 Run：`43594969656`，HEAD `5688717b5239152b6a813bc748673a832f1b9700`，结论 SUCCESS。
 - PowerShell Parser：tools/ 下 3 个 `.ps1` 全部语法解析通过。
-- Python delivery contract：5/5 通过，覆盖 main-only、完整 PASS 授权门、失败先归档打包再返回非零、总包包含实际 manifest、PARTIAL_PASS 不冒充 PASS。
+- Python delivery contract：5/5 通过，覆盖 main-only、完整 PASS 授权门、失败先归档打包再返回非零、总包包含实际 manifest、PARTIAL_PASS 不冒充 PASS、manifest 仓库/分支身份核验。
+- 中间一次 CI 因测试断言未同步脚本新增的 manifest 条件打包行为而失败；测试已更新，最新 HEAD 复跑成功。
 - 此 CI 不运行 MATLAB/Simulink、不生成 MEX、不重建 Flight Host SIL；当前 main 的完整本地 MATLAB 回归仍为 NOT_RUN。
 
 ## 当前未闭合问题
