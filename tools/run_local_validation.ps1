@@ -137,6 +137,22 @@ $flightCommit = Sync-MainRepository $flightRoot 'Flight'
 
 New-Item -ItemType Directory -Force -Path $validationRoot,$archiveRoot | Out-Null
 $runStarted = (Get-Date).ToUniversalTime()
+
+Write-Stage '1.5/6 检查本地验证脚本与验收清单一致性'
+$contractTestPath = Join-Path $repoRoot 'tools\test_local_validation_contract.py'
+$contractLogPath = Join-Path $validationRoot 'local_validation_contract_test.txt'
+if (-not (Test-Path -LiteralPath $contractTestPath -PathType Leaf)) {
+    throw "Local validation contract test is missing: $contractTestPath"
+}
+$contractOutput = @(& $pythonExe -B $contractTestPath 2>&1)
+$contractExitCode = $LASTEXITCODE
+$contractOutput | Set-Content -LiteralPath $contractLogPath -Encoding utf8
+if ($contractExitCode -ne 0) {
+    throw "Local validation contract test failed (exit $contractExitCode). Keep work\validation and terminal output."
+}
+$contractOutput | ForEach-Object { Write-Host $_ }
+Write-Host 'Local validation script/manifest contract: PASS' -ForegroundColor Green
+
 $gccVersion = Get-FirstVersionLine (Join-Path $GccDir 'gcc.exe') @('--version')
 $armGcc = Join-Path $ArmBin 'arm-none-eabi-gcc.exe'
 $armGxx = Join-Path $ArmBin 'arm-none-eabi-g++.exe'
@@ -161,6 +177,8 @@ $context = [ordered]@{
     gcc_version = $gccVersion
     arm_compiler_directory = $ArmBin
     arm_toolchain_available = $abiToolchainReady
+    local_validation_contract_status = 'PASS'
+    local_validation_contract_log = $contractLogPath
 }
 $context | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $validationRoot 'local_run_context.json') -Encoding utf8
 
