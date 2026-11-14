@@ -1,8 +1,8 @@
 # Agent 操作总指南（Flight_Matalab）
 
-版本：1.0  
+版本：1.1  
 适用仓库：`hujunjie-hub/Flight_Matalab`  
-当前开发分支：`optimize/sil-physical-parameter-alignment`  
+唯一工作分支：`main`  
 唯一规范入口：`spec/README.md`
 
 > **执行规则：Agent 每次接手任务，必须先读取本指南和引用的规范，再检查仓库现状。不得只依据对话摘要、旧报告或猜测修改代码、更新问题状态或宣布验收通过。**
@@ -38,59 +38,56 @@
 
 任何写操作前必须：
 
-1. 确认仓库为 `hujunjie-hub/Flight_Matalab`。
+1. 确认仓库为 hujunjie-hub/Flight_Matlab。
 2. 检查当前分支、HEAD commit、工作区状态、PR 状态和目标文件最新版本。
-3. 默认只在用户指定的开发分支工作；当前约定分支为 `optimize/sil-physical-parameter-alignment`。
-4. **不得直接写入 `main`、合并 PR、关闭 PR 或修改保护规则，除非用户明确授权。**
+3. 当前项目已明确只保留 main：所有代码、测试、SPEC 和交接脚本更新均基于最新 main，不得新建或恢复长期开发分支。
+4. 普通修复和文档更新按当前项目授权直接提交 main；不得强制推送、改写历史、擅自删除用户数据，或对工作区执行 reset/clean。分支删除、破坏性操作和安全/架构决策仍须取得用户明确授权。
 5. 查询现有 GitHub Issues，避免覆盖并发提交或创建重复问题。
-6. 若 HEAD 已变化，基于最新 HEAD 重新读取文件和 tree；更新分支时使用 expected SHA 和非强制更新，不能覆盖并发提交。
-7. 提交后重新读取分支和文件，核实 commit SHA、文件内容和 PR head；未核验成功不得声称提交成功。
-
+6. 若 HEAD 已变化，基于最新 HEAD 重新读取文件和 tree；更新文件时使用最新 blob SHA，不能覆盖并发提交。
+7. 提交后重新读取分支和文件，核实 commit SHA、文件内容和 main HEAD；未核验成功不得声称提交成功。
 ## 4. MATLAB 验收执行流程
 
-唯一自动化验收入口：
+MATLAB 内部唯一验收入口仍为 run_component_checks；用户本地唯一推荐入口为一键脚本：
 
-```matlab
-run_component_checks
-```
+~~~powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\run_local_validation.ps1
+~~~
 
-运行前提、依赖、测试顺序、数据集、断言阈值、必需报告和已知缺口以 [MATLAB 验收文档](MATLAB-验收与结果提交.md) 和 [机器可读验收清单](validation/matlab_acceptance_manifest.json) 为准。
+用户从 Flight_Matlab 仓库根目录执行这一条命令即可。脚本负责同步两个 main、环境检查、MATLAB 启动、MEX 检查、完整 run_component_checks、Diary/控制台日志、失败归档、可用时的 FMAT-0018 ARM/Host ABI 检查，以及最终总交付包生成。详细步骤和参数见 [本地 MATLAB 验证交接说明](validation/LOCAL_MATLAB_HANDOFF.md)。
 
-执行时必须：
+执行与验收时必须：
 
-1. 记录 MATLAB Release、操作系统、编译器、Flight 上游 commit 和 Flight_Matalab commit。
-2. 核对 Flight_Matalab 与 Flight 的目录关系、依赖锁和上游源 Hash。
-3. 在完整 Diary 记录下运行完整验收入口；单项脚本不能冒充完整验收。
+1. 通过归档记录 MATLAB Release、操作系统、编译器、Flight 上游 commit 和 Flight_Matlab commit。
+2. 核对 Flight_Matlab 与 Flight 的目录关系、依赖锁和上游源 Hash。
+3. 完整运行 run_component_checks；单项脚本不能冒充完整验收。
 4. 检查必需 JSON 报告、子项状态、仿真终态及源/模型/配置/数据指纹。
 5. 报告缺失、Hash 不匹配、运行中断、旧报告混入或证据不完整时，标记 FAIL 或 UNVERIFIED，不能给 PASS。
-6. 按 MATLAB 验收文档关闭 Diary 后归档。
+6. 优先使用一键脚本生成的 <RUN_ID>_DELIVERY.zip 和同名 .sha256，不要求用户再手工运行归档命令或拆分收集文件。
 
-**能力边界：** 如果 Agent 当前环境不能访问用户 Windows 主机上的 MATLAB/Simulink、编译器或本地 Flight 工作树，只能进行静态审查和用户提交的证据复核。必须标注 `NOT_RUN` 或 `UNVERIFIED`，请用户运行并提供证据包；不得伪造 MATLAB 实测结果。
-
+能力边界：如果 Agent 当前环境不能访问用户 Windows 主机上的 MATLAB/Simulink、编译器或本地 Flight 工作树，只能进行静态审查和用户提交的证据复核。必须标注 NOT_RUN 或 UNVERIFIED，请用户运行一键命令并提供总交付包；不得伪造 MATLAB 实测结果。
 ## 5. 运行证据归档
 
-用户完成 MATLAB 运行并关闭 Diary 后，在仓库根目录执行：
+归档由 tools/run_local_validation.ps1 自动调用 tools/archive_validation_run.ps1 完成。用户不应再单独执行归档脚本，也不应手工收集各个报告。
 
-```powershell
-pwsh -File .\\tools\\archive_validation_run.ps1
-```
+唯一用户命令：
 
-归档工具：`tools/archive_validation_run.ps1`。归档位置：
+~~~powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\run_local_validation.ps1
+~~~
 
-```text
-work/validation/archives/<RUN_ID>/
-work/validation/archives/<RUN_ID>.zip
-work/validation/archives/<RUN_ID>.zip.sha256
-```
+唯一交付位置：
 
+~~~text
+work/validation/archives/<RUN_ID>_DELIVERY.zip
+work/validation/archives/<RUN_ID>_DELIVERY.zip.sha256
+~~~
+
+- 总交付 ZIP 包含 MATLAB 证据 ZIP、校验文件、运行摘要；ARM/Host 工具链可用时还包含 ABI 证据 ZIP 和校验文件。
+- MATLAB 归档包括本轮报告、Diary、运行 manifest、输入 MAT 副本、当前 flight_baseline.json 和各文件 SHA-256。
 - 每次运行使用唯一 RUN_ID，禁止覆盖历史归档。
-- ZIP 包含本轮报告、Diary、运行 manifest、输入 MAT 副本和各文件 SHA-256。
-- ZIP 自身 SHA-256 通过同名 `.sha256` 文件核验。
-- 归档脚本成功生成 ZIP 后会清理当前 `work/validation/` 顶层临时文件。**运行前必须确认 Diary 已关闭且本轮报告齐全。**
-- 历史 `archives/` 不得清理或覆盖。
-- 失败或中断运行也应保留现场并归档，状态记为 FAIL/INCOMPLETE。
-- 原始归档不提交 Git；将 ZIP 附加到对应 Issue。若附件不可用或过大，由用户交给验收方，并在 Issue 记录 ZIP 文件名、SHA-256 和日期。
-
+- 失败或中断时也必须尽可能生成交付包；如果归档步骤本身失败，保留整个 work/validation/ 和终端输出，不得清理现场。
+- 历史 archives/ 不得清理或覆盖；原始归档不提交 Git。
+- 用户只需交付总包及其 SHA-256，不要求逐个发送文件、手工抄录 commit 或计算 Hash。
 ## 6. 问题发现、登记与编号
 
 唯一问题登记位置是本仓库 GitHub Issues。不得使用 Markdown、CSV、Excel 或测试 JSON 另建动态问题台账。
@@ -143,7 +140,7 @@ Issue CLOSED 不等于阶段 PASS；报告 PASS 不自动关闭 Issue。当前�
 5. 修复 commit/PR，以及与 Issue 的关联。
 6. 测试状态、证据 RUN_ID；没有证据则写 UNVERIFIED。
 7. 未关闭问题、阻塞项、已知缺口和下一步。
-8. 是否修改 main；默认不得修改。
+8. 确认所有变更均基于 main 最新 HEAD，并核对提交 SHA；是否存在用户授权以外的破坏性操作（必须为否）。
 
 ## 10. 禁止事项
 
