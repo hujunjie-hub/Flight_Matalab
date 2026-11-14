@@ -40,6 +40,8 @@ class LocalValidationContractTests(unittest.TestCase):
         self.assertIn("tools\\test_local_validation_contract.py", self.script)
         self.assertIn("$pythonExe -B $contractTestPath", self.script)
         self.assertIn("$contractExitCode -ne 0", self.script)
+        self.assertIn("$preflightDeliveryZip", self.script)
+        self.assertIn("LOCAL_VALIDATION_CONTRACT_PREFLIGHT", self.script)
         self.assertIn("local_validation_contract_status = 'PASS'", self.script)
         self.assertEqual(
             self.manifest["local_execution"]["preflight_contract_test"],
