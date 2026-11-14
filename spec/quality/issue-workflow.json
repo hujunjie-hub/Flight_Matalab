@@ -86,5 +86,11 @@
     "0": "Package created; acceptance result is PASS or PARTIAL_PASS as stated in the summary. PARTIAL_PASS is not a full PASS.",
     "1": "MATLAB process/component checks or ABI checks failed; package is still created when archive and package steps succeed.",
     "pre_package_error": "If archive/package creation fails, preserve work/validation and terminal output."
-  }
+  },
+  "delivery_contains": [
+    "current RUN_ID MATLAB evidence ZIP and its SHA-256",
+    "current RUN_ID_DELIVERY.txt with overall status, failure reasons, full-project PASS authorization, blockers, and both repository commits",
+    "the exact spec/validation/matlab_acceptance_manifest.json used to determine whether full-project PASS is authorized",
+    "current RUN_ID ABI evidence ZIP and its SHA-256 when the ARM/Host toolchain is available"
+  ]
 }
