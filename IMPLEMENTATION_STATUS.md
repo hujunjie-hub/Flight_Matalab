@@ -11,6 +11,7 @@
 - tools/write_implementation_manifest.py 已修正为接受预期的 PASS/PARTIAL/PARTIAL_PASS 组合，并在 M6/P-10b gate 通过时生成 PARTIAL_PASS_HOST_SIL；当前 manifest 仍保持 STALE，需等完整证据齐全后再生成。
 - M6 统计适配器已加入版本化 JSON schema；M6 验收 gate 已增加零 job、汇总/逐 job outcome 对账、完整连续 1..N job ID、covered_us=solved×20,000 us、计数不一致、缺少逐 job 记录、非法 outcome 和覆盖时长越界等 fail-closed 检查。负向夹具覆盖汇总 outcome 不一致、非连续 job ID、covered_us 记账不一致，并已修正覆盖时长越界夹具，确保先满足 solved×20,000 us 记账，再单独触发 `covered_us > duration_us`。均接入 verify_m6_jobs_contract 和 run_component_checks。该 MATLAB 测试尚待用户本地执行。
 - FMAT-0012 的 90% 门槛与整轮时长分母没有改变；当前统计合同仍等待用户裁定。FMAT-0013 的 Flight M7 执行器证书/回执事务已有 230/230 Host 检查，但 fms_build_ground_stop_certificate 要求 FMS 已 DISARMED，而 PRODUCT_CMD_DISARM 在同一 handler 内从 DISARMING 直接转 DISARMED 并返回 COMPLETED，未等待真实回执；等待用户批准公共契约/异步 ACK 语义，批准前不改 ICD/ABI。闭环实现后再补本项目 Host MIL 端到端断言。FMAT-0014 的 Host MIL 与真实板级链路继续分开标记。
+- 新增 `.github/workflows/static-validation.yml`：GitHub Actions 在 main 推送后解析 tools/ 下全部 PowerShell 脚本，并运行一键交付合同测试。Run `43594696629`（HEAD `0d2e8305`）成功：3 个 PowerShell 脚本语法解析通过，5 项 Python 合同测试通过。该 CI 仅证明脚本语法/静态交付合同，不代表 MATLAB/Simulink 实测。
 - 本地一键入口为 tools/run_local_validation.ps1；用户在 Flight_Matlab 根目录只需复制 `pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\run_local_validation.ps1`。脚本同步两个 main、执行 MATLAB、归档、运行可用的 ARM/Host ABI 检查，并生成单一 `_DELIVERY.zip` + `.sha256`。总包生成后，MATLAB/组件/ABI 失败以非零退出码返回；`PARTIAL_PASS` 会显式标记为部分通过。归档现在把 config/flight_baseline.json 放入 inputs/，不再要求用户单独找文件。详细说明见 [MATLAB 本地验证交接说明](spec/validation/LOCAL_MATLAB_HANDOFF.md)。
 
 
