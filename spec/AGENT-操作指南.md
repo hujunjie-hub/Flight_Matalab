@@ -82,7 +82,7 @@ work/validation/archives/<RUN_ID>_DELIVERY.zip
 work/validation/archives/<RUN_ID>_DELIVERY.zip.sha256
 ~~~
 
-- 总交付 ZIP 包含 MATLAB 证据 ZIP、校验文件、运行摘要；ARM/Host 工具链可用时还包含 ABI 证据 ZIP 和校验文件。
+- 总交付 ZIP 包含 MATLAB 证据 ZIP、校验文件、运行摘要；ARM/Host 工具链可用时还包含 ABI 证据 ZIP 和校验文件。 同时包含本轮实际使用的 `matlab_acceptance_manifest.json`，用于复核总状态判定依据。
 - MATLAB 归档包括本轮报告、Diary、运行 manifest、输入 MAT 副本、当前 flight_baseline.json 和各文件 SHA-256。
 - 每次运行使用唯一 RUN_ID，禁止覆盖历史归档。
 - 失败或中断时也必须尽可能生成交付包；如果归档步骤本身失败，保留整个 work/validation/ 和终端输出，不得清理现场。
