@@ -173,6 +173,7 @@ ZIP 正常时，不需要再单独发送 ZIP 内已有的每一份 JSON 或 MAT 
 
 - 如果 generated_assets.json 显示本轮修改了某个原先已存在的模型/字典，且问题与该模型/字典有关，再按要求额外提供对应 .slx 或 .sldd 文件。
 - 如果 component_checks 在归档前中断，发送第 5 节列出的原始报告和完整 Diary。
+- 对 FMAT-0018，另在 Flight 仓库根目录运行 `python -B tests\\abi\\abi_report.py`（不要加 `--emit-lock`），并额外交付完整终端输出及 `tests/abi/evidence/abi_arm.json`、`abi_host.json`、`abi_compare.json`、`abi_report.md`、`commands.json`、`artifact_sha256.json`。这组 ABI 证据不包含在 Flight_Matlab 的 MATLAB ZIP 中。
 - 截图只能辅助定位，不能替代报告、日志、数据文件和 SHA-256。
 
 ## 7. 如何登记 MATLAB 发现的问题
@@ -216,6 +217,16 @@ ZIP 正常时，不需要再单独发送 ZIP 内已有的每一份 JSON 或 MAT 
 | FMAT-0019 | FIXED_WAITING_RETEST | M6 汇总 solved/rejected 现必须与逐 job outcome 数量一致，covered_us 必须等于 solved×20,000 us，job ID 必须完整连续 1..N；新增三项负向夹具，等待 MATLAB 本地执行 |
 
 因此，本轮 component_checks.json 仍可能因 FMAT-0012 的 coverage_90 返回 FAIL。这是当前未解决的验收合同问题，不代表可以跳过 M6，也不应通过修改门槛来消除。plant_open_loop_report.json.status=PARTIAL 和 P-10 overall PARTIAL 是当前设计边界的如实记录。
+
+### FMAT-0018 的独立 ABI 验证（与 MATLAB 完整运行分开）
+
+在同级 Flight 仓库切换并同步 main 后，从 Flight 根目录执行：
+
+~~~powershell
+python -B tests\abi\abi_report.py
+~~~
+
+不要添加 `--emit-lock`，不要手工改 abi_lock.h 或 Product/Port revision。该命令会刷新 ARM/Host 编译证据、比较报告和 artifact SHA 清单，并对当前 abi_lock 做校验。预期应明确显示 144 public types、993 fields、56/56 message registry，ARM 与 Host 证据来自同一轮运行，ABI lock 和 spec layout 检查 PASS。若不是该结果，保留完整终端输出及生成的 evidence 文件并交回；不要用旧的 143/986、55-message 报告关闭 FMAT-0018。即使该命令通过，Product/Port revision 是否保持 0x00010906 仍需独立审查结论。
 
 implementation_manifest.json 当前仍是旧证据，不能作为本轮交付 PASS。只有 input_preflight、flight_entries、cold_start_report 为 PASS，Plant 为 PARTIAL、component_checks 为 PARTIAL_PASS 且 M6/P-10b gate 通过后，才可运行 tools/write_implementation_manifest.py 生成 PARTIAL_PASS_HOST_SIL 清单；它不是本轮必须单独发送的文件。
 
