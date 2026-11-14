@@ -66,14 +66,14 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\run_local_validation.ps1
 1. 检查 Git、Python、PowerShell 7、MATLAB 和 Host GCC。
 2. 检查两个仓库是否有本地修改；有修改就停止，不执行 reset、clean 或覆盖。
 3. 自动 fetch 并 fast-forward 同步 Flight_Matlab/main 和同级 Flight/main。
-4. 记录两个仓库的完整 commit SHA、MATLAB 路径、操作系统和编译器版本。
-5. 用 MATLAB -batch 自动选择/检查 MEX C 编译器，执行唯一标准入口 run_component_checks。
-6. 自动保存 MATLAB Diary 和 batch 控制台日志。
-7. 无论 MATLAB 测试通过还是失败，都尝试归档本轮报告；不会因为测试失败而丢弃诊断证据。
-8. 将本轮 config/flight_baseline.json 和 scenarios/flight_sil_recording.mat 一起放入 MATLAB 证据 ZIP。
-9. MATLAB 归档完成后，自动运行 FMAT-0018 的 ARM/Host ABI 检查（默认工具链路径存在时）。
-10. 生成一个总交付包及 SHA-256，方便一次性交回。
-
+4. 运行 `tools/test_local_validation_contract.py`，核对当前脚本、机器可读验收清单、交付文件和退出码规则是否一致；结果写入 `work/validation/local_validation_contract_test.txt`。该检查失败时会在启动 MATLAB 前停止，并保留日志。
+5. 记录两个仓库的完整 commit SHA、MATLAB 路径、操作系统和编译器版本。
+6. 用 MATLAB -batch 自动选择/检查 MEX C 编译器，执行唯一标准入口 `run_component_checks`。
+7. 自动保存 MATLAB Diary 和 batch 控制台日志。
+8. 无论 MATLAB 测试通过还是失败，都尝试归档本轮报告；不会因为测试失败而丢弃诊断证据。
+9. 将本轮 `config/flight_baseline.json` 和 `scenarios/flight_sil_recording.mat` 一起放入 MATLAB 证据 ZIP。
+10. MATLAB 归档完成后，自动运行 FMAT-0018 的 ARM/Host ABI 检查（默认工具链路径存在时）。
+11. 生成一个总交付包及 SHA-256，方便一次性交回。
 ### 3.3 默认路径不同时，只复制这一条带参数命令
 
 默认工具链路径：
