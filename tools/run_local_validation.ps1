@@ -15,9 +15,11 @@ function Write-Stage([string]$Message) {
 }
 
 function Invoke-Git([string]$RepoPath, [string[]]$GitArgs) {
-    & git -C $RepoPath @GitArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "Git command failed in $RepoPath: git $($GitArgs -join ' ')"
+    $output = @(& git -C $RepoPath @GitArgs 2>&1)
+    $exitCode = $LASTEXITCODE
+    $output | ForEach-Object { Write-Host $_ }
+    if ($exitCode -ne 0) {
+        throw "Git command failed in $($RepoPath): git $($GitArgs -join ' ')"
     }
 }
 
@@ -345,7 +347,9 @@ if ($abiToolchainReady) {
     $abiChecksum = $abiZip + '.sha256'
     $abiHash = (Get-FileHash -LiteralPath $abiZip -Algorithm SHA256).Hash.ToLowerInvariant()
     "$abiHash  $(Split-Path $abiZip -Leaf)" | Set-Content -LiteralPath $abiChecksum -Encoding ascii
-    Write-Host "ABI evidence: $abiZip ($abiStatus)" -ForegroundColor $(if ($abiStatus -eq 'PASS') { 'Green' } else { 'Yellow' })
+    $abiColor = 'Yellow'
+    if ($abiStatus -eq 'PASS') { $abiColor = 'Green' }
+    Write-Host "ABI evidence: $abiZip ($abiStatus)" -ForegroundColor $abiColor
 } else {
     Write-Warning "ARM/Host ABI toolchain not found. MATLAB archive is complete; FMAT-0018 ABI check was skipped. Expected ARM tools in $ArmBin and objcopy in $GccDir."
 }
